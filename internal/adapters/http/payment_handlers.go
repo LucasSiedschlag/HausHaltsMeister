@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
+	"github.com/labstack/echo/v4"
 )
 
 type PaymentHandler struct {
@@ -18,6 +18,17 @@ func NewPaymentHandler(service payment.Service) *PaymentHandler {
 	return &PaymentHandler{service: service}
 }
 
+// Create registers a new payment method (e.g., Credit Card).
+// @Summary Criar Meio de Pagamento
+// @Description Creates a new payment method.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Param payload body dto.CreatePaymentMethodRequest true "Payment Method Payload"
+// @Success 201 {object} dto.PaymentMethodResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /payment-methods [post]
 func (h *PaymentHandler) Create(c echo.Context) error {
 	var req dto.CreatePaymentMethodRequest
 	if err := c.Bind(&req); err != nil {
@@ -35,6 +46,15 @@ func (h *PaymentHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toPaymentMethodResponse(created))
 }
 
+// List returns all available payment methods.
+// @Summary Listar Meios de Pagamento
+// @Description Returns a list of payment methods.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.PaymentMethodResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /payment-methods [get]
 func (h *PaymentHandler) List(c echo.Context) error {
 	list, err := h.service.ListPaymentMethods(c.Request().Context())
 	if err != nil {
@@ -49,6 +69,18 @@ func (h *PaymentHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetInvoice returns the invoice details for a specific credit card and month.
+// @Summary Visualizar Fatura
+// @Description Returns the invoice for a credit car payment method in a specific month.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Param id path int true "Payment Method ID"
+// @Param month query string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Success 200 {object} dto.InvoiceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /payment-methods/{id}/invoice [get]
 func (h *PaymentHandler) GetInvoice(c echo.Context) error {
 	idStr := c.Param("id")
 	var id int32

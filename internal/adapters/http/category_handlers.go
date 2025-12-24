@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/labstack/echo/v4"
 )
 
 type CategoryHandler struct {
@@ -18,6 +18,17 @@ func NewCategoryHandler(service category.Service) *CategoryHandler {
 	return &CategoryHandler{service: service}
 }
 
+// Create creates a new category.
+// @Summary Create Categoria
+// @Description Creates a new category for financial flows.
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param payload body dto.CreateCategoryRequest true "Category Payload"
+// @Success 201 {object} dto.CategoryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /categories [post]
 func (h *CategoryHandler) Create(c echo.Context) error {
 	var req dto.CreateCategoryRequest
 	if err := c.Bind(&req); err != nil {
@@ -35,6 +46,16 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toCategoryResponse(cat))
 }
 
+// List returns a list of categories.
+// @Summary Listar Categorias
+// @Description Returns a list of all categories, optionally filtered by active status.
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param active query boolean false "Filter only active categories"
+// @Success 200 {array} dto.CategoryResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /categories [get]
 func (h *CategoryHandler) List(c echo.Context) error {
 	activeOnly := c.QueryParam("active") == "true"
 
@@ -51,6 +72,16 @@ func (h *CategoryHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// Deactivate disables a category.
+// @Summary Desativar Categoria
+// @Description Deactivates a specific category by ID.
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /categories/{id}/deactivate [patch]
 func (h *CategoryHandler) Deactivate(c echo.Context) error {
 	idStr := c.Param("id")
 	var id int32

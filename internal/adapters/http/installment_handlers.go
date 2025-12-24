@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/labstack/echo/v4"
 )
 
 type InstallmentHandler struct {
@@ -18,6 +18,17 @@ func NewInstallmentHandler(service installment.Service) *InstallmentHandler {
 	return &InstallmentHandler{service: service}
 }
 
+// Create registers a new installment purchase.
+// @Summary Criar Compra Parcelada
+// @Description Creates a new purchase that is split into multiple installments.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Param payload body dto.CreateInstallmentRequest true "Installment Payload"
+// @Success 201 {object} dto.InstallmentPlanResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /installments [post]
 func (h *InstallmentHandler) Create(c echo.Context) error {
 	var req dto.CreateInstallmentRequest
 	if err := c.Bind(&req); err != nil {

@@ -20,6 +20,25 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 )
 
+// @title           HausHaltsMeister API
+// @version         1.0
+// @description     API for HausHaltsMeister (Personal Finance Management).
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Lucas Siedschlag
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /
+// @schemes   http
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-App-Token
 func main() {
 	// 1. Load config
 	cfg := config.Load()
@@ -68,6 +87,7 @@ func main() {
 	httpAdapter.RegisterPicuinhaRoutes(e, picHandler)
 	httpAdapter.RegisterPaymentRoutes(e, payHandler)
 	httpAdapter.RegisterInstallmentRoutes(e, instHandler)
+	httpAdapter.RegisterSwaggerRoutes(e)
 
 	// 8. Start server
 	log.Printf("Starting server on port %s", cfg.Port)

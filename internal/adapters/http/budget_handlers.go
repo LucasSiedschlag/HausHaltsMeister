@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
+	"github.com/labstack/echo/v4"
 )
 
 type BudgetHandler struct {
@@ -18,6 +18,17 @@ func NewBudgetHandler(service budget.Service) *BudgetHandler {
 	return &BudgetHandler{service: service}
 }
 
+// GetSummary returns the budget summary for a given month.
+// @Summary Visualizar Orçamento (Planned vs Actual)
+// @Description Returns the budget summary comparing planned vs actual expenses for the month.
+// @Tags Budgets
+// @Accept json
+// @Produce json
+// @Param month path string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Success 200 {object} dto.BudgetSummaryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /budgets/{month}/summary [get]
 func (h *BudgetHandler) GetSummary(c echo.Context) error {
 	monthStr := c.Param("month") // Expects YYYY-MM-DD
 
@@ -42,6 +53,18 @@ func (h *BudgetHandler) GetSummary(c echo.Context) error {
 	})
 }
 
+// SetItem sets a budget item for a specific category and month.
+// @Summary Definir Item de Orçamento
+// @Description Sets or updates the planned amount for a specific category in a given month.
+// @Tags Budgets
+// @Accept json
+// @Produce json
+// @Param month path string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Param payload body dto.SetBudgetItemRequest true "Budget Item Payload"
+// @Success 200 {object} dto.BudgetItemResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /budgets/{month}/items [post]
 func (h *BudgetHandler) SetItem(c echo.Context) error {
 	monthStr := c.Param("month")
 	parsedMonth, err := time.Parse("2006-01-02", monthStr)
@@ -65,6 +88,17 @@ func (h *BudgetHandler) SetItem(c echo.Context) error {
 	return c.JSON(http.StatusOK, toBudgetItemResponse(updated))
 }
 
+// SetBatch sets budget items for a range of months.
+// @Summary Definir Orçamento em Lote
+// @Description Sets the planned amount for a specific category across a range of months.
+// @Tags Budgets
+// @Accept json
+// @Produce json
+// @Param payload body dto.SetBudgetBatchRequest true "Batch Budget Payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /budgets/batch [post]
 func (h *BudgetHandler) SetBatch(c echo.Context) error {
 	var req dto.SetBudgetBatchRequest
 	if err := c.Bind(&req); err != nil {

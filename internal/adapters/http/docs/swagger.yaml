@@ -1,0 +1,830 @@
+basePath: /
+definitions:
+  dto.AddEntryRequest:
+    properties:
+      amount:
+        type: number
+      auto_create_flow:
+        type: boolean
+      cash_flow_id:
+        description: Optional
+        type: integer
+      kind:
+        description: PLUS or MINUS
+        type: string
+      person_id:
+        type: integer
+    type: object
+  dto.BudgetItemResponse:
+    properties:
+      actual_amount:
+        type: number
+      budget_period_id:
+        type: integer
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      id:
+        type: integer
+      mode:
+        type: string
+      planned_amount:
+        type: number
+    type: object
+  dto.BudgetSummaryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.BudgetItemResponse'
+        type: array
+      month:
+        type: string
+    type: object
+  dto.CashFlowResponse:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: integer
+      date:
+        type: string
+      direction:
+        type: string
+      id:
+        type: integer
+      is_fixed:
+        type: boolean
+      title:
+        type: string
+    type: object
+  dto.CategoryResponse:
+    properties:
+      direction:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_budget_relevant:
+        type: boolean
+      name:
+        type: string
+    type: object
+  dto.CategorySummaryResponse:
+    properties:
+      category_name:
+        type: string
+      direction:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.CopyFixedRequest:
+    properties:
+      from_month:
+        type: string
+      to_month:
+        type: string
+    type: object
+  dto.CreateCashFlowRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: integer
+      date:
+        description: YYYY-MM-DD
+        type: string
+      direction:
+        type: string
+      is_fixed:
+        type: boolean
+      title:
+        type: string
+    type: object
+  dto.CreateCategoryRequest:
+    properties:
+      direction:
+        description: IN or OUT
+        type: string
+      is_budget_relevant:
+        type: boolean
+      name:
+        type: string
+    type: object
+  dto.CreateInstallmentRequest:
+    properties:
+      category_id:
+        type: integer
+      count:
+        type: integer
+      description:
+        type: string
+      payment_method_id:
+        type: integer
+      purchase_date:
+        description: YYYY-MM-DD
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.CreatePaymentMethodRequest:
+    properties:
+      bank_name:
+        type: string
+      closing_day:
+        type: integer
+      due_day:
+        type: integer
+      kind:
+        type: string
+      name:
+        type: string
+    type: object
+  dto.CreatePersonRequest:
+    properties:
+      name:
+        type: string
+      notes:
+        type: string
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  dto.InstallmentPlanResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      installment_amount:
+        type: number
+      installment_count:
+        type: integer
+      payment_method_id:
+        type: integer
+      start_month:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.InvoiceEntryResponse:
+    properties:
+      amount:
+        type: number
+      cash_flow_id:
+        type: integer
+      category_name:
+        type: string
+      date:
+        type: string
+      title:
+        type: string
+    type: object
+  dto.InvoiceResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/dto.InvoiceEntryResponse'
+        type: array
+      month:
+        type: string
+      payment_method_id:
+        type: integer
+      total:
+        type: number
+    type: object
+  dto.MonthlySummaryResponse:
+    properties:
+      balance:
+        type: number
+      total_expense:
+        type: number
+      total_income:
+        type: number
+    type: object
+  dto.PaymentMethodResponse:
+    properties:
+      bank_name:
+        type: string
+      closing_day:
+        type: integer
+      due_day:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      kind:
+        type: string
+      name:
+        type: string
+    type: object
+  dto.PersonResponse:
+    properties:
+      balance:
+        type: number
+      id:
+        type: integer
+      name:
+        type: string
+      notes:
+        type: string
+    type: object
+  dto.PicuinhaEntryResponse:
+    properties:
+      amount:
+        type: number
+      cash_flow_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      kind:
+        type: string
+      person_id:
+        type: integer
+    type: object
+  dto.SetBudgetBatchRequest:
+    properties:
+      category_id:
+        type: integer
+      end_month:
+        type: string
+      planned_amount:
+        type: number
+      start_month:
+        type: string
+    type: object
+  dto.SetBudgetItemRequest:
+    properties:
+      category_id:
+        type: integer
+      planned_amount:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: Lucas Siedschlag
+    url: http://www.swagger.io/support
+  description: API for HausHaltsMeister (Personal Finance Management).
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: HausHaltsMeister API
+  version: "1.0"
+paths:
+  /budgets/{month}/items:
+    post:
+      consumes:
+      - application/json
+      description: Sets or updates the planned amount for a specific category in a
+        given month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: path
+        name: month
+        required: true
+        type: string
+      - description: Budget Item Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SetBudgetItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BudgetItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Definir Item de Orçamento
+      tags:
+      - Budgets
+  /budgets/{month}/summary:
+    get:
+      consumes:
+      - application/json
+      description: Returns the budget summary comparing planned vs actual expenses
+        for the month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: path
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BudgetSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Visualizar Orçamento (Planned vs Actual)
+      tags:
+      - Budgets
+  /budgets/batch:
+    post:
+      consumes:
+      - application/json
+      description: Sets the planned amount for a specific category across a range
+        of months.
+      parameters:
+      - description: Batch Budget Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SetBudgetBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Definir Orçamento em Lote
+      tags:
+      - Budgets
+  /cashflows:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of cash flows for the specified month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CashFlowResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Fluxos (Extrato)
+      tags:
+      - CashFlows
+    post:
+      consumes:
+      - application/json
+      description: Creates a new cash flow (income or expense).
+      parameters:
+      - description: CashFlow Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCashFlowRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CashFlowResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Lançamento
+      tags:
+      - CashFlows
+  /cashflows/category-summary:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of expenses/incomes grouped by category for the
+        specified month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CategorySummaryResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Resumo por Categoria
+      tags:
+      - CashFlows
+  /cashflows/copy-fixed:
+    post:
+      consumes:
+      - application/json
+      description: Copies fixed expenses from a source month to a target month.
+      parameters:
+      - description: Copy Fixed Param
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CopyFixedRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Copiar Gastos Fixos
+      tags:
+      - CashFlows
+  /cashflows/summary:
+    get:
+      consumes:
+      - application/json
+      description: Returns the total income, expense, and balance for the specified
+        month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MonthlySummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Resumo Mensal
+      tags:
+      - CashFlows
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of all categories, optionally filtered by active
+        status.
+      parameters:
+      - description: Filter only active categories
+        in: query
+        name: active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CategoryResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Categorias
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Creates a new category for financial flows.
+      parameters:
+      - description: Category Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Categoria
+      tags:
+      - Categories
+  /categories/{id}/deactivate:
+    patch:
+      consumes:
+      - application/json
+      description: Deactivates a specific category by ID.
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Desativar Categoria
+      tags:
+      - Categories
+  /installments:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new purchase that is split into multiple installments.
+      parameters:
+      - description: Installment Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateInstallmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.InstallmentPlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Compra Parcelada
+      tags:
+      - Cards
+  /payment-methods:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of payment methods.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PaymentMethodResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Meios de Pagamento
+      tags:
+      - Cards
+    post:
+      consumes:
+      - application/json
+      description: Creates a new payment method.
+      parameters:
+      - description: Payment Method Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PaymentMethodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Meio de Pagamento
+      tags:
+      - Cards
+  /payment-methods/{id}/invoice:
+    get:
+      consumes:
+      - application/json
+      description: Returns the invoice for a credit car payment method in a specific
+        month.
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Visualizar Fatura
+      tags:
+      - Cards
+  /picuinhas/entries:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new financial entry for a specific person.
+      parameters:
+      - description: Entry Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PicuinhaEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Registrar Entrada/Empréstimo
+      tags:
+      - Picuinhas
+  /picuinhas/persons:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of persons tracking loans/debts.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PersonResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Pessoas e Saldos
+      tags:
+      - Picuinhas
+    post:
+      consumes:
+      - application/json
+      description: Registers a new person for sharing expenses.
+      parameters:
+      - description: Person Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePersonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PersonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Cadastrar Pessoa
+      tags:
+      - Picuinhas
+schemes:
+- http
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-App-Token
+    type: apiKey
+swagger: "2.0"

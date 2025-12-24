@@ -28,6 +28,14 @@ migrate:
 migrate-status:
 	tern status -c internal/db/tern.conf -m migrations
 
+migrestore:
+	@echo "Restoring database..."
+	@docker exec -i cashflow-db psql -U user -d cashflow < backups/latest_backup.sql
+
+swagger:
+	@echo "Generating Swagger documentation..."
+	@$(HOME)/go/bin/swag init -g cmd/api/main.go -o internal/adapters/http/docs
+
 sqlc:
 	sqlc generate
 

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/labstack/echo/v4"
 )
 
 type CashFlowHandler struct {
@@ -18,6 +18,17 @@ func NewCashFlowHandler(service cashflow.Service) *CashFlowHandler {
 	return &CashFlowHandler{service: service}
 }
 
+// Create creates a new cash flow entry.
+// @Summary Criar Lançamento
+// @Description Creates a new cash flow (income or expense).
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param payload body dto.CreateCashFlowRequest true "CashFlow Payload"
+// @Success 201 {object} dto.CashFlowResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /cashflows [post]
 func (h *CashFlowHandler) Create(c echo.Context) error {
 	var req dto.CreateCashFlowRequest
 	if err := c.Bind(&req); err != nil {
@@ -48,6 +59,17 @@ func (h *CashFlowHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toCashFlowResponse(created))
 }
 
+// ListByMonth returns a list of cash flows for a given month.
+// @Summary Listar Fluxos (Extrato)
+// @Description Returns a list of cash flows for the specified month.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param month query string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Success 200 {array} dto.CashFlowResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /cashflows [get]
 func (h *CashFlowHandler) ListByMonth(c echo.Context) error {
 	monthStr := c.QueryParam("month")
 	if monthStr == "" {
@@ -72,6 +94,17 @@ func (h *CashFlowHandler) ListByMonth(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// MonthlySummary returns the financial summary for a given month.
+// @Summary Resumo Mensal
+// @Description Returns the total income, expense, and balance for the specified month.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param month query string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Success 200 {object} dto.MonthlySummaryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /cashflows/summary [get]
 func (h *CashFlowHandler) MonthlySummary(c echo.Context) error {
 	monthStr := c.QueryParam("month")
 	if monthStr == "" {
@@ -94,6 +127,17 @@ func (h *CashFlowHandler) MonthlySummary(c echo.Context) error {
 	})
 }
 
+// CategorySummary returns the financial summary grouped by category for a given month.
+// @Summary Resumo por Categoria
+// @Description Returns a list of expenses/incomes grouped by category for the specified month.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param month query string true "Reference Month (YYYY-MM-DD)" format(date) example(2024-03-01)
+// @Success 200 {array} dto.CategorySummaryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /cashflows/category-summary [get]
 func (h *CashFlowHandler) CategorySummary(c echo.Context) error {
 	monthStr := c.QueryParam("month")
 	if monthStr == "" {
@@ -121,6 +165,17 @@ func (h *CashFlowHandler) CategorySummary(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// CopyFixed copies fixed expenses from one month to another.
+// @Summary Copiar Gastos Fixos
+// @Description Copies fixed expenses from a source month to a target month.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param payload body dto.CopyFixedRequest true "Copy Fixed Param"
+// @Success 200 {object} map[string]int
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /cashflows/copy-fixed [post]
 func (h *CashFlowHandler) CopyFixed(c echo.Context) error {
 	var req dto.CopyFixedRequest
 	if err := c.Bind(&req); err != nil {
