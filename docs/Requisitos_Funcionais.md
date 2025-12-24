@@ -371,9 +371,27 @@ O sistema deve permitir visualizar:
 
 - Histórico por categoria
 - Orçado x realizado
+- Histórico por categoria
+- Orçado x realizado
 - Tendências de crescimento/redução
 
 ---
+
+## 11. Requisitos Funcionais — Manutenção e Sistema
+
+### RF-21 — Execução de Backup
+
+O sistema deve fornecer mecanismos (via CLI ou interface administrativa) para a extração completa dos dados.
+
+- **Formato**: SQL Dump ou formato portável (JSON/CSV) completo.
+- **Conteúdo**: Todas as tabelas, incluindo usuários, lançamentos, categorias e configurações.
+
+### RF-22 — Auditoria e Rastreabilidade
+
+O sistema deve garantir a persistência de um rastro de auditoria.
+
+- **Regra**: O sistema deve registrar logs de auditoria para operações críticas.
+- **Capacidade**: O sistema deve permitir (ao administrador) a consulta desses logs, seja via banco de dados ou endpoint específico, para resolução de incidentes.
 
 ## 11. Regras de Negócio Críticas (Resumo)
 

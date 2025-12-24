@@ -472,4 +472,35 @@ O sistema deve ser capaz de evoluir adicionando novos casos de uso **sem alterar
 
 ---
 
+## 11. Casos de Uso — Manutenção de Sistema
+
+**Ator:** Administrador do Sistema (System/Dev)
+
+---
+
+### UC-99 — Backup e Recuperação
+
+**Objetivo:**  
+Garantir a recuperabilidade dos dados em caso de falha catastrófica.
+
+**Fluxo Principal (Backup):**
+
+1. Usuário executa comando de backup (ex: `make backup`).
+2. Sistema gera dump completo do banco (schema + dados).
+3. Sistema salva arquivo com timestamp em diretório seguro.
+
+**Fluxo Principal (Restore):**
+
+1. Usuário executa comando de restore (ex: `make restore FILE=...`).
+2. Sistema alerta sobre sobreescrita total.
+3. Usuário confirma.
+4. Sistema restaura o estado anterior.
+
+**Regras:**
+
+- Operações de restore são destrutivas para dados atuais.
+- Devem ser executadas em ambiente controlado.
+
+---
+
 **Fim do Documento**

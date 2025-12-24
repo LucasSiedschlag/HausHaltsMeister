@@ -270,16 +270,24 @@ Retorna lista do mês.
 
 ⸻
 
-### 10) Observabilidade e robustez (bons hábitos)
+### 10) Segurança e Observabilidade (RNFs)
 
-    •	Logging: log/slog (ou zerolog) com request-id.
-    •	Middleware:
-    •	recover/panic
-    •	request logging
-    •	timeout por request
-    •	Saúde:
-    •	/health (OK)
-    •	opcional /ready (db ping)
+10.1 Autenticação e Hardening
+• **Autenticação**: Header `X-App-Token` validado via middleware. Token definido na ENV `APP_TOKEN`.
+• **Rate Limit**: Store em memória (x req/s) para evitar loops acidentais.
+• **Timeouts**: Middleware de timeout (30s) em todas as rotas.
+• **Body Limit**: 1MB max payload.
+• **CORS**: Restritivo (apenas domínios confiáveis ou \* em dev).
+
+10.2 Auditoria (Rastreabilidade)
+• Tabela: `audit_logs`
+• id, entity (table_name), entity_id, action (CREATE/UPDATE/DELETE), diff (JSONB), created_at.
+• Service Layer é responsável por despachar log de auditoria em operações críticas.
+
+10.3 Backup e Recuperação
+• Script `make backup` que executa `pg_dump` do container.
+• Script `make restore` para recuperação de desastres.
+• Documentar processo no README.
 
 ⸻
 
@@ -297,6 +305,11 @@ Retorna lista do mês.
     •	GET cashflows month
     9.	[x] Depois: categories endpoints + seed categories
     10.	[x] Depois: budget, picuinhas, cards (iterativo)
+    11. [ ] **Fase 5: Segurança e Operação**
+        • [ ] Implementar Middleware Auth (X-App-Token)
+        • [ ] Criar tabela audit_logs e AuditService
+        • [ ] Configurar Timeouts, BodyLimit e CORS
+        • [ ] Scripts de Backup/Restore
 
 ⸻
 
@@ -306,3 +319,4 @@ Retorna lista do mês.
     •	Domínio não importa Echo nem pgx.
     •	Todas queries sqlc têm testes de integração (posterior).
     •	Migrations versionadas e reprodutíveis.
+    •	**Segurança mínima**: Nenhuma rota de escrita exposta sem token.

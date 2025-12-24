@@ -10,6 +10,33 @@ Este documento descreve todos os endpoints da API do sistema, alinhados com a im
 
 ---
 
+## 0. Segurança e Erros
+
+### 0.1 Autenticação
+
+Todos os endpoints requerem o header:
+
+- `X-App-Token`: `<token_configurado_na_env>`
+
+Respostas comuns:
+
+- `401 Unauthorized`: Token ausente ou inválido.
+
+### 0.2 Tratamento de Erros e Limites
+
+- **Timeouts**: Requests acima de 30s são abortados (`504 Gateway Timeout`).
+- **Rate Limit**: Excesso de requisições retorna `429 Too Many Requests`.
+- **Formato de Erro Padrão**:
+
+```json
+{
+  "error": "Descrição do erro",
+  "request_id": "req-123456"
+}
+```
+
+---
+
 ## 1. Domínio: Categorias (`category`)
 
 ### 1.1 Criar Categoria
