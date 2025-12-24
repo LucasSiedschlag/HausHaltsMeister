@@ -14,6 +14,8 @@ Este documento descreve todos os endpoints da API do sistema, alinhados com a im
 
 ### 0.1 Autenticação
 
+> Para detalhes de configuração, veja [`docs/Seguranca.md`](./Seguranca.md).
+
 Todos os endpoints requerem o header:
 
 - `X-App-Token`: `<token_configurado_na_env>`

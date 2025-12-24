@@ -272,6 +272,8 @@ Retorna lista do mês.
 
 ### 10) Segurança e Observabilidade (RNFs)
 
+> **Ver Guia Completo**: [`docs/Seguranca.md`](./Seguranca.md) para detalhes de implementação passo a passo.
+
 10.1 Autenticação e Hardening
 • **Autenticação**: Header `X-App-Token` validado via middleware. Token definido na ENV `APP_TOKEN`.
 • **Rate Limit**: Store em memória (x req/s) para evitar loops acidentais.

@@ -4,6 +4,8 @@
 
 Este documento estabelece os padrões de qualidade e critérios operacionais (arquiteturais) que o sistema **HausHaltsMeister** deve seguir. Enquanto os Requisitos Funcionais descrevem _o que_ o sistema faz, estes requisitos descrevem _como_ ele deve se comportar sob aspectos de segurança e engenharia.
 
+> **Implementação**: Consulte o [`Guia de Segurança`](./Seguranca.md) para o passo a passo técnico.
+
 ---
 
 ### RNF-01 — Autenticação Mínima
