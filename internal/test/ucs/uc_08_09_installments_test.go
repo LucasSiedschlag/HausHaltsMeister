@@ -21,7 +21,7 @@ import (
 	"github.com/seuuser/cashflow/internal/test/harness"
 )
 
-func TestUC08_InstallmentsAndInvoice(t *testing.T) {
+func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 	// Setup DB
 	db := harness.SetupTestDB(t)
 	defer db.Pool.Close()

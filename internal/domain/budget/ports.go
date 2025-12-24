@@ -16,4 +16,5 @@ type Service interface {
 	GetOrCreatePeriod(ctx context.Context, month time.Time) (*BudgetPeriod, error)
 	SetBudgetItem(ctx context.Context, month time.Time, categoryID int32, plannedAmount float64) (*BudgetItem, error)
 	GetBudgetSummary(ctx context.Context, month time.Time) (*BudgetPeriod, error)
+	SetBudgetBatch(ctx context.Context, startMonth, endMonth time.Time, categoryID int32, plannedAmount float64) error
 }

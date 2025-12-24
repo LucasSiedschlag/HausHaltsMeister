@@ -115,3 +115,18 @@ func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (
 
 	return period, nil
 }
+
+func (s *BudgetService) SetBudgetBatch(ctx context.Context, startMonth, endMonth time.Time, categoryID int32, plannedAmount float64) error {
+	// Normalize to 1st of month
+	current := time.Date(startMonth.Year(), startMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(endMonth.Year(), endMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	for !current.After(end) {
+		_, err := s.SetBudgetItem(ctx, current, categoryID, plannedAmount)
+		if err != nil {
+			return fmt.Errorf("failed at month %s: %w", current.Format("2006-01"), err)
+		}
+		current = current.AddDate(0, 1, 0)
+	}
+	return nil
+}

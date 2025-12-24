@@ -65,6 +65,30 @@ func (h *BudgetHandler) SetItem(c echo.Context) error {
 	return c.JSON(http.StatusOK, toBudgetItemResponse(updated))
 }
 
+func (h *BudgetHandler) SetBatch(c echo.Context) error {
+	var req dto.SetBudgetBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
+	}
+
+	start, err := time.Parse("2006-01-02", req.StartMonth)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid start_month format"})
+	}
+
+	end, err := time.Parse("2006-01-02", req.EndMonth)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid end_month format"})
+	}
+
+	err = h.service.SetBudgetBatch(c.Request().Context(), start, end, req.CategoryID, req.PlannedAmount)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "success"})
+}
+
 func toBudgetItemResponse(it *budget.BudgetItem) dto.BudgetItemResponse {
 	return dto.BudgetItemResponse{
 		ID:             it.ID,
@@ -83,4 +107,6 @@ func RegisterBudgetRoutes(e *echo.Echo, h *BudgetHandler) {
 	g.GET("/:month/summary", h.GetSummary)
 	// POST /budgets/:month/items
 	g.POST("/:month/items", h.SetItem)
+	// POST /budgets/batch
+	g.POST("/batch", h.SetBatch)
 }

@@ -16,8 +16,13 @@ type BudgetItemResponse struct {
 }
 
 type BudgetSummaryResponse struct {
-	Month        string               `json:"month"`
-	TotalPlanned float64              `json:"total_planned"`
-	TotalActual  float64              `json:"total_actual"`
-	Items        []BudgetItemResponse `json:"items"`
+	Month string               `json:"month"`
+	Items []BudgetItemResponse `json:"items"`
+}
+
+type SetBudgetBatchRequest struct {
+	StartMonth    string  `json:"start_month"`
+	EndMonth      string  `json:"end_month"`
+	CategoryID    int32   `json:"category_id"`
+	PlannedAmount float64 `json:"planned_amount"`
 }
