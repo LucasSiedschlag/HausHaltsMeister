@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -71,10 +72,10 @@ func (r *BudgetRepository) CreatePeriod(ctx context.Context, period *budget.Budg
 func (r *BudgetRepository) UpsertItem(ctx context.Context, item *budget.BudgetItem) (*budget.BudgetItem, error) {
 	// Numeric conversion
 	var planned pgtype.Numeric
-	planned.Scan(item.PlannedAmount) // Simplified
+	planned.Scan(fmt.Sprintf("%.2f", item.PlannedAmount))
 
 	var target pgtype.Numeric
-	target.Scan(item.TargetPercent)
+	target.Scan(fmt.Sprintf("%.2f", item.TargetPercent))
 
 	// Mode handling
 	// item.Mode is string, DB column is varchar(30) NOT NULL.
