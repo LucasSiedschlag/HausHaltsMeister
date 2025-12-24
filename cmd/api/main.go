@@ -12,6 +12,7 @@ import (
 	"github.com/seuuser/cashflow/internal/adapters/postgres"
 	"github.com/seuuser/cashflow/internal/config"
 	"github.com/seuuser/cashflow/internal/db"
+	"github.com/seuuser/cashflow/internal/domain/budget"
 	"github.com/seuuser/cashflow/internal/domain/cashflow"
 	"github.com/seuuser/cashflow/internal/domain/category"
 )
@@ -31,14 +32,17 @@ func main() {
 	// 3. Setup repositories
 	catRepo := postgres.NewCategoryRepository(pool)
 	cfRepo := postgres.NewCashFlowRepository(pool)
+	bgRepo := postgres.NewBudgetRepository(pool)
 
 	// 4. Setup services
 	catService := category.NewService(catRepo)
 	cfService := cashflow.NewService(cfRepo, catRepo)
+	bgService := budget.NewService(bgRepo, catRepo)
 
 	// 5. Setup handlers
 	catHandler := httpAdapter.NewCategoryHandler(catService)
 	cfHandler := httpAdapter.NewCashFlowHandler(cfService)
+	bgHandler := httpAdapter.NewBudgetHandler(bgService)
 
 	// 6. Setup Echo
 	e := echo.New()
@@ -48,6 +52,7 @@ func main() {
 	// 7. Register routes
 	httpAdapter.RegisterCategoryRoutes(e, catHandler)
 	httpAdapter.RegisterCashFlowRoutes(e, cfHandler)
+	httpAdapter.RegisterBudgetRoutes(e, bgHandler)
 
 	// 8. Start server
 	log.Printf("Starting server on port %s", cfg.Port)
