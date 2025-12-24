@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -127,4 +128,28 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 		DueDay:     due,
 		IsActive:   row.IsActive,
 	}, nil
+}
+
+func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethodID int32, month time.Time) ([]payment.InvoiceEntry, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	rows, err := r.q.GetInvoiceEntries(ctx, sqlc.GetInvoiceEntriesParams{
+		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		Column2:         pgDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]payment.InvoiceEntry, len(rows))
+	for i, row := range rows {
+		amt, _ := row.Amount.Float64Value()
+		entries[i] = payment.InvoiceEntry{
+			CashFlowID:   row.CashFlowID,
+			Date:         row.Date.Time,
+			Title:        row.Title,
+			Amount:       amt.Float64,
+			CategoryName: row.CategoryName,
+		}
+	}
+	return entries, nil
 }

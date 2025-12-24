@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"time"
 )
 
 type PaymentService struct {
@@ -28,10 +29,25 @@ func (s *PaymentService) CreatePaymentMethod(ctx context.Context, name, kind, ba
 }
 
 func (s *PaymentService) ListPaymentMethods(ctx context.Context) ([]PaymentMethod, error) {
-	// List active only or all? Let's default to all for now or active?
-	// The port said "List(activeOnly bool)" in Repo, but Service interface says "ListPaymentMethods".
-	// Let's return all for config, or default active.
-	// Actually for management UI we usually want all. Dropdowns want active.
-	// Let's just return ALL for now.
-	return s.repo.List(ctx, false) // false -> Valid: false -> List ALL
+	// List ALL for management purposes. In future we can add ListActiveMethods.
+	return s.repo.List(ctx, false)
+}
+
+func (s *PaymentService) GetInvoice(ctx context.Context, paymentMethodID int32, month time.Time) (*Invoice, error) {
+	entries, err := s.repo.GetInvoiceEntries(ctx, paymentMethodID, month)
+	if err != nil {
+		return nil, err
+	}
+
+	var total float64
+	for _, e := range entries {
+		total += e.Amount
+	}
+
+	return &Invoice{
+		PaymentMethodID: paymentMethodID,
+		Month:           month,
+		Total:           total,
+		Entries:         entries,
+	}, nil
 }

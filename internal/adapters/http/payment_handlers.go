@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/seuuser/cashflow/internal/domain/payment"
@@ -49,8 +50,32 @@ func (h *PaymentHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, list)
 }
 
+func (h *PaymentHandler) GetInvoice(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	fmt.Sscanf(idStr, "%d", &id)
+
+	monthStr := c.QueryParam("month")
+	if monthStr == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month parameter is required (YYYY-MM-DD)"})
+	}
+
+	parsedMonth, err := time.Parse("2006-01-02", monthStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format, use YYYY-MM-DD"})
+	}
+
+	invoice, err := h.service.GetInvoice(c.Request().Context(), id, parsedMonth)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get invoice"})
+	}
+
+	return c.JSON(http.StatusOK, invoice)
+}
+
 func RegisterPaymentRoutes(e *echo.Echo, h *PaymentHandler) {
 	g := e.Group("/payment-methods")
 	g.POST("", h.Create)
 	g.GET("", h.List)
+	g.GET("/:id/invoice", h.GetInvoice)
 }

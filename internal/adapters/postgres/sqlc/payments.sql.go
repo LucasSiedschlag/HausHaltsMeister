@@ -48,6 +48,60 @@ func (q *Queries) CreatePaymentMethod(ctx context.Context, arg CreatePaymentMeth
 	return i, err
 }
 
+const getInvoiceEntries = `-- name: GetInvoiceEntries :many
+SELECT 
+    cf.cash_flow_id, 
+    cf.date, 
+    cf.title, 
+    cf.amount, 
+    cat.name as category_name
+FROM cash_flows cf
+JOIN flow_categories cat ON cf.category_id = cat.category_id
+JOIN expense_details ed ON cf.cash_flow_id = ed.cash_flow_id
+WHERE ed.payment_method_id = $1 
+  AND DATE_TRUNC('month', cf.date) = DATE_TRUNC('month', $2::date)
+ORDER BY cf.date ASC
+`
+
+type GetInvoiceEntriesParams struct {
+	PaymentMethodID pgtype.Int4
+	Column2         pgtype.Date
+}
+
+type GetInvoiceEntriesRow struct {
+	CashFlowID   int32
+	Date         pgtype.Date
+	Title        string
+	Amount       pgtype.Numeric
+	CategoryName string
+}
+
+func (q *Queries) GetInvoiceEntries(ctx context.Context, arg GetInvoiceEntriesParams) ([]GetInvoiceEntriesRow, error) {
+	rows, err := q.db.Query(ctx, getInvoiceEntries, arg.PaymentMethodID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInvoiceEntriesRow
+	for rows.Next() {
+		var i GetInvoiceEntriesRow
+		if err := rows.Scan(
+			&i.CashFlowID,
+			&i.Date,
+			&i.Title,
+			&i.Amount,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPaymentMethod = `-- name: GetPaymentMethod :one
 SELECT payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
 FROM payment_methods

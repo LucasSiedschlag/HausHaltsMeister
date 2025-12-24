@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/seuuser/cashflow/internal/domain/cashflow"
 	"github.com/seuuser/cashflow/internal/domain/category"
 )
 
 type BudgetService struct {
 	repo    Repository
 	catRepo category.Repository
+	cfRepo  cashflow.Repository
 }
 
-func NewService(repo Repository, catRepo category.Repository) *BudgetService {
+func NewService(repo Repository, catRepo category.Repository, cfRepo cashflow.Repository) *BudgetService {
 	return &BudgetService{
 		repo:    repo,
 		catRepo: catRepo,
+		cfRepo:  cfRepo,
 	}
 }
 
@@ -84,6 +87,31 @@ func (s *BudgetService) SetBudgetItem(ctx context.Context, month time.Time, cate
 }
 
 func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (*BudgetPeriod, error) {
-	// Reusing GetOrCreate for now, but in future would calculate actuals
-	return s.GetOrCreatePeriod(ctx, month)
+	// 1. Get Base Plan
+	period, err := s.GetOrCreatePeriod(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Get Actuals (CashFlows)
+	// Assuming month is the 1st of the month
+	flows, err := s.cfRepo.ListByMonth(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Aggregate Actuals by Category
+	actuals := make(map[int32]float64)
+	for _, f := range flows {
+		if f.Direction == "OUT" {
+			actuals[f.CategoryID] += f.Amount
+		}
+	}
+
+	// 4. Enrich Items
+	for i := range period.Items {
+		period.Items[i].ActualAmount = actuals[period.Items[i].CategoryID]
+	}
+
+	return period, nil
 }

@@ -9,12 +9,7 @@ import (
 )
 
 type PicuinhaHandler struct {
-	service *picuinha.PicuinhaService // Concrete type or interface? Service in domain/picuinha/ports.go is interface.
-	// Check service.go: NewService returns *PicuinhaService struct which implements... wait, domain/picuinha/ports.go defines interface Service.
-	// But service.go implements it. It's better to depend on interface.
-	// Let's check imports.
-
-	// Actually, let's use the interface method signature style.
+	service *picuinha.PicuinhaService
 }
 
 func NewPicuinhaHandler(service *picuinha.PicuinhaService) *PicuinhaHandler {
@@ -52,10 +47,11 @@ func (h *PicuinhaHandler) ListPersons(c echo.Context) error {
 }
 
 type AddEntryRequest struct {
-	PersonID   int32   `json:"person_id"`
-	Kind       string  `json:"kind"` // PLUS or MINUS
-	Amount     float64 `json:"amount"`
-	CashFlowID *int32  `json:"cash_flow_id"` // Optional
+	PersonID       int32   `json:"person_id"`
+	Kind           string  `json:"kind"` // PLUS or MINUS
+	Amount         float64 `json:"amount"`
+	CashFlowID     *int32  `json:"cash_flow_id"` // Optional
+	AutoCreateFlow bool    `json:"auto_create_flow"`
 }
 
 func (h *PicuinhaHandler) AddEntry(c echo.Context) error {
@@ -64,11 +60,7 @@ func (h *PicuinhaHandler) AddEntry(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
 	}
 
-	// Direct AddDiff logic or specialized?
-	// Let's use AddDiff for simplicity or Lend/Receive based on kind if we want to be fancy.
-	// But Service has AddDiff generic enough.
-
-	entry, err := h.service.AddDiff(c.Request().Context(), req.PersonID, req.Amount, req.Kind)
+	entry, err := h.service.AddDiff(c.Request().Context(), req.PersonID, req.Amount, req.Kind, req.CashFlowID, req.AutoCreateFlow)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}

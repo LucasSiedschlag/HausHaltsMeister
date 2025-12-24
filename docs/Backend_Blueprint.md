@@ -94,30 +94,30 @@ cashflow/
 ### 3) Convenções e guidelines
 
 3.1 Padrões de código
-	•	Sempre usar context.Context em tudo (service + repo).
-	•	Erros do domínio devem ser “sentinels” (var ErrX = errors.New(...)) e tratados no handler.
-	•	Validar inputs no domínio (service), não no handler (handler só faz parse/bind).
-	•	internal/ deve conter todo código não exportável.
-	•	Não usar ORMs.
+• Sempre usar context.Context em tudo (service + repo).
+• Erros do domínio devem ser “sentinels” (var ErrX = errors.New(...)) e tratados no handler.
+• Validar inputs no domínio (service), não no handler (handler só faz parse/bind).
+• internal/ deve conter todo código não exportável.
+• Não usar ORMs.
 
 3.2 Nomes e datas
-	•	Datas: JSON sempre YYYY-MM-DD.
-	•	Mês de referência: usar o primeiro dia (ex: 2026-01-01) para queries de “por mês”.
+• Datas: JSON sempre YYYY-MM-DD.
+• Mês de referência: usar o primeiro dia (ex: 2026-01-01) para queries de “por mês”.
 
 ⸻
 
 ### 4) Modelo de dados (núcleo + extensões)
 
 4.1 Núcleo mínimo (primeira entrega)
-	•	flow_categories
-	•	cash_flows
+• flow_categories
+• cash_flows
 
 4.2 Extensões (incrementais)
-	•	payment_methods
-	•	expense_details
-	•	installment_plans
-	•	budget_periods + budget_items
-	•	picuinha_persons + picuinha_entries
+• payment_methods
+• expense_details
+• installment_plans
+• budget_periods + budget_items
+• picuinha_persons + picuinha_entries
 
 Princípio: entradas (casos 1/2/3) não devem exigir colunas irrelevantes.
 Entradas só usam cash_flows (núcleo). Detalhes opcionais ficam em outras tabelas.
@@ -127,27 +127,27 @@ Entradas só usam cash_flows (núcleo). Detalhes opcionais ficam em outras tabel
 ### 5) Migrations (tern)
 
 5.1 Regra
-	•	Sempre criar/alterar schema via migrations/*.sql.
-	•	Nunca “editar banco na mão” em dev.
+• Sempre criar/alterar schema via migrations/\*.sql.
+• Nunca “editar banco na mão” em dev.
 
 5.2 Comandos esperados (Makefile)
-	•	make migrate → aplica migrations com tern
-	•	make migrate-status → status
-	•	make sqlc → sqlc generate
+• make migrate → aplica migrations com tern
+• make migrate-status → status
+• make sqlc → sqlc generate
 
 ⸻
 
 ### 6) sqlc
 
 6.1 sqlc.yaml
-	•	Engine postgres
-	•	sql_package: pgx/v5
-	•	output em internal/adapters/postgres/sqlc
+• Engine postgres
+• sql_package: pgx/v5
+• output em internal/adapters/postgres/sqlc
 
 6.2 Regras de queries
-	•	Cada domínio possui arquivo de query próprio em db/queries.
-	•	Queries devem ser pequenas e objetivas.
-	•	Sempre nomear com -- name: QueryName :one|:many|:exec.
+• Cada domínio possui arquivo de query próprio em db/queries.
+• Queries devem ser pequenas e objetivas.
+• Sempre nomear com -- name: QueryName :one|:many|:exec.
 
 ⸻
 
@@ -156,40 +156,48 @@ Entradas só usam cash_flows (núcleo). Detalhes opcionais ficam em outras tabel
 7.1 Domain: CashFlow
 
 Objetivo: núcleo de entradas/saídas.
-	•	Entidades:
-	•	CashFlow { id, date, categoryId, direction, title, amount }
-	•	Ports:
-	•	Repository.CreateCashFlow
-	•	Repository.ListByMonth
-	•	Regras:
-	•	amount > 0
-	•	direction válido
-	•	category.direction deve bater com cash_flow.direction (validar via repo ou join)
+• Entidades:
+• CashFlow { id, date, categoryId, direction, title, amount }
+• Ports:
+• Repository.CreateCashFlow
+• Repository.ListByMonth
+• Regras:
+• amount > 0
+• direction válido
+• category.direction deve bater com cash_flow.direction (validar via repo ou join)
 
-7.2 Domain: Budget
+7.2 Domain: Category
+
+Objetivo: classificação de lançamentos.
+• Entidades: Category { id, name, direction, isBudgetRelevant, isActive }
+• Regras:
+• direction imutável
+• isBudgetRelevant define se aparece no planejamento orçamentário
+
+7.3 Domain: Budget
 
 Objetivo: orçamento mensal por categoria de SAÍDA.
-	•	Entidades: BudgetPeriod, BudgetItem
-	•	Regras:
-	•	budget_items.category.direction deve ser OUT
-	•	mode = ABSOLUTE | PERCENT_OF_INCOME
-	•	permitir alterar % para um mês ou em lote
+• Entidades: BudgetPeriod, BudgetItem
+• Regras:
+• budget_items.category.direction deve ser OUT
+• mode = ABSOLUTE | PERCENT_OF_INCOME
+• permitir alterar % para um mês ou em lote
 
 7.3 Domain: Picuinhas
 
 Objetivo: razão por pessoa + saldo.
-	•	Entidades: Person, Entry
-	•	Regras:
-	•	saldo por pessoa calculado por soma/subtração conforme kind
-	•	vincular Entry a cash_flow quando mexer no fluxo real
+• Entidades: Person, Entry
+• Regras:
+• saldo por pessoa calculado por soma/subtração conforme kind
+• vincular Entry a cash_flow quando mexer no fluxo real
 
 7.4 Domain: Cards
 
 Objetivo: parcelamentos e faturas (simples por enquanto).
-	•	Entidades: PaymentMethod (CREDIT_CARD), InstallmentPlan, ExpenseDetails
-	•	Regras:
-	•	compra parcelada gera installment_plan + cash_flows mensais (OUT)
-	•	cada parcela cria expense_detail com payment_method_id e installment_plan_id
+• Entidades: PaymentMethod (CREDIT_CARD), InstallmentPlan, ExpenseDetails
+• Regras:
+• compra parcelada gera installment_plan + cash_flows mensais (OUT)
+• cada parcela cria expense_detail com payment_method_id e installment_plan_id
 
 ⸻
 
@@ -198,40 +206,40 @@ Objetivo: parcelamentos e faturas (simples por enquanto).
 8.1 Rotas mínimas (primeira entrega)
 
 CashFlows
-	•	POST /cashflows
-	•	GET /cashflows?month=YYYY-MM-DD
+• POST /cashflows
+• GET /cashflows?month=YYYY-MM-DD
 
 Categories
-	•	POST /categories
-	•	GET /categories?direction=IN|OUT&active=true
+• POST /categories
+• GET /categories?direction=IN|OUT&active=true
 
 8.2 Rotas posteriores (iterativas)
 
 Budget
-	•	POST /budgets/:month/items (bulk upsert)
-	•	GET /budgets/:month/summary
-	•	PATCH /budgets/items/bulk (alterar % em vários meses)
+• POST /budgets/:month/items (bulk upsert)
+• GET /budgets/:month/summary
+• PATCH /budgets/items/bulk (alterar % em vários meses)
 
 Picuinhas
-	•	POST /picuinhas/persons
-	•	POST /picuinhas/entries
-	•	GET /picuinhas/persons/:id/ledger
-	•	GET /picuinhas/persons/:id/balance
+• POST /picuinhas/persons
+• POST /picuinhas/entries
+• GET /picuinhas/persons/:id/ledger
+• GET /picuinhas/persons/:id/balance
 
 Cards
-	•	POST /cards/installments (cria parcelamento)
-	•	GET /cards/invoices?month=YYYY-MM-DD (total por cartão)
+• POST /cards/installments (cria parcelamento)
+• GET /cards/invoices?month=YYYY-MM-DD (total por cartão)
 
 8.3 Payloads (exemplos)
 
 POST /cashflows
 
 {
-  "date": "2026-01-01",
-  "category_id": 1,
-  "direction": "IN",
-  "title": "Freela site X",
-  "amount": 1200.50
+"date": "2026-01-01",
+"category_id": 1,
+"direction": "IN",
+"title": "Freela site X",
+"amount": 1200.50
 }
 
 GET /cashflows?month=2026-01-01
@@ -242,47 +250,48 @@ Retorna lista do mês.
 ### 9) Bootstrap (cmd/api/main.go)
 
 9.1 Responsabilidades
-	•	Load config
-	•	Run migrations (tern) fora do processo (via Makefile) — ou opcional via wrapper
-	•	Create pgxpool
-	•	Create sqlc queries
-	•	Wire repositories → services → handlers
-	•	Start Echo server
+• Load config
+• Run migrations (tern) fora do processo (via Makefile) — ou opcional via wrapper
+• Create pgxpool
+• Create sqlc queries
+• Wire repositories → services → handlers
+• Start Echo server
 
 ⸻
 
 ### 10) Observabilidade e robustez (bons hábitos)
-	•	Logging: log/slog (ou zerolog) com request-id.
-	•	Middleware:
-	•	recover/panic
-	•	request logging
-	•	timeout por request
-	•	Saúde:
-	•	/health (OK)
-	•	opcional /ready (db ping)
+
+    •	Logging: log/slog (ou zerolog) com request-id.
+    •	Middleware:
+    •	recover/panic
+    •	request logging
+    •	timeout por request
+    •	Saúde:
+    •	/health (OK)
+    •	opcional /ready (db ping)
 
 ⸻
 
 ### 11) Checklist de implementação (ordem sugerida)
 
-	1.	Criar go.mod, estrutura de pastas
-	2.	Criar migrations/001_init.sql (categories + cash_flows)
-	3.	make migrate
-	4.	Criar sqlc.yaml e db/queries/cash_flows.sql
-	5.	make sqlc
-	6.	Implementar internal/db (pgxpool)
-	7.	Implementar domain/cashflow + repo Postgres + handlers
-	8.	Subir API e testar:
-	•	POST cashflow
-	•	GET cashflows month
-	9.	Depois: categories endpoints + seed categories
-	10.	Depois: budget, picuinhas, cards (iterativo)
+    1.	Criar go.mod, estrutura de pastas
+    2.	Criar migrations/001_init.sql (categories + cash_flows)
+    3.	make migrate
+    4.	Criar sqlc.yaml e db/queries/cash_flows.sql
+    5.	make sqlc
+    6.	Implementar internal/db (pgxpool)
+    7.	Implementar domain/cashflow + repo Postgres + handlers
+    8.	Subir API e testar:
+    •	POST cashflow
+    •	GET cashflows month
+    9.	Depois: categories endpoints + seed categories
+    10.	Depois: budget, picuinhas, cards (iterativo)
 
 ⸻
 
 ### 12) Critérios de qualidade
-	•	Nenhum handler acessa sqlc diretamente: sempre via service + repo.
-	•	Domínio não importa Echo nem pgx.
-	•	Todas queries sqlc têm testes de integração (posterior).
-	•	Migrations versionadas e reprodutíveis.
 
+    •	Nenhum handler acessa sqlc diretamente: sempre via service + repo.
+    •	Domínio não importa Echo nem pgx.
+    •	Todas queries sqlc têm testes de integração (posterior).
+    •	Migrations versionadas e reprodutíveis.

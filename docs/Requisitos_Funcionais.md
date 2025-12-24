@@ -1,4 +1,5 @@
-# Documento de Requisitos Funcionais e Regras de Negócio  
+# Documento de Requisitos Funcionais e Regras de Negócio
+
 ## Sistema de Controle Financeiro Pessoal (HausHaltsMeister)
 
 ---
@@ -46,11 +47,13 @@ Esses princípios **regem todas as decisões técnicas e funcionais**:
 Representa **qualquer entrada ou saída de dinheiro** que afeta, direta ou indiretamente, a sua vida financeira.
 
 Características:
+
 - Toda movimentação relevante passa por aqui.
 - É o núcleo imutável do sistema.
 - Não carrega detalhes desnecessários.
 
 Um fluxo de caixa é composto por:
+
 - Data (ou mês de referência)
 - Direção (entrada ou saída)
 - Categoria
@@ -64,6 +67,7 @@ Um fluxo de caixa é composto por:
 Categorias representam **o “porquê” do dinheiro**, não o “como”.
 
 Regras:
+
 - Cada categoria possui uma **direção fixa**:
   - Entrada (`IN`)
   - Saída (`OUT`)
@@ -71,8 +75,10 @@ Regras:
 - Categorias podem ser:
   - Ativas
   - Inativas (históricas)
+- Categorias podem ser marcadas como **Relevantes para Orçamento** (ex: "Investimentos" pode não ser um gasto orçamentário, mas uma transferência patrimonial).
 
 Exemplos:
+
 - Entrada:
   - Ganho
   - Investimento (entrada vinda de investimento)
@@ -90,18 +96,21 @@ Exemplos:
 ### RF-01 — Criar entrada de dinheiro (ganho)
 
 O sistema deve permitir o registro de entradas simples de dinheiro, como:
+
 - Salário
 - Freela
 - Venda pontual
 - Ganhos diversos
 
 Campos obrigatórios:
+
 - Data
 - Categoria (somente categorias de entrada)
 - Nome do ganho
 - Valor
 
 Regras:
+
 - Valor deve ser maior que zero
 - Nenhuma forma de pagamento é exigida
 - Nenhum campo adicional deve ser obrigatório
@@ -113,6 +122,7 @@ Regras:
 O sistema deve permitir registrar entradas provenientes de investimentos (resgates).
 
 Regras específicas:
+
 - A categoria “Investimento” (entrada) implica automaticamente:
   - Que o valor **deve ser considerado no cálculo de quanto deve ser reinvestido**
 - Não é necessário informar:
@@ -127,17 +137,20 @@ Esses detalhes serão tratados em um módulo futuro.
 ### RF-03 — Criar saída simples de dinheiro
 
 O sistema deve permitir registrar saídas simples, como:
+
 - Pagamentos à vista
 - Gastos cotidianos
 - Despesas sem parcelamento
 
 Campos obrigatórios:
+
 - Data
 - Categoria (somente categorias de saída)
 - Nome do gasto
 - Valor
 
 Campos opcionais:
+
 - Forma de pagamento
 - Indicação de gasto fixo
 
@@ -150,6 +163,7 @@ Campos opcionais:
 O sistema deve permitir marcar uma saída como **gasto fixo**.
 
 Regras:
+
 - Gastos fixos podem ser copiados automaticamente para meses seguintes
 - O valor pode ser ajustado mês a mês
 - A cópia nunca deve ocorrer sem confirmação explícita
@@ -161,6 +175,7 @@ Regras:
 Qualquer saída que não seja marcada como fixa é considerada variável.
 
 Regras:
+
 - Gastos variáveis não são copiados automaticamente
 - Devem aparecer apenas no mês em que foram registrados
 
@@ -173,6 +188,7 @@ Regras:
 O sistema deve permitir registrar compras parceladas realizadas em cartão de crédito.
 
 Regras:
+
 - O usuário informa:
   - Nome da compra
   - Valor total
@@ -184,6 +200,7 @@ Regras:
   - Um fluxo de caixa de saída para cada mês/parcela
 
 Cada parcela:
+
 - Deve impactar o mês correto
 - Deve aparecer na fatura do cartão correspondente
 
@@ -192,6 +209,7 @@ Cada parcela:
 ### RF-07 — Projeção de gastos futuros
 
 O sistema deve:
+
 - Mostrar parcelas futuras como compromissos
 - Permitir visualização do impacto futuro no fluxo de caixa
 - Não misturar gastos futuros com gastos já realizados
@@ -205,6 +223,7 @@ O sistema deve:
 O sistema deve permitir criar um orçamento para um mês específico.
 
 O orçamento é composto por:
+
 - Itens por categoria de saída
 - Valores absolutos ou percentuais da renda
 
@@ -213,6 +232,7 @@ O orçamento é composto por:
 ### RF-09 — Modos de orçamento
 
 O sistema deve suportar dois modos de análise:
+
 - **Mensal**: considera apenas o mês atual
 - **Somatório**: considera o acumulado dos meses anteriores
 
@@ -221,6 +241,7 @@ O sistema deve suportar dois modos de análise:
 ### RF-10 — Alteração de orçamento por mês
 
 O usuário pode alterar:
+
 - Percentuais
 - Valores
 - Estratégia de orçamento
@@ -232,6 +253,7 @@ Sem impacto retroativo em meses já fechados.
 ### RF-11 — Alteração de orçamento em lote
 
 O sistema deve permitir:
+
 - Aplicar uma nova regra de orçamento a vários meses futuros
 - Manter histórico intacto
 
@@ -242,6 +264,7 @@ O sistema deve permitir:
 ### RF-12 — Cadastro de pessoas
 
 O sistema deve permitir cadastrar pessoas associadas a picuinhas:
+
 - Familiares
 - Amigos
 - Terceiros
@@ -251,11 +274,13 @@ O sistema deve permitir cadastrar pessoas associadas a picuinhas:
 ### RF-13 — Registrar empréstimos e dívidas
 
 O sistema deve permitir registrar:
+
 - Dinheiro emprestado
 - Compras feitas no cartão para terceiros
 - Ajustes de saldo
 
 Regras:
+
 - O saldo da pessoa é calculado dinamicamente
 - Não existe “quitação automática”
 - Valores podem variar livremente
@@ -265,6 +290,7 @@ Regras:
 ### RF-14 — Pagamentos irregulares
 
 O sistema deve permitir:
+
 - Pagamentos parciais
 - Pagamentos fora de ordem
 - Novos empréstimos antes da quitação anterior
@@ -276,6 +302,7 @@ Tudo deve refletir corretamente no saldo.
 ### RF-15 — Integração com fluxo de caixa
 
 Sempre que uma picuinha:
+
 - Gerar entrada real de dinheiro → criar fluxo de caixa `IN`
 - Gerar saída real de dinheiro → criar fluxo de caixa `OUT`
 
@@ -290,6 +317,7 @@ Picuinhas conceituais (ex.: dívida registrada) **podem não gerar fluxo imediat
 O usuário pode criar novas categorias a qualquer momento.
 
 Regras:
+
 - Categoria deve ter direção fixa (IN ou OUT)
 - Categoria nova só afeta lançamentos futuros
 
@@ -300,6 +328,7 @@ Regras:
 O sistema deve permitir desativar categorias.
 
 Regras:
+
 - Categorias desativadas:
   - Não aparecem em formulários novos
   - Permanecem visíveis em dados históricos
@@ -312,6 +341,7 @@ Regras:
 ### RF-18 — Dashboard mensal
 
 O sistema deve exibir:
+
 - Total de entradas
 - Total de saídas
 - Saldo do mês
@@ -323,6 +353,7 @@ O sistema deve exibir:
 ### RF-19 — Fluxo de caixa acumulado
 
 O sistema deve permitir visualizar:
+
 - Evolução do saldo ao longo do tempo
 - Impacto de gastos futuros
 - Separação visual entre:
@@ -334,6 +365,7 @@ O sistema deve permitir visualizar:
 ### RF-20 — Visões por categoria
 
 O sistema deve permitir visualizar:
+
 - Histórico por categoria
 - Orçado x realizado
 - Tendências de crescimento/redução
@@ -362,6 +394,7 @@ Ele é:
 - Um **laboratório de arquitetura de software**
 
 Qualquer implementação deve respeitar:
+
 - Evolução sem quebra
 - Clareza de domínio
 - Zero gambiarras

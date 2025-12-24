@@ -32,6 +32,7 @@ type BudgetItem struct {
 	CategoryName   string
 	Mode           string // ABSOLUTE or PERCENT
 	PlannedAmount  float64
+	ActualAmount   float64 // Calculated at runtime
 	TargetPercent  float64
 	Notes          string
 }

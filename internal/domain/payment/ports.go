@@ -1,14 +1,34 @@
 package payment
 
-import "context"
+import (
+	"context"
+	"time"
+)
+
+type InvoiceEntry struct {
+	CashFlowID   int32
+	Date         time.Time
+	Title        string
+	Amount       float64
+	CategoryName string
+}
+
+type Invoice struct {
+	PaymentMethodID int32
+	Month           time.Time
+	Total           float64
+	Entries         []InvoiceEntry
+}
 
 type Repository interface {
 	Create(ctx context.Context, method *PaymentMethod) (*PaymentMethod, error)
 	List(ctx context.Context, activeOnly bool) ([]PaymentMethod, error)
 	GetByID(ctx context.Context, id int32) (*PaymentMethod, error)
+	GetInvoiceEntries(ctx context.Context, paymentMethodID int32, month time.Time) ([]InvoiceEntry, error)
 }
 
 type Service interface {
 	CreatePaymentMethod(ctx context.Context, name, kind, bankName string, closingDay, dueDay *int32) (*PaymentMethod, error)
 	ListPaymentMethods(ctx context.Context) ([]PaymentMethod, error)
+	GetInvoice(ctx context.Context, paymentMethodID int32, month time.Time) (*Invoice, error)
 }
