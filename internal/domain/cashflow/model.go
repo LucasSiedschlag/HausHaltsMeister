@@ -1,20 +1,44 @@
 package cashflow
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
-type Direction string
-
-const (
-	DirectionIn  Direction = "IN"
-	DirectionOut Direction = "OUT"
+var (
+	ErrInvalidAmount = errors.New("amount must be greater than zero")
+	ErrEmptyTitle    = errors.New("title cannot be empty")
+	ErrInvalidDate   = errors.New("date is required")
 )
 
 type CashFlow struct {
-	ID         int64
-	Date       time.Time
-	CategoryID int64
-	Direction  Direction
-	Title      string
-	Amount     float64
+	ID           int32
+	Date         time.Time
+	CategoryID   int32
+	CategoryName string // Enriched field for display
+	Direction    string
+	Title        string
+	Amount       float64
 }
 
+func New(date time.Time, categoryID int32, direction, title string, amount float64) (*CashFlow, error) {
+	if amount <= 0 {
+		return nil, ErrInvalidAmount
+	}
+	if title == "" {
+		return nil, ErrEmptyTitle
+	}
+	if date.IsZero() {
+		return nil, ErrInvalidDate
+	}
+
+	// Note: Direction validation against Category happens in Service/Repo or Phase 3
+
+	return &CashFlow{
+		Date:       date,
+		CategoryID: categoryID,
+		Direction:  direction,
+		Title:      title,
+		Amount:     amount,
+	}, nil
+}

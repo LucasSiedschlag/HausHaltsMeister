@@ -1,4 +1,4 @@
-DB_NAME ?= haushaltsmeister
+DB_NAME ?= cashflow
 DB_USER ?= postgres
 DB_PASS ?= postgres
 DB_HOST ?= localhost

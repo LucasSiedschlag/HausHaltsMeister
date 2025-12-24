@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,66 +10,71 @@ import (
 )
 
 type CashFlowHandler struct {
-	service *cashflow.Service
+	service cashflow.Service
 }
 
-func RegisterCashFlowRoutes(e *echo.Echo, svc *cashflow.Service) {
-	h := &CashFlowHandler{service: svc}
-	e.POST("/cashflows", h.CreateCashFlow)
-	e.GET("/cashflows", h.ListCashFlows)
+func NewCashFlowHandler(service cashflow.Service) *CashFlowHandler {
+	return &CashFlowHandler{service: service}
 }
 
-type createCashFlowRequest struct {
-	Date       string  `json:"date"`        // ex.: "2025-12-01"
-	CategoryID int64   `json:"category_id"` // ex.: categoria Ganho/Investimento
-	Direction  string  `json:"direction"`   // "IN" ou "OUT"
+type CreateCashFlowRequest struct {
+	Date       string  `json:"date"` // YYYY-MM-DD
+	CategoryID int32   `json:"category_id"`
+	Direction  string  `json:"direction"`
 	Title      string  `json:"title"`
 	Amount     float64 `json:"amount"`
 }
 
-func (h *CashFlowHandler) CreateCashFlow(c echo.Context) error {
-	var req createCashFlowRequest
+func (h *CashFlowHandler) Create(c echo.Context) error {
+	var req CreateCashFlowRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
 	}
 
-	d, err := time.Parse("2006-01-02", req.Date)
+	parsedDate, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid date"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid date format, use YYYY-MM-DD"})
 	}
 
-	in := cashflow.CreateCashFlowInput{
-		Date:       d,
-		CategoryID: req.CategoryID,
-		Direction:  cashflow.Direction(req.Direction),
-		Title:      req.Title,
-		Amount:     req.Amount,
-	}
-
-	cf, err := h.service.CreateCashFlow(c.Request().Context(), in)
+	created, err := h.service.CreateCashFlow(
+		c.Request().Context(),
+		parsedDate,
+		req.CategoryID,
+		req.Direction,
+		req.Title,
+		req.Amount,
+	)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		if err == cashflow.ErrDirectionMismatch || err == cashflow.ErrCategoryNotFound {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create cash flow: %v", err)})
 	}
 
-	return c.JSON(http.StatusCreated, cf)
+	return c.JSON(http.StatusCreated, created)
 }
 
-func (h *CashFlowHandler) ListCashFlows(c echo.Context) error {
-	monthStr := c.QueryParam("month") // ex.: "2025-12-01"
+func (h *CashFlowHandler) ListByMonth(c echo.Context) error {
+	monthStr := c.QueryParam("month")
 	if monthStr == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month query param required"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month parameter is required (YYYY-MM-DD)"})
 	}
 
-	month, err := time.Parse("2006-01-02", monthStr)
+	parsedMonth, err := time.Parse("2006-01-02", monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format, use YYYY-MM-DD"})
 	}
 
-	list, err := h.service.ListCashFlowsByMonth(c.Request().Context(), month)
+	list, err := h.service.ListCashFlows(c.Request().Context(), parsedMonth)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to list cash flows"})
 	}
 
 	return c.JSON(http.StatusOK, list)
 }
 
+func RegisterCashFlowRoutes(e *echo.Echo, h *CashFlowHandler) {
+	g := e.Group("/cashflows")
+	g.POST("", h.Create)
+	g.GET("", h.ListByMonth)
+}

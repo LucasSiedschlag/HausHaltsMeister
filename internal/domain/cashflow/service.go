@@ -3,53 +3,51 @@ package cashflow
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/seuuser/cashflow/internal/domain/category"
 )
 
 var (
-	ErrInvalidAmount    = errors.New("amount must be positive")
-	ErrInvalidDirection = errors.New("invalid direction")
+	ErrCategoryNotFound  = errors.New("category not found")
+	ErrDirectionMismatch = errors.New("cash flow direction does not match category direction")
 )
 
-type Service struct {
-	repo Repository
+type CashFlowService struct {
+	repo    Repository
+	catRepo category.Repository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, catRepo category.Repository) *CashFlowService {
+	return &CashFlowService{
+		repo:    repo,
+		catRepo: catRepo,
+	}
 }
 
-type CreateCashFlowInput struct {
-	Date       time.Time
-	CategoryID int64
-	Direction  Direction
-	Title      string
-	Amount     float64
-}
-
-func (s *Service) CreateCashFlow(ctx context.Context, in CreateCashFlowInput) (*CashFlow, error) {
-	if in.Amount <= 0 {
-		return nil, ErrInvalidAmount
+func (s *CashFlowService) CreateCashFlow(ctx context.Context, date time.Time, categoryID int32, direction, title string, amount float64) (*CashFlow, error) {
+	newFlow, err := New(date, categoryID, direction, title, amount)
+	if err != nil {
+		return nil, fmt.Errorf("domain validation failed: %w", err)
 	}
 
-	if in.Direction != DirectionIn && in.Direction != DirectionOut {
-		return nil, ErrInvalidDirection
+	// Validate Category and Direction
+	cat, err := s.catRepo.GetByID(ctx, categoryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+	if cat == nil {
+		return nil, ErrCategoryNotFound
 	}
 
-	cf := &CashFlow{
-		Date:       in.Date,
-		CategoryID: in.CategoryID,
-		Direction:  in.Direction,
-		Title:      in.Title,
-		Amount:     in.Amount,
+	if cat.Direction != direction {
+		return nil, ErrDirectionMismatch
 	}
 
-	return s.repo.Create(ctx, cf)
+	return s.repo.Create(ctx, newFlow)
 }
 
-func (s *Service) ListCashFlowsByMonth(ctx context.Context, month time.Time) ([]CashFlow, error) {
-	// Ex: passamos "2025-12-01" para a query
-	monthStr := month.Format("2006-01-02")
-	return s.repo.ListByMonth(ctx, monthStr)
+func (s *CashFlowService) ListCashFlows(ctx context.Context, month time.Time) ([]*CashFlow, error) {
+	return s.repo.ListByMonth(ctx, month)
 }
-
