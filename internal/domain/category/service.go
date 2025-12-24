@@ -1,0 +1,31 @@
+package category
+
+import (
+	"context"
+	"fmt"
+)
+
+type CategoryService struct {
+	repo Repository
+}
+
+func NewService(repo Repository) *CategoryService {
+	return &CategoryService{repo: repo}
+}
+
+func (s *CategoryService) CreateCategory(ctx context.Context, name, direction string) (*Category, error) {
+	newCat, err := New(name, direction)
+	if err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
+
+	createdCat, err := s.repo.Create(ctx, newCat)
+	if err != nil {
+		return nil, fmt.Errorf("repository error: %w", err)
+	}
+	return createdCat, nil
+}
+
+func (s *CategoryService) ListCategories(ctx context.Context, activeOnly bool) ([]*Category, error) {
+	return s.repo.List(ctx, activeOnly)
+}
