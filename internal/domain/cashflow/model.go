@@ -19,9 +19,22 @@ type CashFlow struct {
 	Direction    string
 	Title        string
 	Amount       float64
+	IsFixed      bool
 }
 
-func New(date time.Time, categoryID int32, direction, title string, amount float64) (*CashFlow, error) {
+type MonthlySummary struct {
+	TotalIncome  float64 `json:"total_income"`
+	TotalExpense float64 `json:"total_expense"`
+	Balance      float64 `json:"balance"`
+}
+
+type CategorySummary struct {
+	CategoryName string  `json:"category_name"`
+	Direction    string  `json:"direction"`
+	TotalAmount  float64 `json:"total_amount"`
+}
+
+func New(date time.Time, categoryID int32, direction, title string, amount float64, isFixed bool) (*CashFlow, error) {
 	if amount <= 0 {
 		return nil, ErrInvalidAmount
 	}
@@ -40,5 +53,6 @@ func New(date time.Time, categoryID int32, direction, title string, amount float
 		Direction:  direction,
 		Title:      title,
 		Amount:     amount,
+		IsFixed:    isFixed,
 	}, nil
 }

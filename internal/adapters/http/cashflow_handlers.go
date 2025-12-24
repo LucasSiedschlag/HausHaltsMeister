@@ -23,6 +23,7 @@ type CreateCashFlowRequest struct {
 	Direction  string  `json:"direction"`
 	Title      string  `json:"title"`
 	Amount     float64 `json:"amount"`
+	IsFixed    bool    `json:"is_fixed"`
 }
 
 func (h *CashFlowHandler) Create(c echo.Context) error {
@@ -43,6 +44,7 @@ func (h *CashFlowHandler) Create(c echo.Context) error {
 		req.Direction,
 		req.Title,
 		req.Amount,
+		req.IsFixed,
 	)
 	if err != nil {
 		if err == cashflow.ErrDirectionMismatch || err == cashflow.ErrCategoryNotFound {
@@ -77,4 +79,68 @@ func RegisterCashFlowRoutes(e *echo.Echo, h *CashFlowHandler) {
 	g := e.Group("/cashflows")
 	g.POST("", h.Create)
 	g.GET("", h.ListByMonth)
+	g.POST("/copy-fixed", h.CopyFixed)
+	g.GET("/summary", h.MonthlySummary)
+	g.GET("/category-summary", h.CategorySummary)
+}
+
+func (h *CashFlowHandler) MonthlySummary(c echo.Context) error {
+	monthStr := c.QueryParam("month")
+	if monthStr == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month is required"})
+	}
+	parsedMonth, err := time.Parse("2006-01-02", monthStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format"})
+	}
+
+	summary, err := h.service.GetMonthlySummary(c.Request().Context(), parsedMonth)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get summary"})
+	}
+	return c.JSON(http.StatusOK, summary)
+}
+
+func (h *CashFlowHandler) CategorySummary(c echo.Context) error {
+	monthStr := c.QueryParam("month")
+	if monthStr == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month is required"})
+	}
+	parsedMonth, err := time.Parse("2006-01-02", monthStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format"})
+	}
+
+	summary, err := h.service.GetCategorySummary(c.Request().Context(), parsedMonth)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get category summary"})
+	}
+	return c.JSON(http.StatusOK, summary)
+}
+
+func (h *CashFlowHandler) CopyFixed(c echo.Context) error {
+	type Request struct {
+		FromMonth string `json:"from_month"`
+		ToMonth   string `json:"to_month"`
+	}
+	var req Request
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+	}
+
+	from, err := time.Parse("2006-01-02", req.FromMonth)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid from_month format"})
+	}
+	to, err := time.Parse("2006-01-02", req.ToMonth)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid to_month format"})
+	}
+
+	count, err := h.service.CopyFixedExpenses(c.Request().Context(), from, to)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to copy expenses: %v", err)})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"copied_count": count})
 }

@@ -33,6 +33,7 @@ type CashFlow struct {
 	Direction  string
 	Title      string
 	Amount     pgtype.Numeric
+	IsFixed    bool
 }
 
 // Entradas (Ganhos/Investimentos) NÃO precisam de registro aqui. Apenas saídas mais complexas.

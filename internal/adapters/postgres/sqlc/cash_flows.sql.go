@@ -17,11 +17,12 @@ INSERT INTO cash_flows (
   category_id,
   direction,
   title,
-  amount
+  amount,
+  is_fixed
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4, $5, $6
 )
-RETURNING cash_flow_id, date, category_id, direction, title, amount
+RETURNING cash_flow_id, date, category_id, direction, title, amount, is_fixed
 `
 
 type CreateCashFlowParams struct {
@@ -30,6 +31,7 @@ type CreateCashFlowParams struct {
 	Direction  string
 	Title      string
 	Amount     pgtype.Numeric
+	IsFixed    bool
 }
 
 func (q *Queries) CreateCashFlow(ctx context.Context, arg CreateCashFlowParams) (CashFlow, error) {
@@ -39,6 +41,7 @@ func (q *Queries) CreateCashFlow(ctx context.Context, arg CreateCashFlowParams) 
 		arg.Direction,
 		arg.Title,
 		arg.Amount,
+		arg.IsFixed,
 	)
 	var i CashFlow
 	err := row.Scan(
@@ -48,7 +51,66 @@ func (q *Queries) CreateCashFlow(ctx context.Context, arg CreateCashFlowParams) 
 		&i.Direction,
 		&i.Title,
 		&i.Amount,
+		&i.IsFixed,
 	)
+	return i, err
+}
+
+const getCategorySummary = `-- name: GetCategorySummary :many
+SELECT
+  fc.name,
+  fc.direction,
+  SUM(cf.amount)::float AS total_amount
+FROM cash_flows cf
+JOIN flow_categories fc ON fc.category_id = cf.category_id
+WHERE date_trunc('month', cf.date) = date_trunc('month', $1::date)
+GROUP BY fc.name, fc.direction
+ORDER BY total_amount DESC
+`
+
+type GetCategorySummaryRow struct {
+	Name        string
+	Direction   string
+	TotalAmount float64
+}
+
+func (q *Queries) GetCategorySummary(ctx context.Context, dollar_1 pgtype.Date) ([]GetCategorySummaryRow, error) {
+	rows, err := q.db.Query(ctx, getCategorySummary, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCategorySummaryRow
+	for rows.Next() {
+		var i GetCategorySummaryRow
+		if err := rows.Scan(&i.Name, &i.Direction, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMonthlySummary = `-- name: GetMonthlySummary :one
+SELECT
+  SUM(CASE WHEN direction = 'IN' THEN amount ELSE 0 END)::float AS total_income,
+  SUM(CASE WHEN direction = 'OUT' THEN amount ELSE 0 END)::float AS total_expense
+FROM cash_flows
+WHERE date_trunc('month', date) = date_trunc('month', $1::date)
+`
+
+type GetMonthlySummaryRow struct {
+	TotalIncome  float64
+	TotalExpense float64
+}
+
+func (q *Queries) GetMonthlySummary(ctx context.Context, dollar_1 pgtype.Date) (GetMonthlySummaryRow, error) {
+	row := q.db.QueryRow(ctx, getMonthlySummary, dollar_1)
+	var i GetMonthlySummaryRow
+	err := row.Scan(&i.TotalIncome, &i.TotalExpense)
 	return i, err
 }
 
@@ -60,6 +122,7 @@ SELECT
   cf.direction,
   cf.title,
   cf.amount,
+  cf.is_fixed,
   fc.name AS category_name
 FROM cash_flows cf
 JOIN flow_categories fc ON fc.category_id = cf.category_id
@@ -74,6 +137,7 @@ type ListCashFlowsByMonthRow struct {
 	Direction    string
 	Title        string
 	Amount       pgtype.Numeric
+	IsFixed      bool
 	CategoryName string
 }
 
@@ -93,6 +157,7 @@ func (q *Queries) ListCashFlowsByMonth(ctx context.Context, dollar_1 pgtype.Date
 			&i.Direction,
 			&i.Title,
 			&i.Amount,
+			&i.IsFixed,
 			&i.CategoryName,
 		); err != nil {
 			return nil, err

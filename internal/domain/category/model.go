@@ -13,6 +13,7 @@ const (
 var (
 	ErrInvalidDirection = errors.New("invalid direction: must be IN or OUT")
 	ErrEmptyName        = errors.New("category name cannot be empty")
+	ErrCategoryNotFound = errors.New("category not found")
 )
 
 type Category struct {

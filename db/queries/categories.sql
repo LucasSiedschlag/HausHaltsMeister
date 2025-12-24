@@ -19,3 +19,9 @@ ORDER BY name;
 SELECT category_id, name, direction, is_budget_relevant, is_active
 FROM flow_categories
 WHERE category_id = $1;
+
+-- name: UpdateCategory :one
+UPDATE flow_categories
+SET is_active = $2
+WHERE category_id = $1
+RETURNING category_id, name, direction, is_budget_relevant, is_active;

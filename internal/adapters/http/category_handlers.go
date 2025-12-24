@@ -1,6 +1,8 @@
 package http
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -29,7 +31,7 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 	cat, err := h.service.CreateCategory(c.Request().Context(), req.Name, req.Direction)
 	if err != nil {
 		// Map domain errors to status codes
-		if err == category.ErrInvalidDirection || err == category.ErrEmptyName {
+		if errors.Is(err, category.ErrInvalidDirection) || errors.Is(err, category.ErrEmptyName) {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
@@ -53,4 +55,21 @@ func RegisterCategoryRoutes(e *echo.Echo, h *CategoryHandler) {
 	g := e.Group("/categories")
 	g.POST("", h.Create)
 	g.GET("", h.List)
+	g.PATCH("/:id/deactivate", h.Deactivate)
+}
+
+func (h *CategoryHandler) Deactivate(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
+	}
+
+	err := h.service.DeactivateCategory(c.Request().Context(), id)
+	if err != nil {
+		// Could map ErrCategoryNotFound to 404 if defined
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to deactivate category"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "deactivated"})
 }

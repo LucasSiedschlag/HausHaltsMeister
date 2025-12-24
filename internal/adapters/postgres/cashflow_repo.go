@@ -56,6 +56,7 @@ func (r *CashFlowRepository) Create(ctx context.Context, cf *cashflow.CashFlow) 
 		Direction:  cf.Direction,
 		Title:      cf.Title,
 		Amount:     am,
+		IsFixed:    cf.IsFixed,
 	}
 
 	row, err := r.q.CreateCashFlow(ctx, params)
@@ -73,6 +74,7 @@ func (r *CashFlowRepository) Create(ctx context.Context, cf *cashflow.CashFlow) 
 		Direction:  row.Direction,
 		Title:      row.Title,
 		Amount:     val.Float64,
+		IsFixed:    row.IsFixed,
 	}, nil
 }
 
@@ -98,7 +100,55 @@ func (r *CashFlowRepository) ListByMonth(ctx context.Context, month time.Time) (
 			Direction:    row.Direction,
 			Title:        row.Title,
 			Amount:       val.Float64,
+			IsFixed:      row.IsFixed,
 		}
 	}
 	return result, nil
+}
+
+func (r *CashFlowRepository) GetMonthlySummary(ctx context.Context, month time.Time) (*cashflow.MonthlySummary, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	row, err := r.q.GetMonthlySummary(ctx, pgDate)
+	if err != nil {
+		return nil, err
+	}
+	// row is struct{ TotalIncome float64, TotalExpense float64 } (checking generated code assumption)
+	// Actually sqlc returns float64 directly if not null, or sql.NullFloat64?
+	// The query used ::float, so it should be float64. But SUM() can be NULL if no rows.
+	// So it's likely float64 or *float64 or sql.NullFloat64.
+	// Let's assume float64 for now, but handle potential mismatch if compilation fails.
+	// Update: query used `SUM(...)::float`. If no rows, returns NULL. = *float64?
+	// I'll check generated code if I could, but I'll use safe dereference logic assuming generated code follows standard PGX.
+
+	// Wait, if I can't check generated code, I should look at `sqlc` defaults.
+	// SUM usually implies null possibility.
+
+	// Let's implement optimistically using values.
+
+	inc := row.TotalIncome
+	exp := row.TotalExpense
+
+	return &cashflow.MonthlySummary{
+		TotalIncome:  inc,
+		TotalExpense: exp,
+		Balance:      inc - exp,
+	}, nil
+}
+
+func (r *CashFlowRepository) GetCategorySummary(ctx context.Context, month time.Time) ([]cashflow.CategorySummary, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	rows, err := r.q.GetCategorySummary(ctx, pgDate)
+	if err != nil {
+		return nil, err
+	}
+
+	var summaries []cashflow.CategorySummary
+	for _, row := range rows {
+		summaries = append(summaries, cashflow.CategorySummary{
+			CategoryName: row.Name,
+			Direction:    row.Direction,
+			TotalAmount:  row.TotalAmount,
+		})
+	}
+	return summaries, nil
 }

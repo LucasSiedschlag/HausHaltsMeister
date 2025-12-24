@@ -1,0 +1,76 @@
+package ucs
+
+import (
+	"encoding/json"
+	std_http "net/http"
+	"testing"
+
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/seuuser/cashflow/internal/adapters/http"
+	"github.com/seuuser/cashflow/internal/adapters/postgres"
+	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/seuuser/cashflow/internal/test/harness"
+)
+
+func TestUC04_CreateCategory(t *testing.T) {
+	// Setup DB
+	db := harness.SetupTestDB(t)
+	defer db.Pool.Close()
+
+	// Setup Clean Architecture Stack
+	repo := postgres.NewCategoryRepository(db.Pool)
+	svc := category.NewService(repo)
+	handler := http.NewCategoryHandler(svc)
+
+	// Setup Echo
+	e := echo.New()
+	http.RegisterCategoryRoutes(e, handler)
+	client := harness.NewHTTPClient(e)
+
+	t.Run("Success - Create Category", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"name":      "New Category Test",
+			"direction": "OUT",
+		}
+
+		rec := client.Request(t, "POST", "/categories", payload)
+
+		require.Equal(t, std_http.StatusCreated, rec.Code)
+
+		var resp map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		assert.Equal(t, "New Category Test", resp["Name"])
+		assert.Equal(t, "OUT", resp["Direction"])
+		assert.NotZero(t, resp["ID"])
+		assert.True(t, resp["IsActive"].(bool))
+	})
+
+	t.Run("Error - Invalid Direction", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"name":      "Bad Category",
+			"direction": "INVALID",
+		}
+
+		rec := client.Request(t, "POST", "/categories", payload)
+
+		require.Equal(t, std_http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "invalid direction")
+	})
+
+	t.Run("Error - Empty Name", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"name":      "",
+			"direction": "IN",
+		}
+
+		rec := client.Request(t, "POST", "/categories", payload)
+
+		require.Equal(t, std_http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "category name cannot be empty")
+	})
+}

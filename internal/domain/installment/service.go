@@ -160,7 +160,7 @@ func (s *InstallmentService) CreateInstallmentPurchase(ctx context.Context, desc
 
 		// Create CashFlow
 		// Direction OUT implied for purchases
-		cf, err := s.cfService.CreateCashFlow(ctx, currentDueDate, categoryID, "OUT", title, installmentAmount)
+		cf, err := s.cfService.CreateCashFlow(ctx, currentDueDate, categoryID, "OUT", title, installmentAmount, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create installment %d: %w", i+1, err)
 		}

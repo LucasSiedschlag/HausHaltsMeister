@@ -29,3 +29,11 @@ func (s *CategoryService) CreateCategory(ctx context.Context, name, direction st
 func (s *CategoryService) ListCategories(ctx context.Context, activeOnly bool) ([]*Category, error) {
 	return s.repo.List(ctx, activeOnly)
 }
+
+func (s *CategoryService) DeactivateCategory(ctx context.Context, id int32) error {
+	_, err := s.repo.Update(ctx, id, false)
+	if err != nil {
+		return fmt.Errorf("failed to deactivate category: %w", err)
+	}
+	return nil
+}

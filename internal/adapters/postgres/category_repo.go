@@ -94,3 +94,26 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*category.C
 		IsActive:         row.IsActive,
 	}, nil
 }
+
+func (r *CategoryRepository) Update(ctx context.Context, id int32, isActive bool) (*category.Category, error) {
+	params := sqlc.UpdateCategoryParams{
+		CategoryID: id,
+		IsActive:   isActive,
+	}
+
+	row, err := r.q.UpdateCategory(ctx, params)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, category.ErrCategoryNotFound // Assuming this exists or returns nil
+		}
+		return nil, err
+	}
+
+	return &category.Category{
+		ID:               row.CategoryID,
+		Name:             row.Name,
+		Direction:        row.Direction,
+		IsBudgetRelevant: row.IsBudgetRelevant,
+		IsActive:         row.IsActive,
+	}, nil
+}

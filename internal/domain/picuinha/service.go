@@ -91,7 +91,7 @@ func (s *PicuinhaService) AddDiff(ctx context.Context, personID int32, amount fl
 			title = fmt.Sprintf("Recebimento: %s", name)
 		}
 
-		cf, err := s.cfService.CreateCashFlow(ctx, time.Now(), foundID, cfDirection, title, amount)
+		cf, err := s.cfService.CreateCashFlow(ctx, time.Now(), foundID, cfDirection, title, amount, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create automatic cash flow: %w", err)
 		}

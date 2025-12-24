@@ -1,0 +1,1 @@
+ALTER TABLE cash_flows ADD COLUMN is_fixed BOOLEAN NOT NULL DEFAULT false;
