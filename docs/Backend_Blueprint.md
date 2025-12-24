@@ -63,6 +63,12 @@ cashflow/
         sqlc/
 
       http/
+        dto/
+          category.go
+          cashflow.go
+          budget.go
+          picuinha.go
+          payment.go
         router.go
         cashflow_handlers.go
         budget_handlers.go
@@ -99,10 +105,15 @@ cashflow/
 • Validar inputs no domínio (service), não no handler (handler só faz parse/bind).
 • internal/ deve conter todo código não exportável.
 • Não usar ORMs.
+• **DTO Pattern (HTTP):**
 
-3.2 Nomes e datas
-• Datas: JSON sempre YYYY-MM-DD.
-• Mês de referência: usar o primeiro dia (ex: 2026-01-01) para queries de “por mês”.
+- Todo handler deve usar structs específicas para Request/Response (`internal/adapters/http/dto`).
+- Nomes de campos JSON em `snake_case`.
+- Conversão DTO <-> Domain deve ser explícita no handler ou em helpers.
+
+  3.2 Nomes e datas
+  • Datas: JSON sempre YYYY-MM-DD.
+  • Mês de referência: usar o primeiro dia (ex: 2026-01-01) para queries de “por mês”.
 
 ⸻
 
@@ -216,9 +227,9 @@ Categories
 8.2 Rotas posteriores (iterativas)
 
 Budget
-• POST /budgets/:month/items (bulk upsert)
+• POST /budgets/:month/items (upsert)
 • GET /budgets/:month/summary
-• PATCH /budgets/items/bulk (alterar % em vários meses)
+• POST /budgets/batch (alterar em lote para vários meses)
 
 Picuinhas
 • POST /picuinhas/persons
@@ -274,18 +285,18 @@ Retorna lista do mês.
 
 ### 11) Checklist de implementação (ordem sugerida)
 
-    1.	Criar go.mod, estrutura de pastas
-    2.	Criar migrations/001_init.sql (categories + cash_flows)
-    3.	make migrate
-    4.	Criar sqlc.yaml e db/queries/cash_flows.sql
-    5.	make sqlc
-    6.	Implementar internal/db (pgxpool)
-    7.	Implementar domain/cashflow + repo Postgres + handlers
-    8.	Subir API e testar:
+    1.	[x] Criar go.mod, estrutura de pastas
+    2.	[x] Criar migrations/001_init.sql (categories + cash_flows)
+    3.	[x] make migrate
+    4.	[x] Criar sqlc.yaml e db/queries/cash_flows.sql
+    5.	[x] make sqlc
+    6.	[x] Implementar internal/db (pgxpool)
+    7.	[x] Implementar domain/cashflow + repo Postgres + handlers
+    8.	[x] Subir API e testar:
     •	POST cashflow
     •	GET cashflows month
-    9.	Depois: categories endpoints + seed categories
-    10.	Depois: budget, picuinhas, cards (iterativo)
+    9.	[x] Depois: categories endpoints + seed categories
+    10.	[x] Depois: budget, picuinhas, cards (iterativo)
 
 ⸻
 

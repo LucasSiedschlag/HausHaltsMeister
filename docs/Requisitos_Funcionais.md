@@ -210,9 +210,9 @@ Cada parcela:
 
 O sistema deve:
 
-- Mostrar parcelas futuras como compromissos
+- Mostrar parcelas futuras como compromissos (saídas previstas)
 - Permitir visualização do impacto futuro no fluxo de caixa
-- Não misturar gastos futuros com gastos já realizados
+- Não misturar gastos futuros com gastos já realizados (distinção visual ou de status)
 
 ---
 
@@ -301,10 +301,13 @@ Tudo deve refletir corretamente no saldo.
 
 ### RF-15 — Integração com fluxo de caixa
 
-Sempre que uma picuinha:
+A integração entre Picuinhas e Fluxo de Caixa é **opcional no momento do lançamento**:
 
-- Gerar entrada real de dinheiro → criar fluxo de caixa `IN`
-- Gerar saída real de dinheiro → criar fluxo de caixa `OUT`
+- Se o usuário selecionar "Auto-criar Fluxo":
+  - Empréstimo (`PLUS`) → cria fluxo de caixa `OUT` na categoria "Picuinhas".
+  - Pagamento/Recebimento (`MINUS`) → cria fluxo de caixa `IN` na categoria "Picuinhas".
+- Se NÃO selecionar:
+  - Apenas o saldo da dívida é ajustado (ex: dívida antiga, compra para terceiro, ajuste de contas).
 
 Picuinhas conceituais (ex.: dívida registrada) **podem não gerar fluxo imediato**.
 

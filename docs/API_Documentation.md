@@ -1,82 +1,64 @@
 # Documentação da API HausHaltsMeister
 
-Este documento descreve todos os endpoints da API do sistema HausHaltsMeister, organizados por domínio.
+Este documento descreve todos os endpoints da API do sistema, alinhados com a implementação atual (Go + Echo + DTOs).
+
+**Observações Gerais:**
+
+- Todas as datas devem ser enviadas no formato `YYYY-MM-DD` (exeto quando especificado timestamp).
+- Os nomes dos campos no JSON seguem o padrão `snake_case`.
+- Valores monetários são `float` (ex: `1250.50`).
 
 ---
 
 ## 1. Domínio: Categorias (`category`)
 
-Gerencia as classificações de fluxo de caixa (ex: Salário, Custos fixos, Prazeres).
-
 ### 1.1 Criar Categoria
 
-**Endpoint:** `POST /categories`  
-**Descrição:** Registra uma nova categoria de fluxo no sistema.
+**Endpoint:** `POST /categories`
 
-**Inputs:**
-
-- `name` (string, obrigatório): Nome descritivo da categoria.
-- `direction` (string, obrigatório): Direção fixa da categoria (`IN` ou `OUT`).
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
   "name": "Educação",
-  "direction": "OUT"
+  "direction": "OUT",
+  "is_budget_relevant": true
 }
 ```
 
-**Exemplo de Resposta (JSON - 201 Created):**
+- `direction`: "IN" ou "OUT".
+- `is_budget_relevant`: Define se aparece no planejamento.
+
+**Response (201 Created):**
 
 ```json
 {
-  "ID": 15,
-  "Name": "Educação",
-  "Direction": "OUT",
-  "IsBudgetRelevant": true,
-  "IsActive": true
+  "id": 15,
+  "name": "Educação",
+  "direction": "OUT",
+  "is_budget_relevant": true,
+  "is_active": true
 }
 ```
 
----
-
 ### 1.2 Listar Categorias
 
-**Endpoint:** `GET /categories`  
-**Descrição:** Retorna a lista de todas as categorias cadastradas (incluindo as pré-definidas no sistema).
+**Endpoint:** `GET /categories`
 
-**Parâmetros de Consulta (Query Params):**
+**Query Params:**
 
-- `active` (boolean, opcional): Se `true`, retorna apenas categorias ativas. Default: `false`.
+- `active` (bool): `true` para apenas ativas.
 
-**Exemplo de Requisição:**
-`GET /categories?active=true`
-
-**Exemplo de Resposta (JSON - 200 OK):**
+**Response (200 OK):**
 
 ```json
 [
   {
-    "ID": 1,
-    "Name": "Salário",
-    "Direction": "IN",
-    "IsBudgetRelevant": true,
-    "IsActive": true
-  },
-  {
-    "ID": 5,
-    "Name": "Investimentos",
-    "Direction": "OUT",
-    "IsBudgetRelevant": true,
-    "IsActive": true
-  },
-  {
-    "ID": 10,
-    "Name": "Prazeres",
-    "Direction": "OUT",
-    "IsBudgetRelevant": true,
-    "IsActive": true
+    "id": 1,
+    "name": "Salário",
+    "direction": "IN",
+    "is_budget_relevant": true,
+    "is_active": true
   }
 ]
 ```
@@ -85,71 +67,96 @@ Gerencia as classificações de fluxo de caixa (ex: Salário, Custos fixos, Praz
 
 ## 2. Domínio: Fluxo de Caixa (`cashflow`)
 
-Gerencia as entradas e saídas reais de dinheiro.
-
 ### 2.1 Criar Lançamento
 
-**Endpoint:** `POST /cashflows`  
-**Descrição:** Registra uma nova movimentação financeira baseada nas categorias existentes.
+**Endpoint:** `POST /cashflows`
 
-**Inputs:**
-
-- `date` (string, obrigatório): Data da movimentação no formato `YYYY-MM-DD`.
-- `category_id` (int, obrigatório): ID da categoria associada (ex: 10 para 'Prazeres').
-- `direction` (string, obrigatório): Direção da movimentação (`IN` ou `OUT`). Deve coincidir com a direção da categoria.
-- `title` (string, obrigatório): Título ou descrição curta do lançamento.
-- `amount` (float, obrigatório): Valor da movimentação (maior que zero).
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
-  "date": "2025-12-24",
+  "date": "2024-03-15",
   "category_id": 10,
   "direction": "OUT",
   "title": "Jantar Especial",
-  "amount": 250.0
+  "amount": 250.0,
+  "is_fixed": false
 }
 ```
 
-**Exemplo de Resposta (JSON - 201 Created):**
+**Response (201 Created):**
 
 ```json
 {
-  "ID": 42,
-  "Date": "2025-12-24T00:00:00Z",
-  "CategoryID": 10,
-  "Direction": "OUT",
-  "Title": "Jantar Especial",
-  "Amount": 250.0
+  "id": 42,
+  "date": "2024-03-15",
+  "category_id": 10,
+  "direction": "OUT",
+  "title": "Jantar Especial",
+  "amount": 250.0,
+  "is_fixed": false
 }
 ```
 
----
+### 2.2 Listar Lançamentos (Extrato)
 
-### 2.2 Listar Lançamentos por Mês
+**Endpoint:** `GET /cashflows`
 
-**Endpoint:** `GET /cashflows`  
-**Descrição:** Retorna todos os lançamentos de um mês específico.
+**Query Params:**
 
-**Parâmetros de Consulta (Query Params):**
+- `month` (string): `YYYY-MM-DD` (ex: `2024-03-01`).
 
-- `month` (string, obrigatório): Primeiro dia do mês desejado no formato `YYYY-MM-DD`.
+**Response (200 OK):** List of CashFlow objects.
 
-**Exemplo de Requisição:**
-`GET /cashflows?month=2025-12-01`
+### 2.3 Copiar Gastos Fixos
 
-**Exemplo de Resposta (JSON - 200 OK):**
+**Endpoint:** `POST /cashflows/copy-fixed`
+
+**Payload (JSON):**
+
+```json
+{
+  "from_month": "2024-02-01",
+  "to_month": "2024-03-01"
+}
+```
+
+**Response (200 OK):** `{"copied_count": 5}`
+
+### 2.4 Resumo Mensal (Financial Summary)
+
+**Endpoint:** `GET /cashflows/summary`
+
+**Query Params:**
+
+- `month` (string): `YYYY-MM-DD`.
+
+**Response (200 OK):**
+
+```json
+{
+  "total_income": 5000.0,
+  "total_expense": 3500.0,
+  "balance": 1500.0
+}
+```
+
+### 2.5 Resumo por Categoria
+
+**Endpoint:** `GET /cashflows/category-summary`
+
+**Query Params:**
+
+- `month` (string): `YYYY-MM-DD`.
+
+**Response (200 OK):**
 
 ```json
 [
   {
-    "ID": 42,
-    "Date": "2025-12-24T00:00:00Z",
-    "CategoryID": 10,
-    "Direction": "OUT",
-    "Title": "Jantar Especial",
-    "Amount": 250.0
+    "category_name": "Alimentação",
+    "direction": "OUT",
+    "total_amount": 1200.0
   }
 ]
 ```
@@ -158,23 +165,13 @@ Gerencia as entradas e saídas reais de dinheiro.
 
 ## 3. Domínio: Orçamento (`budget`)
 
-Permite planejar gastos mensais por categoria e comparar com o realizado.
-
 ### 3.1 Definir Item de Orçamento
 
-**Endpoint:** `POST /budgets/:month/items`  
-**Descrição:** Define ou atualiza o valor planejado para uma categoria em um mês.
+**Endpoint:** `POST /budgets/:month/items`
 
-**Parâmetros de Caminho (Path Params):**
+**Path Params:** `month` (YYYY-MM-DD).
 
-- `month` (string, obrigatório): Primeiro dia do mês no formato `YYYY-MM-DD`.
-
-**Inputs:**
-
-- `category_id` (int, obrigatório): ID da categoria (deve ser `OUT`, ex: 10 para 'Prazeres').
-- `planned_amount` (float, obrigatório): Valor orçado para o mês.
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
@@ -183,55 +180,45 @@ Permite planejar gastos mensais por categoria e comparar com o realizado.
 }
 ```
 
-**Exemplo de Resposta (JSON - 200 OK):**
+**Response (200 OK):** BudgetItem object.
+
+### 3.2 Definir Orçamento em Lote (Batch)
+
+**Endpoint:** `POST /budgets/batch`
+
+Use para aplicar o mesmo valor a vários meses futuros.
+
+**Payload (JSON):**
 
 ```json
 {
-  "ID": 1,
-  "BudgetPeriodID": 100,
-  "CategoryID": 10,
-  "CategoryName": "Prazeres",
-  "Mode": "ABSOLUTE",
-  "PlannedAmount": 2000.0,
-  "ActualAmount": 0,
-  "TargetPercent": 0,
-  "Notes": ""
+  "start_month": "2024-04-01",
+  "end_month": "2024-12-01",
+  "category_id": 10,
+  "planned_amount": 2000.0
 }
 ```
 
----
+**Response (200 OK):** `{"status": "success"}`
 
-### 3.2 Resumo do Orçamento (Orçado x Realizado)
+### 3.3 Visualizar Orçamento (Planned vs Actual)
 
-**Endpoint:** `GET /budgets/:month/summary`  
-**Descrição:** Retorna o plano orçamentário completo do mês com os valores reais gastos em cada categoria.
+**Endpoint:** `GET /budgets/:month/summary`
 
-**Parâmetros de Caminho (Path Params):**
-
-- `month` (string, obrigatório): Primeiro dia do mês no formato `YYYY-MM-DD`.
-
-**Exemplo de Requisição:**
-`GET /budgets/2025-12-01/summary`
-
-**Exemplo de Resposta (JSON - 200 OK):**
+**Response (200 OK):**
 
 ```json
 {
-  "ID": 100,
-  "Month": "2025-12-01T00:00:00Z",
-  "AnalysisMode": "DEFAULT",
-  "IsClosed": false,
-  "Items": [
+  "month": "2024-03-01",
+  "items": [
     {
-      "ID": 1,
-      "BudgetPeriodID": 100,
-      "CategoryID": 10,
-      "CategoryName": "Prazeres",
-      "Mode": "ABSOLUTE",
-      "PlannedAmount": 2000.0,
-      "ActualAmount": 250.0,
-      "TargetPercent": 0,
-      "Notes": ""
+      "id": 5,
+      "budget_period_id": 10,
+      "category_id": 10,
+      "category_name": "Alimentação",
+      "mode": "ABSOLUTE",
+      "planned_amount": 2000.0,
+      "actual_amount": 1200.0
     }
   ]
 }
@@ -241,222 +228,126 @@ Permite planejar gastos mensais por categoria e comparar com o realizado.
 
 ## 4. Domínio: Picuinhas (`picuinha`)
 
-Gerencia empréstimos, dívidas e dinheiro de terceiros.
-
 ### 4.1 Cadastrar Pessoa
 
-**Endpoint:** `POST /picuinhas/persons`  
-**Descrição:** Adiciona uma nova pessoa para controle de dívidas.
+**Endpoint:** `POST /picuinhas/persons`
 
-**Inputs:**
-
-- `name` (string, obrigatório): Nome da pessoa.
-- `notes` (string, opcional): Notas adicionais.
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
-  "name": "Joãozinho",
-  "notes": "Colega de trabalho"
+  "name": "João",
+  "notes": "Amigo do trabalho"
 }
 ```
 
-**Exemplo de Resposta (JSON - 201 Created):**
+### 4.2 Listar Pessoas (com Saldo)
 
-```json
-{
-  "ID": 1,
-  "Name": "Joãozinho",
-  "Notes": "Colega de trabalho",
-  "Balance": 0
-}
-```
+**Endpoint:** `GET /picuinhas/persons`
 
----
-
-### 4.2 Listar Pessoas e Saldos
-
-**Endpoint:** `GET /picuinhas/persons`  
-**Descrição:** Retorna a lista de pessoas com seus respectivos saldos devedores (positivo = deve para você, negativo = você deve para ela).
-
-**Exemplo de Resposta (JSON - 200 OK):**
+**Response (200 OK):**
 
 ```json
 [
   {
-    "ID": 1,
-    "Name": "Joãozinho",
-    "Notes": "Colega de trabalho",
-    "Balance": 150.0
+    "id": 1,
+    "name": "João",
+    "notes": "Amigo do trabalho",
+    "balance": 150.0
   }
 ]
 ```
 
----
+_Note: Balance > 0 means they ensure you (você tem crédito)._
 
-### 4.3 Registrar Movimentação de Dívida
+### 4.3 Registrar Entrada (Empréstimo/Pagamento)
 
-**Endpoint:** `POST /picuinhas/entries`  
-**Descrição:** Registra um novo empréstimo (PLUS) ou recebimento (MINUS).
+**Endpoint:** `POST /picuinhas/entries`
 
-**Inputs:**
-
-- `person_id` (int, obrigatório): ID da pessoa.
-- `kind` (string, obrigatório): Tipo da movimentação (`PLUS` para aumentar a dívida dela, `MINUS` para diminuir).
-- `amount` (float, obrigatório): Valor da movimentação.
-- `cash_flow_id` (int, opcional): Vínculo com um lançamento manual de fluxo de caixa.
-- `auto_create_flow` (boolean, opcional): Se `true`, cria automaticamente um lançamento no Fluxo de Caixa na categoria pré-definida 'Picuinhas'.
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
   "person_id": 1,
+  "amount": 100.0,
   "kind": "PLUS",
-  "amount": 150.0,
   "auto_create_flow": true
 }
 ```
 
-**Exemplo de Resposta (JSON - 201 Created):**
+- `kind`: "PLUS" (aumenta dívida dela/meu crédito) ou "MINUS" (diminui dívida dela/ela pagou).
+- `auto_create_flow`: Se `true`, cria fluxo de caixa correspondente na categoria "Picuinhas".
+
+**Response (201 Created):**
 
 ```json
 {
-  "ID": 5,
-  "PersonID": 1,
-  "Date": "2025-12-24T00:00:00Z",
-  "Kind": "PLUS",
-  "Amount": 150.0,
-  "CashFlowID": 201
+  "id": 10,
+  "person_id": 1,
+  "amount": 100.0,
+  "kind": "PLUS",
+  "created_at": "2024-03-15T10:00:00Z"
 }
 ```
 
 ---
 
-## 5. Domínio: Meios de Pagamento (`payment`)
-
-Gerencia as formas como o dinheiro é transacionado (Cartões, Pix, Dinheiro).
+## 5. Domínio: Cartões e Parcelamentos (`payment/installment`)
 
 ### 5.1 Criar Meio de Pagamento
 
-**Endpoint:** `POST /payment-methods`  
-**Descrição:** Registra um novo meio de pagamento.
+**Endpoint:** `POST /payment-methods`
 
-**Inputs:**
-
-- `name` (string, obrigatório): Nome (ex: "Nubank").
-- `kind` (string, obrigatório): Tipo (`CREDIT_CARD`, `DEBIT_CARD`, `CASH`, `PIX`, `BANK_SLIP`).
-- `bank_name` (string, opcional): Nome do banco.
-- `closing_day` (int, opcional): Dia de fechamento (apenas para `CREDIT_CARD`).
-- `due_day` (int, opcional): Dia de vencimento (apenas para `CREDIT_CARD`).
-
-**Exemplo de Requisição (JSON):**
+**Payload (JSON):**
 
 ```json
 {
   "name": "Nubank",
   "kind": "CREDIT_CARD",
-  "bank_name": "Nubank S.A.",
+  "bank_name": "Nu Pagamentos",
   "closing_day": 1,
   "due_day": 7
 }
 ```
 
-**Exemplo de Resposta (JSON - 201 Created):**
+### 5.2 Criar Compra Parcelada
+
+**Endpoint:** `POST /installments`
+
+**Payload (JSON):**
 
 ```json
 {
-  "ID": 1,
-  "Name": "Nubank",
-  "Kind": "CREDIT_CARD",
-  "BankName": "Nubank S.A.",
-  "ClosingDay": 1,
-  "DueDay": 7,
-  "IsActive": true
+  "description": "Notebook",
+  "total_amount": 3000.0,
+  "count": 10,
+  "category_id": 15,
+  "payment_method_id": 1,
+  "purchase_date": "2024-03-15"
 }
 ```
 
----
+**Response (201 Created):** Includes `installment_amount` and `start_month`.
 
-### 5.2 Visualizar Fatura do Cartão
+### 5.3 Visualizar Fatura
 
-**Endpoint:** `GET /payment-methods/:id/invoice`  
-**Descrição:** Lista todos os lançamentos vinculados a um cartão específico em um determinado mês.
+**Endpoint:** `GET /payment-methods/:id/invoice`
 
-**Parâmetros de Caminho (Path Params):**
+**Query Params:**
 
-- `id` (int, obrigatório): ID do meio de pagamento.
+- `month` (string): `YYYY-MM-DD`.
 
-**Parâmetros de Consulta (Query Params):**
-
-- `month` (string, obrigatório): Mês da fatura no formato `YYYY-MM-DD`.
-
-**Exemplo de Requisição:**
-`GET /payment-methods/1/invoice?month=2024-01-01`
-
-**Exemplo de Resposta (JSON - 200 OK):**
+**Response (200 OK):**
 
 ```json
 {
-  "PaymentMethodID": 1,
-  "Month": "2024-01-01T00:00:00Z",
-  "Total": 500.0,
-  "Entries": [
+  "total": 300.0,
+  "entries": [
     {
-      "CashFlowID": 101,
-      "Date": "2024-01-07T00:00:00Z",
-      "Title": "Compra iPhone (1/10)",
-      "Amount": 500.0,
-      "CategoryName": "Picuinhas"
+      "title": "Notebook (1/10)",
+      "amount": 300.0,
+      "date": "2024-04-07"
     }
   ]
-}
-```
-
----
-
-## 6. Domínio: Parcelamentos (`installment`)
-
-Gerencia compras parceladas com geração automática de fluxos de caixa.
-
-### 6.1 Criar Compra Parcelada
-
-**Endpoint:** `POST /installments`  
-**Descrição:** Registra uma compra e gera automaticamente todos os lançamentos de fluxo de caixa futuros.
-
-**Inputs:**
-
-- `description` (string, obrigatório): Título da compra.
-- `total_amount` (float, obrigatório): Valor total bruto.
-- `count` (int, obrigatório): Número de parcelas.
-- `category_id` (int, obrigatório): Categoria do gasto (ex: 12 para 'Educação').
-- `payment_method_id` (int, obrigatório): ID do cartão ou meio de pagamento.
-- `purchase_date` (string, obrigatório): Data da compra (YYYY-MM-DD).
-
-**Exemplo de Requisição (JSON):**
-
-```json
-{
-  "description": "Compra iPhone",
-  "total_amount": 5000.0,
-  "count": 10,
-  "category_id": 12,
-  "payment_method_id": 1,
-  "purchase_date": "2023-12-25"
-}
-```
-
-**Exemplo de Resposta (JSON - 201 Created):**
-
-```json
-{
-  "ID": 1,
-  "Description": "Compra iPhone",
-  "TotalAmount": 5000.0,
-  "InstallmentCount": 10,
-  "InstallmentAmount": 500.0,
-  "StartMonth": "2023-12-25T00:00:00Z",
-  "PaymentMethodID": 1
 }
 ```

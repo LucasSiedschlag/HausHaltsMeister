@@ -243,8 +243,8 @@ Registrar compra parcelada em cartão de crédito.
 
 - Sistema cria:
   - Um plano de parcelamento
-  - Um fluxo de caixa mensal por parcela
-- Parcelas futuras aparecem como compromissos.
+  - Um fluxo de caixa mensal por parcela (saídas `OUT` futuras).
+- Parcelas futuras aparecem como compromissos no fluxo de caixa.
 
 ---
 
@@ -256,7 +256,7 @@ Ver total da fatura por mês.
 **Fluxo Principal:**
 
 1. Usuário seleciona cartão e mês.
-2. Sistema soma todas as parcelas do mês.
+2. Sistema soma todas as parcelas "devidas" naquele mês (ou cuja fatura vença no mês, conforme configuração do cartão).
 3. Exibe total e lista de compras.
 
 ---
@@ -274,8 +274,13 @@ Planejar distribuição do dinheiro do mês.
 
 1. Usuário acessa “Orçamento”.
 2. Seleciona mês.
-3. Define valores ou percentuais por categoria.
+3. Define valores para categorias de saída.
 4. Confirma.
+
+**Regras:**
+
+- Orçamento é informativo (planejado x realizado).
+- Não impede lançamentos se exceder o valor.
 
 ---
 
@@ -287,12 +292,12 @@ Ajustar estratégia financeira pontual.
 **Fluxo Principal:**
 
 1. Usuário edita orçamento do mês.
-2. Altera valores ou percentuais.
+2. Altera valor planejado de uma categoria.
 3. Salva.
 
 **Regras:**
 
-- Alterações não afetam meses fechados.
+- Alterações são pontuais para aquele mês.
 
 ---
 
@@ -303,9 +308,13 @@ Aplicar nova estratégia para vários meses futuros.
 
 **Fluxo Principal:**
 
-1. Usuário seleciona múltiplos meses.
-2. Aplica novos percentuais.
-3. Confirma.
+1. Usuário define um intervalo de meses (ex: Junho a Dezembro).
+2. Seleciona uma categoria e o novo valor planejado.
+3. Confirma a aplicação em lote.
+
+**Pós-condições:**
+
+- Todos os meses no intervalo têm o valor planejado atualizado para a categoria selecionada.
 
 ---
 
@@ -323,42 +332,49 @@ Registrar alguém com quem há movimentações recorrentes.
 1. Usuário cadastra nova pessoa.
 2. Informa nome e observações.
 
+**Pós-condições:**
+
+- Pessoa disponível para registro de empréstimos/dívidas.
+
 ---
 
-### UC-14 — Registrar Empréstimo
+### UC-14 — Registrar Empréstimo (Eu Emprestei)
 
 **Objetivo:**  
-Registrar dinheiro emprestado a alguém.
+Registrar dinheiro que saiu do seu bolso e foi para outra pessoa.
 
 **Fluxo Principal:**
 
 1. Usuário cria entrada de picuinha:
    - Pessoa
-   - Tipo: Empréstimo
+   - Tipo: `PLUS` (Aumenta a dívida dela para comigo)
    - Valor
-2. Sistema registra saldo da pessoa.
+2. Opção “Auto-criar Fluxo”: Selecionada.
+3. Sistema registra:
+   - Entrada na tabela de picuinhas (saldo da pessoa sobe).
+   - Fluxo de Caixa `OUT` na categoria “Picuinhas” (dinheiro saiu da minha conta).
 
-**Pós-condições:**
+**Fluxos Alternativos:**
 
-- Saldo da pessoa aumenta.
+- Se "Auto-criar Fluxo" não for selecionado, apenas o saldo da pessoa é ajustado (ex: vendi algo usado para ela, não saiu dinheiro do meu caixa, mas ela me deve).
 
 ---
 
-### UC-15 — Registrar Pagamento de Picuinha
+### UC-15 — Registrar Recebimento (Ela Pagou)
 
 **Objetivo:**  
 Registrar dinheiro devolvido ao usuário.
 
 **Fluxo Principal:**
 
-1. Usuário registra pagamento.
-2. Sistema cria:
-   - Entrada no fluxo de caixa
-   - Entrada de picuinha vinculada
-
-**Pós-condições:**
-
-- Saldo da pessoa diminui.
+1. Usuário registra recebimento.
+   - Pessoa
+   - Tipo: `MINUS` (Diminui a dívida dela)
+   - Valor
+2. Opção “Auto-criar Fluxo”: Selecionada.
+3. Sistema cria:
+   - Fluxo de Caixa `IN` na categoria “Picuinhas” (dinheiro entrou).
+   - Ajuste de saldo na tabela de picuinhas.
 
 ---
 
@@ -370,10 +386,10 @@ Registrar compra parcelada no cartão para terceiro.
 **Fluxo Principal:**
 
 1. Usuário registra compra parcelada.
-2. Associa a uma pessoa.
+2. Associa a compra (ou partes dela) a uma “Pessoa de Picuinha”.
 3. Sistema:
-   - Cria parcelamento
-   - Registra dívida total da pessoa
+   - Cria o parcelamento no cartão (minha dívida com o banco).
+   - Registra a dívida total da pessoa para comigo (saldo `PLUS`).
 
 ---
 
@@ -386,8 +402,8 @@ Saber quanto alguém deve ou tem crédito.
 
 1. Usuário seleciona pessoa.
 2. Sistema exibe:
-   - Saldo atual
-   - Histórico completo
+   - Saldo atual e consolidado.
+   - Histórico de entradas (empréstimos, pagamentos).
 
 ---
 
@@ -398,16 +414,16 @@ Saber quanto alguém deve ou tem crédito.
 ### UC-18 — Visualizar Dashboard Mensal
 
 **Objetivo:**  
-Obter visão geral do mês.
+Obter visão geral do mês (Health Check).
 
 **Fluxo Principal:**
 
 1. Usuário seleciona mês.
 2. Sistema exibe:
-   - Entradas
-   - Saídas
-   - Saldo
-   - Comparativo com mês anterior
+   - Total Entradas (Income)
+   - Total Saídas (Expenses)
+   - Saldo (Balance = Income - Expenses)
+   - Comparativo simples com mês anterior.
 
 ---
 
@@ -419,22 +435,20 @@ Analisar evolução financeira no tempo.
 **Fluxo Principal:**
 
 1. Usuário acessa “Fluxo Acumulado”.
-2. Sistema exibe gráfico de saldo ao longo dos meses.
+2. Sistema exibe gráfico/lista de saldo ao longo dos meses.
 
 ---
 
 ### UC-20 — Visualizar Análise por Categoria
 
 **Objetivo:**  
-Analisar comportamento financeiro por categoria.
+Analisar onde o dinheiro está indo.
 
 **Fluxo Principal:**
 
-1. Usuário seleciona categoria.
-2. Sistema exibe:
-   - Histórico mensal
-   - Orçado x realizado
-   - Tendência
+1. Usuário seleciona mês.
+2. Sistema exibe lista de categorias ordenadas por valor gasto.
+3. Exibe quanto cada uma representa do total.
 
 ---
 
@@ -442,9 +456,13 @@ Analisar comportamento financeiro por categoria.
 
 Este conjunto de casos de uso cobre:
 
-- Uso diário (lançamentos rápidos)
-- Uso estratégico (orçamento e análise)
-- Situações complexas (parcelamentos, picuinhas)
+- Uso diário (lançamentos rápidos - UC-01 a UC-03)
+- Gestão de Estrutura (Categorias - UC-04, UC-05)
+- Recorrência (Fixos - UC-06, UC-07)
+- Crédito (Parcelamentos - UC-08, UC-09)
+- Planejamento (Orçamento - UC-10 a UC-12)
+- Terceiros (Picuinhas - UC-13 a UC-17)
+- Análise (Dashboards - UC-18 a UC-20)
 
 O sistema deve ser capaz de evoluir adicionando novos casos de uso **sem alterar os existentes**, respeitando sempre:
 
