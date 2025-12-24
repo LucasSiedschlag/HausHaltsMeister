@@ -15,6 +15,7 @@ import (
 	"github.com/seuuser/cashflow/internal/domain/budget"
 	"github.com/seuuser/cashflow/internal/domain/cashflow"
 	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/seuuser/cashflow/internal/domain/payment"
 	"github.com/seuuser/cashflow/internal/domain/picuinha"
 )
 
@@ -35,18 +36,21 @@ func main() {
 	cfRepo := postgres.NewCashFlowRepository(pool)
 	bgRepo := postgres.NewBudgetRepository(pool)
 	picRepo := postgres.NewPicuinhaRepository(pool)
+	payRepo := postgres.NewPaymentRepository(pool)
 
 	// 4. Setup services
 	catService := category.NewService(catRepo)
 	cfService := cashflow.NewService(cfRepo, catRepo)
 	bgService := budget.NewService(bgRepo, catRepo)
 	picService := picuinha.NewService(picRepo)
+	payService := payment.NewService(payRepo)
 
 	// 5. Setup handlers
 	catHandler := httpAdapter.NewCategoryHandler(catService)
 	cfHandler := httpAdapter.NewCashFlowHandler(cfService)
 	bgHandler := httpAdapter.NewBudgetHandler(bgService)
 	picHandler := httpAdapter.NewPicuinhaHandler(picService)
+	payHandler := httpAdapter.NewPaymentHandler(payService)
 
 	// 6. Setup Echo
 	e := echo.New()
@@ -58,6 +62,7 @@ func main() {
 	httpAdapter.RegisterCashFlowRoutes(e, cfHandler)
 	httpAdapter.RegisterBudgetRoutes(e, bgHandler)
 	httpAdapter.RegisterPicuinhaRoutes(e, picHandler)
+	httpAdapter.RegisterPaymentRoutes(e, payHandler)
 
 	// 8. Start server
 	log.Printf("Starting server on port %s", cfg.Port)
