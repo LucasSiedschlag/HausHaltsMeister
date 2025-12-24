@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/seuuser/cashflow/internal/adapters/http"
-	"github.com/seuuser/cashflow/internal/adapters/postgres"
-	"github.com/seuuser/cashflow/internal/domain/category"
-	"github.com/seuuser/cashflow/internal/test/harness"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
 func TestUC05_DeactivateCategory(t *testing.T) {

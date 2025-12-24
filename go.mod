@@ -1,4 +1,4 @@
-module github.com/seuuser/cashflow
+module github.com/LucasSiedschlag/HausHaltsMeister
 
 go 1.24.0
 

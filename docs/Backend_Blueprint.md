@@ -1,4 +1,4 @@
-# Backend Blueprint — CashFlow (Go + Echo + pgx + sqlc + tern)
+# Backend Blueprint — HausHaltsMeister (Go + Echo + pgx + sqlc + tern)
 
 > Objetivo: construir um backend web (single-user) para controle financeiro pessoal, com núcleo mínimo de movimentações (`cash_flows`) e detalhes opcionais (cartões/parcelas/picuinhas/orçamento), usando boas práticas de mercado: Clean/Hexagonal leve.
 
@@ -23,7 +23,7 @@
 ## 2) Estrutura de pastas (obrigatória)
 
 ```txt
-cashflow/
+haushaltsmeister/
   cmd/
     api/
       main.go

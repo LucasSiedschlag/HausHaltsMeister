@@ -8,16 +8,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	httpAdapter "github.com/seuuser/cashflow/internal/adapters/http"
-	"github.com/seuuser/cashflow/internal/adapters/postgres"
-	"github.com/seuuser/cashflow/internal/config"
-	"github.com/seuuser/cashflow/internal/db"
-	"github.com/seuuser/cashflow/internal/domain/budget"
-	"github.com/seuuser/cashflow/internal/domain/cashflow"
-	"github.com/seuuser/cashflow/internal/domain/category"
-	"github.com/seuuser/cashflow/internal/domain/installment"
-	"github.com/seuuser/cashflow/internal/domain/payment"
-	"github.com/seuuser/cashflow/internal/domain/picuinha"
+	httpAdapter "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/db"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 )
 
 func main() {

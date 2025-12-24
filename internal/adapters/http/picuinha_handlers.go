@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/seuuser/cashflow/internal/adapters/http/dto"
-	"github.com/seuuser/cashflow/internal/domain/picuinha"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 )
 
 type PicuinhaHandler struct {

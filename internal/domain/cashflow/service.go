@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 )
 
 var (

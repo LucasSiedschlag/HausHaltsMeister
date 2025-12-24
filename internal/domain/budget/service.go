@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/seuuser/cashflow/internal/domain/cashflow"
-	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 )
 
 type BudgetService struct {

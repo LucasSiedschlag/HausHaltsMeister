@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/seuuser/cashflow/internal/adapters/http/dto"
-	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 )
 
 type CategoryHandler struct {

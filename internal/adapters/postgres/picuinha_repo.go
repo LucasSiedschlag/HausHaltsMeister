@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/seuuser/cashflow/internal/adapters/postgres/sqlc"
-	"github.com/seuuser/cashflow/internal/domain/picuinha"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 )
 
 type PicuinhaRepository struct {

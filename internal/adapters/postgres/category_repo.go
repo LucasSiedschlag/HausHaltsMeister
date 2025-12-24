@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/seuuser/cashflow/internal/adapters/postgres/sqlc"
-	"github.com/seuuser/cashflow/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 )
 
 type CategoryRepository struct {

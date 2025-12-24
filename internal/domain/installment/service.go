@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/seuuser/cashflow/internal/domain/cashflow"
-	"github.com/seuuser/cashflow/internal/domain/payment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 )
 
 type InstallmentService struct {
