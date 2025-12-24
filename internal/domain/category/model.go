@@ -24,7 +24,7 @@ type Category struct {
 	IsActive         bool
 }
 
-func New(name, direction string) (*Category, error) {
+func New(name, direction string, isBudgetRelevant bool) (*Category, error) {
 	if name == "" {
 		return nil, ErrEmptyName
 	}
@@ -35,7 +35,7 @@ func New(name, direction string) (*Category, error) {
 	return &Category{
 		Name:             name,
 		Direction:        direction,
-		IsBudgetRelevant: true,
+		IsBudgetRelevant: isBudgetRelevant,
 		IsActive:         true,
 	}, nil
 }

@@ -56,8 +56,8 @@ func TestUC06_RegisterFixedExpense(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &resp)
 		require.NoError(t, err)
 
-		assert.Equal(t, "Fibra Óptica", resp["Title"])
-		assert.Equal(t, 150.00, resp["Amount"])
-		assert.True(t, resp["IsFixed"].(bool), "Response should indicate IsFixed=true")
+		assert.Equal(t, "Fibra Óptica", resp["title"])
+		assert.Equal(t, 150.00, resp["amount"])
+		assert.True(t, resp["is_fixed"].(bool), "Response should indicate is_fixed=true")
 	})
 }

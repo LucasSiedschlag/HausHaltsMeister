@@ -13,8 +13,8 @@ func NewService(repo Repository) *CategoryService {
 	return &CategoryService{repo: repo}
 }
 
-func (s *CategoryService) CreateCategory(ctx context.Context, name, direction string) (*Category, error) {
-	newCat, err := New(name, direction)
+func (s *CategoryService) CreateCategory(ctx context.Context, name, direction string, isBudgetRelevant bool) (*Category, error) {
+	newCat, err := New(name, direction, isBudgetRelevant)
 	if err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
 	}

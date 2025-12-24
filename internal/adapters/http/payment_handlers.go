@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/seuuser/cashflow/internal/adapters/http/dto"
 	"github.com/seuuser/cashflow/internal/domain/payment"
 )
 
@@ -17,18 +18,10 @@ func NewPaymentHandler(service payment.Service) *PaymentHandler {
 	return &PaymentHandler{service: service}
 }
 
-type CreatePaymentMethodRequest struct {
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	BankName   string `json:"bank_name"`
-	ClosingDay *int32 `json:"closing_day"`
-	DueDay     *int32 `json:"due_day"`
-}
-
 func (h *PaymentHandler) Create(c echo.Context) error {
-	var req CreatePaymentMethodRequest
+	var req dto.CreatePaymentMethodRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
 
 	created, err := h.service.CreatePaymentMethod(
@@ -36,18 +29,24 @@ func (h *PaymentHandler) Create(c echo.Context) error {
 		req.Name, req.Kind, req.BankName, req.ClosingDay, req.DueDay,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create payment method: %v", err)})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create payment method: %v", err)})
 	}
 
-	return c.JSON(http.StatusCreated, created)
+	return c.JSON(http.StatusCreated, toPaymentMethodResponse(created))
 }
 
 func (h *PaymentHandler) List(c echo.Context) error {
 	list, err := h.service.ListPaymentMethods(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to list payment methods"})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list payment methods"})
 	}
-	return c.JSON(http.StatusOK, list)
+
+	resp := make([]dto.PaymentMethodResponse, len(list))
+	for i, m := range list {
+		resp[i] = toPaymentMethodResponse(&m)
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (h *PaymentHandler) GetInvoice(c echo.Context) error {
@@ -57,20 +56,36 @@ func (h *PaymentHandler) GetInvoice(c echo.Context) error {
 
 	monthStr := c.QueryParam("month")
 	if monthStr == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "month parameter is required (YYYY-MM-DD)"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "month parameter is required (YYYY-MM-DD)"})
 	}
 
 	parsedMonth, err := time.Parse("2006-01-02", monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format, use YYYY-MM-DD"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format, use YYYY-MM-DD"})
 	}
 
 	invoice, err := h.service.GetInvoice(c.Request().Context(), id, parsedMonth)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get invoice"})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get invoice"})
 	}
 
-	return c.JSON(http.StatusOK, invoice)
+	entries := make([]dto.InvoiceEntryResponse, len(invoice.Entries))
+	for i, e := range invoice.Entries {
+		entries[i] = dto.InvoiceEntryResponse{
+			CashFlowID:   e.CashFlowID,
+			Date:         e.Date.Format("2006-01-02"),
+			Title:        e.Title,
+			Amount:       e.Amount,
+			CategoryName: e.CategoryName,
+		}
+	}
+
+	return c.JSON(http.StatusOK, dto.InvoiceResponse{
+		PaymentMethodID: invoice.PaymentMethodID,
+		Month:           invoice.Month.Format("2006-01-02"),
+		Total:           invoice.Total,
+		Entries:         entries,
+	})
 }
 
 func RegisterPaymentRoutes(e *echo.Echo, h *PaymentHandler) {
@@ -78,4 +93,16 @@ func RegisterPaymentRoutes(e *echo.Echo, h *PaymentHandler) {
 	g.POST("", h.Create)
 	g.GET("", h.List)
 	g.GET("/:id/invoice", h.GetInvoice)
+}
+
+func toPaymentMethodResponse(m *payment.PaymentMethod) dto.PaymentMethodResponse {
+	return dto.PaymentMethodResponse{
+		ID:         m.ID,
+		Name:       m.Name,
+		Kind:       m.Kind,
+		BankName:   m.BankName,
+		ClosingDay: m.ClosingDay,
+		DueDay:     m.DueDay,
+		IsActive:   m.IsActive,
+	}
 }

@@ -32,8 +32,9 @@ func TestUC04_CreateCategory(t *testing.T) {
 
 	t.Run("Success - Create Category", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"name":      "New Category Test",
-			"direction": "OUT",
+			"name":               "New Category Test",
+			"direction":          "OUT",
+			"is_budget_relevant": true,
 		}
 
 		rec := client.Request(t, "POST", "/categories", payload)
@@ -44,10 +45,11 @@ func TestUC04_CreateCategory(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &resp)
 		require.NoError(t, err)
 
-		assert.Equal(t, "New Category Test", resp["Name"])
-		assert.Equal(t, "OUT", resp["Direction"])
-		assert.NotZero(t, resp["ID"])
-		assert.True(t, resp["IsActive"].(bool))
+		assert.Equal(t, "New Category Test", resp["name"])
+		assert.Equal(t, "OUT", resp["direction"])
+		assert.NotZero(t, resp["id"])
+		assert.True(t, resp["is_active"].(bool))
+		assert.True(t, resp["is_budget_relevant"].(bool))
 	})
 
 	t.Run("Error - Invalid Direction", func(t *testing.T) {

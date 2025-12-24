@@ -69,14 +69,14 @@ func TestUC07_CopyFixedExpenses(t *testing.T) {
 
 	require.Len(t, febList, 1)
 	entry := febList[0]
-	assert.Equal(t, "Internet Jan", entry["Title"]) // Title is copied verbatim (usually user updates it later)
-	assert.Equal(t, 100.0, entry["Amount"])
-	assert.True(t, entry["IsFixed"].(bool))
+	assert.Equal(t, "Internet Jan", entry["title"])
+	assert.Equal(t, 100.0, entry["amount"])
+	assert.True(t, entry["is_fixed"].(bool))
 
 	// Verify Date (should be 15th Feb)
 	// entry["Date"] comes as string RFC3339 if using standard JSON marshaling
-	dateStr := entry["Date"].(string)
-	parsedDate, _ := time.Parse(time.RFC3339, dateStr)
+	dateStr := entry["date"].(string)
+	parsedDate, _ := time.Parse("2006-01-02", dateStr) // DTO uses Format("2006-01-02")
 	assert.Equal(t, 15, parsedDate.Day())
 	assert.Equal(t, time.Month(2), parsedDate.Month())
 }

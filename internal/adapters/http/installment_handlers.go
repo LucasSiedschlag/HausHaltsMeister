@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/seuuser/cashflow/internal/adapters/http/dto"
 	"github.com/seuuser/cashflow/internal/domain/installment"
 )
 
@@ -17,24 +18,15 @@ func NewInstallmentHandler(service installment.Service) *InstallmentHandler {
 	return &InstallmentHandler{service: service}
 }
 
-type CreateInstallmentRequest struct {
-	Description     string  `json:"description"`
-	TotalAmount     float64 `json:"total_amount"`
-	Count           int32   `json:"count"`
-	CategoryID      int32   `json:"category_id"`
-	PaymentMethodID int32   `json:"payment_method_id"`
-	PurchaseDate    string  `json:"purchase_date"` // YYYY-MM-DD
-}
-
 func (h *InstallmentHandler) Create(c echo.Context) error {
-	var req CreateInstallmentRequest
+	var req dto.CreateInstallmentRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
 
 	pDate, err := time.Parse("2006-01-02", req.PurchaseDate)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid date format"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid date format"})
 	}
 
 	plan, err := h.service.CreateInstallmentPurchase(
@@ -47,13 +39,25 @@ func (h *InstallmentHandler) Create(c echo.Context) error {
 		pDate,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to create installment plan: %v", err)})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create installment plan: %v", err)})
 	}
 
-	return c.JSON(http.StatusCreated, plan)
+	return c.JSON(http.StatusCreated, toInstallmentPlanResponse(plan))
 }
 
 func RegisterInstallmentRoutes(e *echo.Echo, h *InstallmentHandler) {
 	g := e.Group("/installments")
 	g.POST("", h.Create)
+}
+
+func toInstallmentPlanResponse(p *installment.InstallmentPlan) dto.InstallmentPlanResponse {
+	return dto.InstallmentPlanResponse{
+		ID:                p.ID,
+		Description:       p.Description,
+		TotalAmount:       p.TotalAmount,
+		InstallmentCount:  p.InstallmentCount,
+		InstallmentAmount: p.InstallmentAmount,
+		StartMonth:        p.StartMonth.Format("2006-01-02"),
+		PaymentMethodID:   p.PaymentMethodID,
+	}
 }

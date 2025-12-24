@@ -42,7 +42,7 @@ func TestUC05_DeactivateCategory(t *testing.T) {
 	var createdCat map[string]interface{}
 	err := json.Unmarshal(createRec.Body.Bytes(), &createdCat)
 	require.NoError(t, err)
-	catID := int(createdCat["ID"].(float64))
+	catID := int(createdCat["id"].(float64))
 
 	// Step 2: Deactivate it
 	deactivatePath := fmt.Sprintf("/categories/%d/deactivate", catID)
@@ -58,7 +58,7 @@ func TestUC05_DeactivateCategory(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, c := range activeList {
-		if int(c["ID"].(float64)) == catID {
+		if int(c["id"].(float64)) == catID {
 			t.Fatalf("Category %d should NOT be in active list", catID)
 		}
 	}
@@ -73,9 +73,9 @@ func TestUC05_DeactivateCategory(t *testing.T) {
 
 	found := false
 	for _, c := range allList {
-		if int(c["ID"].(float64)) == catID {
+		if int(c["id"].(float64)) == catID {
 			found = true
-			assert.False(t, c["IsActive"].(bool), "Category should be inactive in full list")
+			assert.False(t, c["is_active"].(bool), "Category should be inactive in full list")
 			break
 		}
 	}

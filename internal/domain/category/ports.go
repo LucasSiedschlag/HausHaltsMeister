@@ -10,7 +10,7 @@ type Repository interface {
 }
 
 type Service interface {
-	CreateCategory(ctx context.Context, name, direction string) (*Category, error)
+	CreateCategory(ctx context.Context, name, direction string, isBudgetRelevant bool) (*Category, error)
 	ListCategories(ctx context.Context, activeOnly bool) ([]*Category, error)
 	DeactivateCategory(ctx context.Context, id int32) error
 }

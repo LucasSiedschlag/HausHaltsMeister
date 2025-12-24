@@ -58,9 +58,9 @@ func TestUC01_CreateCashFlow(t *testing.T) {
 		var resp map[string]interface{}
 		err := json.Unmarshal(rec.Body.Bytes(), &resp)
 		require.NoError(t, err)
-		assert.Equal(t, "Salário Mensal", resp["Title"])
-		assert.Equal(t, 5000.00, resp["Amount"])
-		assert.Equal(t, "IN", resp["Direction"])
+		assert.Equal(t, "Salário Mensal", resp["title"])
+		assert.Equal(t, 5000.00, resp["amount"])
+		assert.Equal(t, "IN", resp["direction"])
 	})
 
 	t.Run("UC-03: Create Expense (OUT)", func(t *testing.T) {
@@ -78,8 +78,8 @@ func TestUC01_CreateCashFlow(t *testing.T) {
 		var resp map[string]interface{}
 		err := json.Unmarshal(rec.Body.Bytes(), &resp)
 		require.NoError(t, err)
-		assert.Equal(t, "Aluguel Dezembro", resp["Title"])
-		assert.Equal(t, 1200.00, resp["Amount"])
+		assert.Equal(t, "Aluguel Dezembro", resp["title"])
+		assert.Equal(t, 1200.00, resp["amount"])
 	})
 
 	t.Run("Error: Direction Mismatch", func(t *testing.T) {

@@ -72,7 +72,7 @@ func TestUC08_InstallmentsAndInvoice(t *testing.T) {
 	var cardRes map[string]interface{}
 	err := json.Unmarshal(cardRec.Body.Bytes(), &cardRes)
 	require.NoError(t, err)
-	cardID := int(cardRes["ID"].(float64))
+	cardID := int(cardRes["id"].(float64))
 
 	// 2. Register Installment Purchase (UC-08)
 	// Purchase Date: Jan 20, 2024.
@@ -94,7 +94,7 @@ func TestUC08_InstallmentsAndInvoice(t *testing.T) {
 	var instRes map[string]interface{}
 	err = json.Unmarshal(instRec.Body.Bytes(), &instRes)
 	require.NoError(t, err)
-	assert.Equal(t, 100.0, instRes["InstallmentAmount"])
+	assert.Equal(t, 100.0, instRes["installment_amount"])
 
 	// 3. Verify CashFlows (Future)
 	// First payment should be Feb 10.
@@ -107,12 +107,12 @@ func TestUC08_InstallmentsAndInvoice(t *testing.T) {
 
 	found := false
 	for _, cf := range listRes {
-		if cf["Title"] == "MacBook (1/10)" {
+		if cf["title"] == "MacBook (1/10)" {
 			found = true
-			assert.Equal(t, 100.0, cf["Amount"])
+			assert.Equal(t, 100.0, cf["amount"])
 			// Check date Feb 10
-			dateStr := cf["Date"].(string)
-			parsed, _ := time.Parse(time.RFC3339, dateStr)
+			dateStr := cf["date"].(string)
+			parsed, _ := time.Parse("2006-01-02", dateStr) // DTO uses Format("2006-01-02")
 			assert.Equal(t, 10, parsed.Day())
 		}
 	}
@@ -137,13 +137,13 @@ func TestUC08_InstallmentsAndInvoice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Expect total amount 100.0
-	assert.Equal(t, 100.0, invRes["Total"])
+	assert.Equal(t, 100.0, invRes["total"])
 
 	// Expect list items
-	items := invRes["Entries"].([]interface{})
+	items := invRes["entries"].([]interface{})
 	require.NotEmpty(t, items)
 	item := items[0].(map[string]interface{})
-	assert.Equal(t, "MacBook (1/10)", item["Title"])
+	assert.Equal(t, "MacBook (1/10)", item["title"])
 }
 
 func jsonNumber(i int) string {

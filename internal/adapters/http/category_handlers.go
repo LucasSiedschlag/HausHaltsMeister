@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/seuuser/cashflow/internal/adapters/http/dto"
 	"github.com/seuuser/cashflow/internal/domain/category"
 )
 
@@ -17,27 +18,21 @@ func NewCategoryHandler(service category.Service) *CategoryHandler {
 	return &CategoryHandler{service: service}
 }
 
-type CreateCategoryRequest struct {
-	Name      string `json:"name"`
-	Direction string `json:"direction"`
-}
-
 func (h *CategoryHandler) Create(c echo.Context) error {
-	var req CreateCategoryRequest
+	var req dto.CreateCategoryRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
 
-	cat, err := h.service.CreateCategory(c.Request().Context(), req.Name, req.Direction)
+	cat, err := h.service.CreateCategory(c.Request().Context(), req.Name, req.Direction, req.IsBudgetRelevant)
 	if err != nil {
-		// Map domain errors to status codes
 		if errors.Is(err, category.ErrInvalidDirection) || errors.Is(err, category.ErrEmptyName) {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 	}
 
-	return c.JSON(http.StatusCreated, cat)
+	return c.JSON(http.StatusCreated, toCategoryResponse(cat))
 }
 
 func (h *CategoryHandler) List(c echo.Context) error {
@@ -45,10 +40,30 @@ func (h *CategoryHandler) List(c echo.Context) error {
 
 	list, err := h.service.ListCategories(c.Request().Context(), activeOnly)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to list categories"})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list categories"})
 	}
 
-	return c.JSON(http.StatusOK, list)
+	resp := make([]dto.CategoryResponse, len(list))
+	for i, cat := range list {
+		resp[i] = toCategoryResponse(cat)
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (h *CategoryHandler) Deactivate(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	err := h.service.DeactivateCategory(c.Request().Context(), id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to deactivate category"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "deactivated"})
 }
 
 func RegisterCategoryRoutes(e *echo.Echo, h *CategoryHandler) {
@@ -58,18 +73,12 @@ func RegisterCategoryRoutes(e *echo.Echo, h *CategoryHandler) {
 	g.PATCH("/:id/deactivate", h.Deactivate)
 }
 
-func (h *CategoryHandler) Deactivate(c echo.Context) error {
-	idStr := c.Param("id")
-	var id int32
-	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
+func toCategoryResponse(c *category.Category) dto.CategoryResponse {
+	return dto.CategoryResponse{
+		ID:               c.ID,
+		Name:             c.Name,
+		Direction:        c.Direction,
+		IsBudgetRelevant: c.IsBudgetRelevant,
+		IsActive:         c.IsActive,
 	}
-
-	err := h.service.DeactivateCategory(c.Request().Context(), id)
-	if err != nil {
-		// Could map ErrCategoryNotFound to 404 if defined
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to deactivate category"})
-	}
-
-	return c.JSON(http.StatusOK, map[string]string{"status": "deactivated"})
 }

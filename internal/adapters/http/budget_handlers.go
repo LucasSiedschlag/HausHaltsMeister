@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/seuuser/cashflow/internal/adapters/http/dto"
 	"github.com/seuuser/cashflow/internal/domain/budget"
 )
 
@@ -17,48 +18,63 @@ func NewBudgetHandler(service budget.Service) *BudgetHandler {
 	return &BudgetHandler{service: service}
 }
 
-type SetBudgetItemRequest struct {
-	CategoryID    int32   `json:"category_id"`
-	PlannedAmount float64 `json:"planned_amount"`
-}
-
 func (h *BudgetHandler) GetSummary(c echo.Context) error {
-	monthStr := c.Param("month") // Expects YYYY-MM-DD (e.g., 2023-12-01)
+	monthStr := c.Param("month") // Expects YYYY-MM-DD
 
 	parsedMonth, err := time.Parse("2006-01-02", monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format"})
 	}
 
 	summary, err := h.service.GetBudgetSummary(c.Request().Context(), parsedMonth)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get budget summary"})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get budget summary"})
 	}
 
-	return c.JSON(http.StatusOK, summary)
+	items := make([]dto.BudgetItemResponse, len(summary.Items))
+	for i, it := range summary.Items {
+		items[i] = toBudgetItemResponse(&it)
+	}
+
+	return c.JSON(http.StatusOK, dto.BudgetSummaryResponse{
+		Month: summary.Month.Format("2006-01-02"),
+		Items: items,
+	})
 }
 
 func (h *BudgetHandler) SetItem(c echo.Context) error {
 	monthStr := c.Param("month")
 	parsedMonth, err := time.Parse("2006-01-02", monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid month format"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format"})
 	}
 
-	var req SetBudgetItemRequest
+	var req dto.SetBudgetItemRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
 
 	updated, err := h.service.SetBudgetItem(c.Request().Context(), parsedMonth, req.CategoryID, req.PlannedAmount)
 	if err != nil {
 		if err == budget.ErrInvalidCategory {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to set budget item: %v", err)})
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to set budget item: %v", err)})
 	}
 
-	return c.JSON(http.StatusOK, updated)
+	return c.JSON(http.StatusOK, toBudgetItemResponse(updated))
+}
+
+func toBudgetItemResponse(it *budget.BudgetItem) dto.BudgetItemResponse {
+	return dto.BudgetItemResponse{
+		ID:             it.ID,
+		BudgetPeriodID: it.BudgetPeriodID,
+		CategoryID:     it.CategoryID,
+		CategoryName:   it.CategoryName,
+		Mode:           it.Mode,
+		PlannedAmount:  it.PlannedAmount,
+		ActualAmount:   it.ActualAmount,
+	}
 }
 
 func RegisterBudgetRoutes(e *echo.Echo, h *BudgetHandler) {
