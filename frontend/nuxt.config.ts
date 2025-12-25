@@ -9,12 +9,13 @@ export default defineNuxtConfig({
   ],
   modules: [
     '@nuxtjs/tailwindcss',
-    'shadcn-nuxt'
-  ], 
-  // Global config if needed
-  shadcn: {
-    // Explicitly pointing to shared layer for correct resolution if needed,
-    // though the layer config should handle it.
-    componentDir: './layers/shared/components/ui' 
-  }
+    'shadcn-nuxt',
+    '@nuxtjs/color-mode'
+  ],
+  colorMode: {
+    classSuffix: '',
+    preference: 'system',
+    fallback: 'light'
+  }, 
 })
+

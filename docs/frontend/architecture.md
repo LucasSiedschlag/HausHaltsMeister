@@ -10,14 +10,17 @@ frontend/
 ├── layers/               # Módulos da aplicação
 │   ├── shared/           # Camada Base (UI, Utils, Configs)
 │   │   ├── components/
-│   │   │   └── ui/       # Componentes shadcn-vue (Button, Input, etc)
+│   │   │   └── ui/       # Componentes shadcn-vue (Button, Sheet, Dropdown, etc)
 │   │   ├── utils/        # Ex: cn.ts, formatters
 │   │   ├── composables/  # Hooks genéricos
-│   │   ├── assets/       # CSS global (Tailwind)
+│   │   ├── assets/       # CSS global (Tailwind + Tema Azul)
 │   │   └── nuxt.config.ts
 │   │
 │   ├── core/             # Camada de Aplicação (Layouts, Home)
-│   │   ├── layouts/      # Default, AuthLayout
+│   │   ├── layouts/      # default.vue (Shell com Sidebar + Header)
+│   │   ├── components/
+│   │   │   └── layout/   # AppSidebar.vue, AppHeader.vue, ThemeToggle.vue
+│   │   ├── utils/        # navigation.ts
 │   │   ├── pages/        # index.vue (Home)
 │   │   ├── plugins/      # Plugins globais
 │   │   └── nuxt.config.ts

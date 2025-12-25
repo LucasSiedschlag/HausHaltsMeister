@@ -1,8 +1,11 @@
-// frontend/layers/shared/nuxt.config.ts
+import { createResolver } from '@nuxt/kit'
+
+const { resolve } = createResolver(import.meta.url)
+
 export default defineNuxtConfig({
   components: [
     {
-      path: 'components',
+      path: resolve('components'),
       extensions: ['.vue'],
       pathPrefix: false 
     }
@@ -13,10 +16,13 @@ export default defineNuxtConfig({
   ],
   shadcn: {
     prefix: '',
-    componentDir: './components/ui'
+    componentDir: resolve('./components/ui')
   },
+  css: [
+    resolve('./assets/css/tailwind.css')
+  ],
   tailwindcss: {
-    cssPath: './assets/css/tailwind.css',
-    configPath: 'tailwind.config.ts'
+    viewer: false,
   }
 })
+
