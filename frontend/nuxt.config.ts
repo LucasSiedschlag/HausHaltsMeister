@@ -2,9 +2,13 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
+  css: [
+    '~/layers/shared/assets/css/tailwind.css'
+  ],
   extends: [
     './layers/shared',
     './layers/core',
+    './layers/categories',
     './layers/dashboard'
   ],
   modules: [
@@ -15,7 +19,21 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: '',
     preference: 'system',
-    fallback: 'light'
-  }, 
+    fallback: 'light',
+    disableTransition: true
+  },
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
+      apiToken: process.env.NUXT_PUBLIC_API_TOKEN || ''
+    }
+  },
+  nitro: {
+    devProxy: {
+      '/api': {
+        target: process.env.NUXT_PUBLIC_API_PROXY_TARGET || 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
+  },
 })
-

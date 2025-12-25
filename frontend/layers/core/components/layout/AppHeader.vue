@@ -10,21 +10,27 @@
             </Button>
           </SheetTrigger>
           <SheetContent side="left" class="flex w-72 flex-col gap-4 p-4 sm:w-80">
-            <NuxtLink to="/" class="flex items-center gap-2 text-base font-semibold">
-              <GalleryVerticalEnd class="h-5 w-5" />
-              <span>HausHaltsMeister</span>
-            </NuxtLink>
+            <SheetClose as-child>
+              <NuxtLink to="/" class="flex items-center gap-2 text-base font-semibold">
+                <GalleryVerticalEnd class="h-5 w-5" />
+                <span>HausHaltsMeister</span>
+              </NuxtLink>
+            </SheetClose>
             <nav class="flex flex-col gap-1 text-sm font-medium">
-              <NuxtLink
+              <SheetClose
                 v-for="item in navigation"
                 :key="item.href"
-                :to="item.href"
-                class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                active-class="bg-primary/10 text-primary"
+                as-child
               >
-                <component :is="getIcon(item.icon)" class="h-4 w-4" />
-                {{ item.title }}
-              </NuxtLink>
+                <NuxtLink
+                  :to="item.href"
+                  class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  active-class="bg-primary/10 text-primary"
+                >
+                  <component :is="getIcon(item.icon)" class="h-4 w-4" />
+                  {{ item.title }}
+                </NuxtLink>
+              </SheetClose>
             </nav>
           </SheetContent>
         </Sheet>

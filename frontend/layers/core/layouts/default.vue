@@ -1,5 +1,5 @@
 <template>
-  <div :class="['min-h-screen w-full bg-background text-foreground', isDark && 'dark']">
+  <div class="min-h-screen w-full bg-background text-foreground">
     <AppSidebar />
     <div class="flex min-h-screen flex-col md:pl-64">
       <AppHeader />
@@ -15,7 +15,4 @@
 <script setup lang="ts">
 import AppSidebar from '~/layers/core/components/layout/AppSidebar.vue'
 import AppHeader from '~/layers/core/components/layout/AppHeader.vue'
-
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 </script>
