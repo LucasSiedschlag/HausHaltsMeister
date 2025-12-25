@@ -94,6 +94,44 @@ Respostas comuns:
 
 ---
 
+### 1.3 Atualizar Categoria
+
+**Endpoint:** `PUT /categories/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "name": "Educação",
+  "direction": "OUT",
+  "is_budget_relevant": true,
+  "is_active": true
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": 15,
+  "name": "Educação",
+  "direction": "OUT",
+  "is_budget_relevant": true,
+  "is_active": true
+}
+```
+
+**Erros (400/404):**
+
+```json
+{
+  "error": "category name cannot be empty",
+  "request_id": "req-123456"
+}
+```
+
+---
+
 ## 2. Domínio: Fluxo de Caixa (`cashflow`)
 
 ### 2.1 Criar Lançamento

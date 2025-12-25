@@ -6,6 +6,13 @@ type CreateCategoryRequest struct {
 	IsBudgetRelevant bool   `json:"is_budget_relevant"`
 }
 
+type UpdateCategoryRequest struct {
+	Name             *string `json:"name"`
+	Direction        *string `json:"direction"` // IN or OUT
+	IsBudgetRelevant *bool   `json:"is_budget_relevant"`
+	IsActive         *bool   `json:"is_active"`
+}
+
 type CategoryResponse struct {
 	ID               int32  `json:"id"`
 	Name             string `json:"name"`

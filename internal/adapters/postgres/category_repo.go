@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CategoryRepository struct {
@@ -95,10 +95,13 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*category.C
 	}, nil
 }
 
-func (r *CategoryRepository) Update(ctx context.Context, id int32, isActive bool) (*category.Category, error) {
+func (r *CategoryRepository) Update(ctx context.Context, c *category.Category) (*category.Category, error) {
 	params := sqlc.UpdateCategoryParams{
-		CategoryID: id,
-		IsActive:   isActive,
+		CategoryID:       c.ID,
+		Name:             c.Name,
+		Direction:        c.Direction,
+		IsBudgetRelevant: c.IsBudgetRelevant,
+		IsActive:         c.IsActive,
 	}
 
 	row, err := r.q.UpdateCategory(ctx, params)

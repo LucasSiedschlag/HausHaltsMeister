@@ -97,10 +97,52 @@ func (h *CategoryHandler) Deactivate(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "deactivated"})
 }
 
+// Update updates a category.
+// @Summary Atualizar Categoria
+// @Description Updates a category by ID.
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Param payload body dto.UpdateCategoryRequest true "Category Payload"
+// @Success 200 {object} dto.CategoryResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /categories/{id} [put]
+func (h *CategoryHandler) Update(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	var req dto.UpdateCategoryRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
+	}
+	if req.Name == nil || req.Direction == nil || req.IsBudgetRelevant == nil || req.IsActive == nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "missing required fields"})
+	}
+
+	updated, err := h.service.UpdateCategory(c.Request().Context(), id, *req.Name, *req.Direction, *req.IsBudgetRelevant, *req.IsActive)
+	if err != nil {
+		if errors.Is(err, category.ErrInvalidDirection) || errors.Is(err, category.ErrEmptyName) {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
+		if errors.Is(err, category.ErrCategoryNotFound) {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, toCategoryResponse(updated))
+}
+
 func RegisterCategoryRoutes(e *echo.Echo, h *CategoryHandler) {
 	g := e.Group("/categories")
 	g.POST("", h.Create)
 	g.GET("", h.List)
+	g.PUT("/:id", h.Update)
 	g.PATCH("/:id/deactivate", h.Deactivate)
 }
 

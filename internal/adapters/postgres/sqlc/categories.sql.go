@@ -100,18 +100,30 @@ func (q *Queries) ListCategories(ctx context.Context, dollar_1 bool) ([]FlowCate
 
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE flow_categories
-SET is_active = $2
+SET name = $2,
+    direction = $3,
+    is_budget_relevant = $4,
+    is_active = $5
 WHERE category_id = $1
 RETURNING category_id, name, direction, is_budget_relevant, is_active
 `
 
 type UpdateCategoryParams struct {
-	CategoryID int32
-	IsActive   bool
+	CategoryID       int32
+	Name             string
+	Direction        string
+	IsBudgetRelevant bool
+	IsActive         bool
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (FlowCategory, error) {
-	row := q.db.QueryRow(ctx, updateCategory, arg.CategoryID, arg.IsActive)
+	row := q.db.QueryRow(ctx, updateCategory,
+		arg.CategoryID,
+		arg.Name,
+		arg.Direction,
+		arg.IsBudgetRelevant,
+		arg.IsActive,
+	)
 	var i FlowCategory
 	err := row.Scan(
 		&i.CategoryID,

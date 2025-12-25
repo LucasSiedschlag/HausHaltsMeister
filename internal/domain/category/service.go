@@ -31,9 +31,41 @@ func (s *CategoryService) ListCategories(ctx context.Context, activeOnly bool) (
 }
 
 func (s *CategoryService) DeactivateCategory(ctx context.Context, id int32) error {
-	_, err := s.repo.Update(ctx, id, false)
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to deactivate category: %w", err)
+	}
+	if existing == nil {
+		return ErrCategoryNotFound
+	}
+
+	existing.IsActive = false
+	_, err = s.repo.Update(ctx, existing)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate category: %w", err)
 	}
 	return nil
+}
+
+func (s *CategoryService) UpdateCategory(ctx context.Context, id int32, name, direction string, isBudgetRelevant, isActive bool) (*Category, error) {
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update category: %w", err)
+	}
+	if existing == nil {
+		return nil, ErrCategoryNotFound
+	}
+
+	updated, err := New(name, direction, isBudgetRelevant)
+	if err != nil {
+		return nil, err
+	}
+	updated.ID = id
+	updated.IsActive = isActive
+
+	updated, err = s.repo.Update(ctx, updated)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update category: %w", err)
+	}
+	return updated, nil
 }

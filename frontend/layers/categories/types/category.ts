@@ -13,3 +13,10 @@ export interface CreateCategoryRequest {
   direction: Direction
   is_budget_relevant: boolean
 }
+
+export interface UpdateCategoryRequest {
+  name: string
+  direction: Direction
+  is_budget_relevant: boolean
+  is_active: boolean
+}

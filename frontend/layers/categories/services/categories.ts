@@ -1,4 +1,4 @@
-import type { Category, CreateCategoryRequest } from '../types/category'
+import type { Category, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category'
 import { useApiClient } from '~/layers/shared/utils/api'
 
 export function useCategoriesService() {
@@ -23,10 +23,17 @@ export function useCategoriesService() {
     })
   }
 
-  // TODO: Backend não expõe endpoint para atualizar categorias. Necessário adicionar PATCH/PUT.
+  const updateCategory = async (id: number, payload: UpdateCategoryRequest) => {
+    return request<Category>(`/categories/${id}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
   return {
     listCategories,
     createCategory,
+    updateCategory,
     deactivateCategory,
   }
 }

@@ -58,6 +58,13 @@ interface CreateCategoryRequest {
   direction: Direction;
   is_budget_relevant: boolean;
 }
+
+interface UpdateCategoryRequest {
+  name: string;
+  direction: Direction;
+  is_budget_relevant: boolean;
+  is_active: boolean;
+}
 ```
 
 ### 2.2 Endpoints
@@ -70,6 +77,11 @@ interface CreateCategoryRequest {
 **POST /categories**
 
 - Body: `CreateCategoryRequest`
+- Response: `Category`
+
+**PUT /categories/:id**
+
+- Body: `UpdateCategoryRequest`
 - Response: `Category`
 
 ---

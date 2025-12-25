@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import CategoryTable from '../components/CategoryTable.vue'
 import CategoryFormSheet from '../components/CategoryFormSheet.vue'
 import CategoryDeleteDialog from '../components/CategoryDeleteDialog.vue'
-import type { Category, CreateCategoryRequest } from '../types/category'
+import type { Category, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category'
 import { useCategoriesService } from '../services/categories'
 import { getApiErrorMessage } from '~/layers/shared/utils/api'
 import { Button } from '~/layers/shared/components/ui/button'
@@ -12,7 +12,7 @@ definePageMeta({
   layout: 'default',
 })
 
-const { listCategories, createCategory, deactivateCategory } = useCategoriesService()
+const { listCategories, createCategory, updateCategory, deactivateCategory } = useCategoriesService()
 
 const categories = ref<Category[]>([])
 const loading = ref(true)
@@ -58,18 +58,24 @@ function openEdit(category: Category) {
   formOpen.value = true
 }
 
-async function handleSubmit(payload: CreateCategoryRequest) {
-  if (formMode.value === 'edit') {
-    formError.value = 'Edição ainda não suportada pela API. Disponibilizar endpoint de atualização.'
-    return
-  }
-
+async function handleSubmit(payload: UpdateCategoryRequest) {
   submitting.value = true
   formError.value = null
   try {
-    const created = await createCategory(payload)
-    categories.value = [created, ...categories.value]
-    feedback.value = { type: 'success', message: 'Categoria criada com sucesso.' }
+    if (formMode.value === 'edit' && selectedCategory.value) {
+      const updated = await updateCategory(selectedCategory.value.id, payload)
+      categories.value = categories.value.map((item) => (item.id === updated.id ? updated : item))
+      feedback.value = { type: 'success', message: 'Categoria atualizada com sucesso.' }
+    } else {
+      const createPayload: CreateCategoryRequest = {
+        name: payload.name,
+        direction: payload.direction,
+        is_budget_relevant: payload.is_budget_relevant,
+      }
+      const created = await createCategory(createPayload)
+      categories.value = [created, ...categories.value]
+      feedback.value = { type: 'success', message: 'Categoria criada com sucesso.' }
+    }
     formOpen.value = false
   } catch (error) {
     formError.value = getApiErrorMessage(error)

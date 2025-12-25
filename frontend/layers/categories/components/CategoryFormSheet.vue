@@ -6,7 +6,7 @@ import { Input } from '~/layers/shared/components/ui/input'
 import { Label } from '~/layers/shared/components/ui/label'
 import { Select } from '~/layers/shared/components/ui/select'
 import { Switch } from '~/layers/shared/components/ui/switch'
-import type { Category, CreateCategoryRequest, Direction } from '../types/category'
+import type { Category, Direction } from '../types/category'
 import { validateCategoryInput } from '../validation/category'
 
 interface Props {
@@ -25,13 +25,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  submit: [payload: CreateCategoryRequest]
+  submit: [payload: { name: string; direction: Direction; is_budget_relevant: boolean; is_active: boolean }]
 }>()
 
-const form = reactive<CreateCategoryRequest>({
+const form = reactive<{ name: string; direction: Direction; is_budget_relevant: boolean; is_active: boolean }>({
   name: '',
   direction: 'OUT',
   is_budget_relevant: true,
+  is_active: true,
 })
 
 const errors = ref<{ name?: string; direction?: string }>({})
@@ -43,10 +44,12 @@ function resetForm() {
     form.name = props.category.name
     form.direction = props.category.direction
     form.is_budget_relevant = props.category.is_budget_relevant
+    form.is_active = props.category.is_active
   } else {
     form.name = ''
     form.direction = 'OUT'
     form.is_budget_relevant = true
+    form.is_active = true
   }
   errors.value = {}
 }
@@ -61,6 +64,7 @@ function handleSubmit() {
     name: form.name.trim(),
     direction: form.direction as Direction,
     is_budget_relevant: form.is_budget_relevant,
+    is_active: form.is_active,
   })
 }
 
@@ -118,9 +122,13 @@ watch(
           <Switch v-model="form.is_budget_relevant" :disabled="props.submitting" />
         </div>
 
-        <p v-if="props.mode === 'edit'" class="text-xs text-muted-foreground">
-          Edição indisponível no backend no momento.
-        </p>
+        <div v-if="props.mode === 'edit'" class="flex items-center justify-between rounded-md border p-3">
+          <div>
+            <p class="text-sm font-medium">Categoria ativa</p>
+            <p class="text-xs text-muted-foreground">Desative para esconder da lista principal.</p>
+          </div>
+          <Switch v-model="form.is_active" :disabled="props.submitting" />
+        </div>
       </div>
 
       <SheetFooter class="mt-6">
