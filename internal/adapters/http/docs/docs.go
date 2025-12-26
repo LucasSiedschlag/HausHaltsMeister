@@ -75,7 +75,7 @@ const docTemplate = `{
         },
         "/budgets/items/{id}": {
             "put": {
-                "description": "Updates the planned amount for a specific budget item.",
+                "description": "Updates the budget item (percentual ou absoluto) for a specific budget item.",
                 "consumes": [
                     "application/json"
                 ],
@@ -127,8 +127,64 @@ const docTemplate = `{
             }
         },
         "/budgets/{month}/items": {
+            "put": {
+                "description": "Updates all budget items for a month and validates 100% distribution.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budgets"
+                ],
+                "summary": "Atualizar Orçamento em Lote",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-03-01",
+                        "description": "Reference Month (YYYY-MM-DD)",
+                        "name": "month",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Bulk Budget Items Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BulkBudgetItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
-                "description": "Sets or updates the planned amount for a specific category in a given month.",
+                "description": "Sets or updates the budget item (percentual or absoluto) for a specific category in a given month.",
                 "consumes": [
                     "application/json"
                 ],
@@ -818,6 +874,50 @@ const docTemplate = `{
             }
         },
         "/picuinhas/entries": {
+            "get": {
+                "description": "Returns a list of picuinha entries.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Listar Lançamentos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Person ID",
+                        "name": "person_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PicuinhaEntryResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Registers a new financial entry for a specific person.",
                 "consumes": [
@@ -850,6 +950,104 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/picuinhas/entries/{id}": {
+            "put": {
+                "description": "Updates a picuinha entry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Atualizar Lançamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Entry ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Entry Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PicuinhaEntryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a picuinha entry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Excluir Lançamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Entry ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -932,6 +1130,110 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/picuinhas/persons/{id}": {
+            "put": {
+                "description": "Updates a person in picuinhas.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Atualizar Pessoa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Person Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdatePersonRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PersonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a person (only if no entries exist).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Excluir Pessoa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -980,6 +1282,9 @@ const docTemplate = `{
                 },
                 "planned_amount": {
                     "type": "number"
+                },
+                "target_percent": {
+                    "type": "number"
                 }
             }
         },
@@ -994,6 +1299,31 @@ const docTemplate = `{
                 },
                 "month": {
                     "type": "string"
+                },
+                "total_income": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.BulkBudgetItemRequest": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "target_percent": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.BulkBudgetItemsRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BulkBudgetItemRequest"
+                    }
                 }
             }
         },
@@ -1031,6 +1361,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "inactive_from_month": {
+                    "type": "string"
                 },
                 "is_active": {
                     "type": "boolean"
@@ -1325,11 +1658,17 @@ const docTemplate = `{
                 "end_month": {
                     "type": "string"
                 },
+                "mode": {
+                    "type": "string"
+                },
                 "planned_amount": {
                     "type": "number"
                 },
                 "start_month": {
                     "type": "string"
+                },
+                "target_percent": {
+                    "type": "number"
                 }
             }
         },
@@ -1339,7 +1678,13 @@ const docTemplate = `{
                 "category_id": {
                     "type": "integer"
                 },
+                "mode": {
+                    "type": "string"
+                },
                 "planned_amount": {
+                    "type": "number"
+                },
+                "target_percent": {
                     "type": "number"
                 }
             }
@@ -1347,7 +1692,13 @@ const docTemplate = `{
         "dto.UpdateBudgetItemRequest": {
             "type": "object",
             "properties": {
+                "mode": {
+                    "type": "string"
+                },
                 "planned_amount": {
+                    "type": "number"
+                },
+                "target_percent": {
                     "type": "number"
                 }
             }
@@ -1366,6 +1717,35 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdateEntryRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "auto_create_flow": {
+                    "type": "boolean"
+                },
+                "kind": {
+                    "description": "PLUS or MINUS",
+                    "type": "string"
+                },
+                "person_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.UpdatePersonRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
                     "type": "string"
                 }
             }

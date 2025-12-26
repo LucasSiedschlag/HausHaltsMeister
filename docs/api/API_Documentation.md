@@ -402,7 +402,45 @@ Use para aplicar o mesmo valor a vários meses futuros.
 
 _Note: Balance > 0 means they ensure you (você tem crédito)._
 
-### 4.3 Registrar Entrada (Empréstimo/Pagamento)
+### 4.3 Atualizar Pessoa
+
+**Endpoint:** `PUT /picuinhas/persons/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "name": "João",
+  "notes": "Amigo de infância"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": 1,
+  "name": "João",
+  "notes": "Amigo de infância",
+  "balance": 150.0
+}
+```
+
+### 4.4 Excluir Pessoa
+
+**Endpoint:** `DELETE /picuinhas/persons/{id}`
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "deleted"
+}
+```
+
+**Observação:** não é permitido excluir uma pessoa que já tenha lançamentos.
+
+### 4.5 Registrar Entrada (Empréstimo/Pagamento)
 
 **Endpoint:** `POST /picuinhas/entries`
 
@@ -413,12 +451,16 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "person_id": 1,
   "amount": 100.0,
   "kind": "PLUS",
-  "auto_create_flow": true
+  "auto_create_flow": true,
+  "payment_method_id": 2,
+  "card_owner": "SELF"
 }
 ```
 
 - `kind`: "PLUS" (aumenta dívida dela/meu crédito) ou "MINUS" (diminui dívida dela/ela pagou).
 - `auto_create_flow`: Se `true`, cria fluxo de caixa correspondente na categoria "Picuinhas".
+- `payment_method_id`: Opcional. Cartão usado no lançamento.
+- `card_owner`: "SELF" (cartão do usuário) ou "THIRD" (cartão de outra pessoa). Para "THIRD" o `auto_create_flow` é ignorado.
 
 **Response (201 Created):**
 
@@ -428,7 +470,64 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "person_id": 1,
   "amount": 100.0,
   "kind": "PLUS",
+  "cash_flow_id": 33,
+  "payment_method_id": 2,
+  "card_owner": "SELF",
   "created_at": "2024-03-15T10:00:00Z"
+}
+```
+
+### 4.6 Listar Entradas
+
+**Endpoint:** `GET /picuinhas/entries`
+
+**Query Params (opcional):**
+
+- `person_id` (int): filtra lançamentos por pessoa.
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 10,
+    "person_id": 1,
+    "amount": 100.0,
+    "kind": "PLUS",
+    "cash_flow_id": 55,
+    "created_at": "2024-03-15T10:00:00Z"
+  }
+]
+```
+
+### 4.7 Atualizar Entrada
+
+**Endpoint:** `PUT /picuinhas/entries/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "person_id": 1,
+  "amount": 80.0,
+  "kind": "PLUS",
+  "auto_create_flow": true,
+  "payment_method_id": 2,
+  "card_owner": "SELF"
+}
+```
+
+**Response (200 OK):** `PicuinhaEntryResponse`
+
+### 4.8 Excluir Entrada
+
+**Endpoint:** `DELETE /picuinhas/entries/{id}`
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "deleted"
 }
 ```
 
@@ -450,6 +549,26 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "closing_day": 1,
   "due_day": 7
 }
+```
+
+### 5.1.1 Listar Meios de Pagamento
+
+**Endpoint:** `GET /payment-methods`
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Nubank",
+    "kind": "CREDIT_CARD",
+    "bank_name": "Nu Pagamentos",
+    "closing_day": 1,
+    "due_day": 7,
+    "is_active": true
+  }
+]
 ```
 
 ### 5.2 Criar Compra Parcelada

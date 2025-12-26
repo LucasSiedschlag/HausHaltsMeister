@@ -6,9 +6,14 @@ import (
 )
 
 var (
-	ErrPersonNameRequired = errors.New("person name is required")
-	ErrAmountRequired     = errors.New("amount must be greater than zero")
-	ErrInvalidKind        = errors.New("invalid kind (must be 'loan' or 'repayment')")
+	ErrPersonNameRequired   = errors.New("person name is required")
+	ErrAmountRequired       = errors.New("amount must be greater than zero")
+	ErrInvalidKind          = errors.New("invalid kind (must be 'PLUS' or 'MINUS')")
+	ErrPersonNotFound       = errors.New("person not found")
+	ErrEntryNotFound        = errors.New("entry not found")
+	ErrPersonHasEntries     = errors.New("person has entries")
+	ErrInvalidCardOwner     = errors.New("invalid card owner (must be 'SELF' or 'THIRD')")
+	ErrCardOwnerUnsupported = errors.New("card owner 'THIRD' not supported yet")
 )
 
 const (
@@ -34,6 +39,11 @@ const (
 	// MINUS (Diminui o que a pessoa me deve)
 )
 
+const (
+	CardOwnerSelf  = "SELF"
+	CardOwnerThird = "THIRD"
+)
+
 type Person struct {
 	ID      int32
 	Name    string
@@ -42,10 +52,12 @@ type Person struct {
 }
 
 type Entry struct {
-	ID         int32
-	PersonID   int32
-	Date       time.Time
-	Kind       string // PLUS, MINUS
-	Amount     float64
-	CashFlowID *int32 // Optional link directly to a transaction (e.g. I paid the bar tab)
+	ID              int32
+	PersonID        int32
+	Date            time.Time
+	Kind            string // PLUS, MINUS
+	Amount          float64
+	CashFlowID      *int32 // Optional link directly to a transaction (e.g. I paid the bar tab)
+	PaymentMethodID *int32
+	CardOwner       string
 }

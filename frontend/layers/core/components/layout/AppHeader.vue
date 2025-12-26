@@ -17,20 +17,40 @@
               </NuxtLink>
             </SheetClose>
             <nav class="flex flex-col gap-1 text-sm font-medium">
-              <SheetClose
-                v-for="item in navigation"
-                :key="item.href"
-                as-child
-              >
-                <NuxtLink
-                  :to="item.href"
-                  class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                  active-class="bg-primary/10 text-primary"
+              <template v-for="item in navigation" :key="item.href">
+                <div v-if="item.children?.length" class="space-y-1">
+                  <div class="flex items-center gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    <component :is="getIcon(item.icon)" class="h-4 w-4" />
+                    {{ item.title }}
+                  </div>
+                  <SheetClose
+                    v-for="child in item.children"
+                    :key="child.href"
+                    as-child
+                  >
+                    <NuxtLink
+                      :to="child.href"
+                      class="flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                      active-class="bg-primary/10 text-primary"
+                    >
+                      {{ child.title }}
+                    </NuxtLink>
+                  </SheetClose>
+                </div>
+                <SheetClose
+                  v-else
+                  as-child
                 >
-                  <component :is="getIcon(item.icon)" class="h-4 w-4" />
-                  {{ item.title }}
-                </NuxtLink>
-              </SheetClose>
+                  <NuxtLink
+                    :to="item.href"
+                    class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                    active-class="bg-primary/10 text-primary"
+                  >
+                    <component :is="getIcon(item.icon)" class="h-4 w-4" />
+                    {{ item.title }}
+                  </NuxtLink>
+                </SheetClose>
+              </template>
             </nav>
           </SheetContent>
         </Sheet>

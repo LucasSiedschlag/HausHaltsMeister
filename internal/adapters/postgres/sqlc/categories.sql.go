@@ -49,6 +49,33 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 	return i, err
 }
 
+const deactivateCategory = `-- name: DeactivateCategory :one
+UPDATE flow_categories
+SET is_active = false,
+    inactive_from_month = $2
+WHERE category_id = $1
+RETURNING category_id, name, direction, is_budget_relevant, is_active, inactive_from_month
+`
+
+type DeactivateCategoryParams struct {
+	CategoryID        int32
+	InactiveFromMonth pgtype.Date
+}
+
+func (q *Queries) DeactivateCategory(ctx context.Context, arg DeactivateCategoryParams) (FlowCategory, error) {
+	row := q.db.QueryRow(ctx, deactivateCategory, arg.CategoryID, arg.InactiveFromMonth)
+	var i FlowCategory
+	err := row.Scan(
+		&i.CategoryID,
+		&i.Name,
+		&i.Direction,
+		&i.IsBudgetRelevant,
+		&i.IsActive,
+		&i.InactiveFromMonth,
+	)
+	return i, err
+}
+
 const getCategoryByID = `-- name: GetCategoryByID :one
 SELECT category_id, name, direction, is_budget_relevant, is_active, inactive_from_month
 FROM flow_categories
@@ -132,12 +159,12 @@ ORDER BY name
 `
 
 type ListCategoriesByMonthParams struct {
-	ActiveOnly bool
-	Month      pgtype.Date
+	Column1 bool
+	Column2 pgtype.Date
 }
 
 func (q *Queries) ListCategoriesByMonth(ctx context.Context, arg ListCategoriesByMonthParams) ([]FlowCategory, error) {
-	rows, err := q.db.Query(ctx, listCategoriesByMonth, arg.ActiveOnly, arg.Month)
+	rows, err := q.db.Query(ctx, listCategoriesByMonth, arg.Column1, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -189,33 +216,6 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		arg.IsBudgetRelevant,
 		arg.IsActive,
 	)
-	var i FlowCategory
-	err := row.Scan(
-		&i.CategoryID,
-		&i.Name,
-		&i.Direction,
-		&i.IsBudgetRelevant,
-		&i.IsActive,
-		&i.InactiveFromMonth,
-	)
-	return i, err
-}
-
-const deactivateCategory = `-- name: DeactivateCategory :one
-UPDATE flow_categories
-SET is_active = false,
-    inactive_from_month = $2
-WHERE category_id = $1
-RETURNING category_id, name, direction, is_budget_relevant, is_active, inactive_from_month
-`
-
-type DeactivateCategoryParams struct {
-	CategoryID        int32
-	InactiveFromMonth pgtype.Date
-}
-
-func (q *Queries) DeactivateCategory(ctx context.Context, arg DeactivateCategoryParams) (FlowCategory, error) {
-	row := q.db.QueryRow(ctx, deactivateCategory, arg.CategoryID, arg.InactiveFromMonth)
 	var i FlowCategory
 	err := row.Scan(
 		&i.CategoryID,

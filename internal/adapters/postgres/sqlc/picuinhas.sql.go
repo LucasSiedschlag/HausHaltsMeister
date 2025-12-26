@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countEntriesByPerson = `-- name: CountEntriesByPerson :one
+SELECT COUNT(*)
+FROM picuinha_entries
+WHERE person_id = $1
+`
+
+func (q *Queries) CountEntriesByPerson(ctx context.Context, personID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countEntriesByPerson, personID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPerson = `-- name: CreatePerson :one
 INSERT INTO picuinha_persons (name, notes)
 VALUES ($1, $2)
@@ -30,17 +43,19 @@ func (q *Queries) CreatePerson(ctx context.Context, arg CreatePersonParams) (Pic
 }
 
 const createPicuinhaEntry = `-- name: CreatePicuinhaEntry :one
-INSERT INTO picuinha_entries (person_id, date, kind, amount, cash_flow_id)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING picuinha_entry_id, person_id, date, kind, amount, cash_flow_id
+INSERT INTO picuinha_entries (person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
 `
 
 type CreatePicuinhaEntryParams struct {
-	PersonID   int32
-	Date       pgtype.Date
-	Kind       string
-	Amount     pgtype.Numeric
-	CashFlowID pgtype.Int4
+	PersonID        int32
+	Date            pgtype.Date
+	Kind            string
+	Amount          pgtype.Numeric
+	CashFlowID      pgtype.Int4
+	PaymentMethodID pgtype.Int4
+	CardOwner       string
 }
 
 func (q *Queries) CreatePicuinhaEntry(ctx context.Context, arg CreatePicuinhaEntryParams) (PicuinhaEntry, error) {
@@ -50,6 +65,8 @@ func (q *Queries) CreatePicuinhaEntry(ctx context.Context, arg CreatePicuinhaEnt
 		arg.Kind,
 		arg.Amount,
 		arg.CashFlowID,
+		arg.PaymentMethodID,
+		arg.CardOwner,
 	)
 	var i PicuinhaEntry
 	err := row.Scan(
@@ -59,6 +76,50 @@ func (q *Queries) CreatePicuinhaEntry(ctx context.Context, arg CreatePicuinhaEnt
 		&i.Kind,
 		&i.Amount,
 		&i.CashFlowID,
+		&i.PaymentMethodID,
+		&i.CardOwner,
+	)
+	return i, err
+}
+
+const deletePerson = `-- name: DeletePerson :exec
+DELETE FROM picuinha_persons
+WHERE person_id = $1
+`
+
+func (q *Queries) DeletePerson(ctx context.Context, personID int32) error {
+	_, err := q.db.Exec(ctx, deletePerson, personID)
+	return err
+}
+
+const deletePicuinhaEntry = `-- name: DeletePicuinhaEntry :exec
+DELETE FROM picuinha_entries
+WHERE picuinha_entry_id = $1
+`
+
+func (q *Queries) DeletePicuinhaEntry(ctx context.Context, picuinhaEntryID int32) error {
+	_, err := q.db.Exec(ctx, deletePicuinhaEntry, picuinhaEntryID)
+	return err
+}
+
+const getEntry = `-- name: GetEntry :one
+SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
+FROM picuinha_entries
+WHERE picuinha_entry_id = $1
+`
+
+func (q *Queries) GetEntry(ctx context.Context, picuinhaEntryID int32) (PicuinhaEntry, error) {
+	row := q.db.QueryRow(ctx, getEntry, picuinhaEntryID)
+	var i PicuinhaEntry
+	err := row.Scan(
+		&i.PicuinhaEntryID,
+		&i.PersonID,
+		&i.Date,
+		&i.Kind,
+		&i.Amount,
+		&i.CashFlowID,
+		&i.PaymentMethodID,
+		&i.CardOwner,
 	)
 	return i, err
 }
@@ -89,8 +150,43 @@ func (q *Queries) GetPersonBalance(ctx context.Context, personID int32) (pgtype.
 	return column_1, err
 }
 
+const listEntries = `-- name: ListEntries :many
+SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
+FROM picuinha_entries
+ORDER BY date DESC
+`
+
+func (q *Queries) ListEntries(ctx context.Context) ([]PicuinhaEntry, error) {
+	rows, err := q.db.Query(ctx, listEntries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PicuinhaEntry
+	for rows.Next() {
+		var i PicuinhaEntry
+		if err := rows.Scan(
+			&i.PicuinhaEntryID,
+			&i.PersonID,
+			&i.Date,
+			&i.Kind,
+			&i.Amount,
+			&i.CashFlowID,
+			&i.PaymentMethodID,
+			&i.CardOwner,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEntriesByPerson = `-- name: ListEntriesByPerson :many
-SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id
+SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
 FROM picuinha_entries
 WHERE person_id = $1
 ORDER BY date DESC
@@ -112,6 +208,8 @@ func (q *Queries) ListEntriesByPerson(ctx context.Context, personID int32) ([]Pi
 			&i.Kind,
 			&i.Amount,
 			&i.CashFlowID,
+			&i.PaymentMethodID,
+			&i.CardOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -147,4 +245,71 @@ func (q *Queries) ListPersons(ctx context.Context) ([]PicuinhaPerson, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePerson = `-- name: UpdatePerson :one
+UPDATE picuinha_persons
+SET name = $2,
+    notes = $3
+WHERE person_id = $1
+RETURNING person_id, name, notes
+`
+
+type UpdatePersonParams struct {
+	PersonID int32
+	Name     string
+	Notes    pgtype.Text
+}
+
+func (q *Queries) UpdatePerson(ctx context.Context, arg UpdatePersonParams) (PicuinhaPerson, error) {
+	row := q.db.QueryRow(ctx, updatePerson, arg.PersonID, arg.Name, arg.Notes)
+	var i PicuinhaPerson
+	err := row.Scan(&i.PersonID, &i.Name, &i.Notes)
+	return i, err
+}
+
+const updatePicuinhaEntry = `-- name: UpdatePicuinhaEntry :one
+UPDATE picuinha_entries
+SET person_id = $2,
+    kind = $3,
+    amount = $4,
+    cash_flow_id = $5,
+    payment_method_id = $6,
+    card_owner = $7
+WHERE picuinha_entry_id = $1
+RETURNING picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
+`
+
+type UpdatePicuinhaEntryParams struct {
+	PicuinhaEntryID int32
+	PersonID        int32
+	Kind            string
+	Amount          pgtype.Numeric
+	CashFlowID      pgtype.Int4
+	PaymentMethodID pgtype.Int4
+	CardOwner       string
+}
+
+func (q *Queries) UpdatePicuinhaEntry(ctx context.Context, arg UpdatePicuinhaEntryParams) (PicuinhaEntry, error) {
+	row := q.db.QueryRow(ctx, updatePicuinhaEntry,
+		arg.PicuinhaEntryID,
+		arg.PersonID,
+		arg.Kind,
+		arg.Amount,
+		arg.CashFlowID,
+		arg.PaymentMethodID,
+		arg.CardOwner,
+	)
+	var i PicuinhaEntry
+	err := row.Scan(
+		&i.PicuinhaEntryID,
+		&i.PersonID,
+		&i.Date,
+		&i.Kind,
+		&i.Amount,
+		&i.CashFlowID,
+		&i.PaymentMethodID,
+		&i.CardOwner,
+	)
+	return i, err
 }

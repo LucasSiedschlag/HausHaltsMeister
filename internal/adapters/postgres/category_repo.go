@@ -84,8 +84,8 @@ func (r *CategoryRepository) List(ctx context.Context, activeOnly bool) ([]*cate
 func (r *CategoryRepository) ListByMonth(ctx context.Context, activeOnly bool, month time.Time) ([]*category.Category, error) {
 	pgDate := pgtype.Date{Time: month, Valid: true}
 	rows, err := r.q.ListCategoriesByMonth(ctx, sqlc.ListCategoriesByMonthParams{
-		ActiveOnly: activeOnly,
-		Month:      pgDate,
+		Column1: activeOnly,
+		Column2: pgDate,
 	})
 	if err != nil {
 		return nil, err

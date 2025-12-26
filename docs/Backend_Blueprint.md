@@ -202,6 +202,7 @@ Objetivo: razão por pessoa + saldo.
 • Regras:
 • saldo por pessoa calculado por soma/subtração conforme kind
 • vincular Entry a cash_flow quando mexer no fluxo real
+• Entry pode referenciar payment_method_id e card_owner (SELF/THIRD)
 
 7.4 Domain: Cards
 
@@ -234,9 +235,13 @@ Budget
 
 Picuinhas
 • POST /picuinhas/persons
+• PUT /picuinhas/persons/:id
+• DELETE /picuinhas/persons/:id
+• GET /picuinhas/persons
 • POST /picuinhas/entries
-• GET /picuinhas/persons/:id/ledger
-• GET /picuinhas/persons/:id/balance
+• GET /picuinhas/entries?person_id=:id
+• PUT /picuinhas/entries/:id
+• DELETE /picuinhas/entries/:id
 
 Cards
 • POST /cards/installments (cria parcelamento)

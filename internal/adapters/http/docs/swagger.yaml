@@ -31,6 +31,8 @@ definitions:
         type: string
       planned_amount:
         type: number
+      target_percent:
+        type: number
     type: object
   dto.BudgetSummaryResponse:
     properties:
@@ -40,6 +42,22 @@ definitions:
         type: array
       month:
         type: string
+      total_income:
+        type: number
+    type: object
+  dto.BulkBudgetItemRequest:
+    properties:
+      category_id:
+        type: integer
+      target_percent:
+        type: number
+    type: object
+  dto.BulkBudgetItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.BulkBudgetItemRequest'
+        type: array
     type: object
   dto.CashFlowResponse:
     properties:
@@ -64,6 +82,8 @@ definitions:
         type: string
       id:
         type: integer
+      inactive_from_month:
+        type: string
       is_active:
         type: boolean
       is_budget_relevant:
@@ -255,21 +275,33 @@ definitions:
         type: integer
       end_month:
         type: string
+      mode:
+        type: string
       planned_amount:
         type: number
       start_month:
         type: string
+      target_percent:
+        type: number
     type: object
   dto.SetBudgetItemRequest:
     properties:
       category_id:
         type: integer
+      mode:
+        type: string
       planned_amount:
+        type: number
+      target_percent:
         type: number
     type: object
   dto.UpdateBudgetItemRequest:
     properties:
+      mode:
+        type: string
       planned_amount:
+        type: number
+      target_percent:
         type: number
     type: object
   dto.UpdateCategoryRequest:
@@ -282,6 +314,25 @@ definitions:
       is_budget_relevant:
         type: boolean
       name:
+        type: string
+    type: object
+  dto.UpdateEntryRequest:
+    properties:
+      amount:
+        type: number
+      auto_create_flow:
+        type: boolean
+      kind:
+        description: PLUS or MINUS
+        type: string
+      person_id:
+        type: integer
+    type: object
+  dto.UpdatePersonRequest:
+    properties:
+      name:
+        type: string
+      notes:
         type: string
     type: object
 host: localhost:8080
@@ -302,8 +353,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Sets or updates the planned amount for a specific category in a
-        given month.
+      description: Sets or updates the budget item (percentual or absoluto) for a
+        specific category in a given month.
       parameters:
       - description: Reference Month (YYYY-MM-DD)
         example: "2024-03-01"
@@ -334,6 +385,44 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Definir Item de Orçamento
+      tags:
+      - Budgets
+    put:
+      consumes:
+      - application/json
+      description: Updates all budget items for a month and validates 100% distribution.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: path
+        name: month
+        required: true
+        type: string
+      - description: Bulk Budget Items Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BulkBudgetItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Orçamento em Lote
       tags:
       - Budgets
   /budgets/{month}/summary:
@@ -405,7 +494,8 @@ paths:
     put:
       consumes:
       - application/json
-      description: Updates the planned amount for a specific budget item.
+      description: Updates the budget item (percentual ou absoluto) for a specific
+        budget item.
       parameters:
       - description: Budget Item ID
         in: path
@@ -832,6 +922,35 @@ paths:
       tags:
       - Cards
   /picuinhas/entries:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of picuinha entries.
+      parameters:
+      - description: Person ID
+        in: query
+        name: person_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PicuinhaEntryResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Lançamentos
+      tags:
+      - Picuinhas
     post:
       consumes:
       - application/json
@@ -855,6 +974,71 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Registrar Entrada/Empréstimo
+      tags:
+      - Picuinhas
+  /picuinhas/entries/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a picuinha entry.
+      parameters:
+      - description: Entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Excluir Lançamento
+      tags:
+      - Picuinhas
+    put:
+      consumes:
+      - application/json
+      description: Updates a picuinha entry.
+      parameters:
+      - description: Entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Entry Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PicuinhaEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Lançamento
       tags:
       - Picuinhas
   /picuinhas/persons:
@@ -905,6 +1089,75 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Cadastrar Pessoa
+      tags:
+      - Picuinhas
+  /picuinhas/persons/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a person (only if no entries exist).
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Excluir Pessoa
+      tags:
+      - Picuinhas
+    put:
+      consumes:
+      - application/json
+      description: Updates a person in picuinhas.
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Person Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdatePersonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PersonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Pessoa
       tags:
       - Picuinhas
 schemes:

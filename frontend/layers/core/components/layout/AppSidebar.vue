@@ -9,16 +9,32 @@
     <div class="flex-1 overflow-y-auto px-3 py-4">
       <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Main</p>
       <nav class="space-y-1 text-sm font-medium">
-        <NuxtLink
-          v-for="item in navigation"
-          :key="item.href"
-          :to="item.href"
-          class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-          active-class="bg-primary/10 text-primary"
-        >
-          <component :is="getIcon(item.icon)" class="h-4 w-4" />
-          {{ item.title }}
-        </NuxtLink>
+        <template v-for="item in navigation" :key="item.href">
+          <div v-if="item.children?.length" class="space-y-1">
+            <div class="flex items-center gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <component :is="getIcon(item.icon)" class="h-4 w-4" />
+              {{ item.title }}
+            </div>
+            <NuxtLink
+              v-for="child in item.children"
+              :key="child.href"
+              :to="child.href"
+              class="flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              active-class="bg-primary/10 text-primary"
+            >
+              {{ child.title }}
+            </NuxtLink>
+          </div>
+          <NuxtLink
+            v-else
+            :to="item.href"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-primary/10 text-primary"
+          >
+            <component :is="getIcon(item.icon)" class="h-4 w-4" />
+            {{ item.title }}
+          </NuxtLink>
+        </template>
       </nav>
     </div>
     <div class="mt-auto p-4">

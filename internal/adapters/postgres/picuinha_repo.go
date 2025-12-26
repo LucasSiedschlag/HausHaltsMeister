@@ -3,13 +3,14 @@ package postgres
 import (
 	"context"
 	"database/sql"
-
+	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PicuinhaRepository struct {
@@ -54,6 +55,9 @@ func (r *PicuinhaRepository) ListPersons(ctx context.Context) ([]picuinha.Person
 func (r *PicuinhaRepository) GetPerson(ctx context.Context, id int32) (*picuinha.Person, error) {
 	row, err := r.q.GetPerson(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &picuinha.Person{
@@ -61,6 +65,34 @@ func (r *PicuinhaRepository) GetPerson(ctx context.Context, id int32) (*picuinha
 		Name:  row.Name,
 		Notes: row.Notes.String,
 	}, nil
+}
+
+func (r *PicuinhaRepository) UpdatePerson(ctx context.Context, id int32, name, notes string) (*picuinha.Person, error) {
+	n := pgtype.Text{String: notes, Valid: notes != ""}
+	row, err := r.q.UpdatePerson(ctx, sqlc.UpdatePersonParams{
+		PersonID: id,
+		Name:     name,
+		Notes:    n,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &picuinha.Person{
+		ID:    row.PersonID,
+		Name:  row.Name,
+		Notes: row.Notes.String,
+	}, nil
+}
+
+func (r *PicuinhaRepository) DeletePerson(ctx context.Context, id int32) error {
+	return r.q.DeletePerson(ctx, id)
+}
+
+func (r *PicuinhaRepository) CountEntriesByPerson(ctx context.Context, personID int32) (int64, error) {
+	return r.q.CountEntriesByPerson(ctx, personID)
 }
 
 func (r *PicuinhaRepository) AddEntry(ctx context.Context, entry *picuinha.Entry) (*picuinha.Entry, error) {
@@ -73,12 +105,24 @@ func (r *PicuinhaRepository) AddEntry(ctx context.Context, entry *picuinha.Entry
 		cfID = pgtype.Int4{Int32: *entry.CashFlowID, Valid: true}
 	}
 
+	pmID := pgtype.Int4{Valid: false}
+	if entry.PaymentMethodID != nil {
+		pmID = pgtype.Int4{Int32: *entry.PaymentMethodID, Valid: true}
+	}
+
+	cardOwner := entry.CardOwner
+	if cardOwner == "" {
+		cardOwner = picuinha.CardOwnerSelf
+	}
+
 	row, err := r.q.CreatePicuinhaEntry(ctx, sqlc.CreatePicuinhaEntryParams{
-		PersonID:   entry.PersonID,
-		Date:       pgDate,
-		Kind:       entry.Kind,
-		Amount:     am,
-		CashFlowID: cfID,
+		PersonID:        entry.PersonID,
+		Date:            pgDate,
+		Kind:            entry.Kind,
+		Amount:          am,
+		CashFlowID:      cfID,
+		PaymentMethodID: pmID,
+		CardOwner:       cardOwner,
 	})
 	if err != nil {
 		return nil, err
@@ -89,18 +133,24 @@ func (r *PicuinhaRepository) AddEntry(ctx context.Context, entry *picuinha.Entry
 	if row.CashFlowID.Valid {
 		retCfID = &row.CashFlowID.Int32
 	}
+	var retPmID *int32
+	if row.PaymentMethodID.Valid {
+		retPmID = &row.PaymentMethodID.Int32
+	}
 
 	return &picuinha.Entry{
-		ID:         row.PicuinhaEntryID,
-		PersonID:   row.PersonID,
-		Date:       row.Date.Time,
-		Kind:       row.Kind,
-		Amount:     val.Float64,
-		CashFlowID: retCfID,
+		ID:              row.PicuinhaEntryID,
+		PersonID:        row.PersonID,
+		Date:            row.Date.Time,
+		Kind:            row.Kind,
+		Amount:          val.Float64,
+		CashFlowID:      retCfID,
+		PaymentMethodID: retPmID,
+		CardOwner:       row.CardOwner,
 	}, nil
 }
 
-func (r *PicuinhaRepository) ListEntries(ctx context.Context, personID int32) ([]picuinha.Entry, error) {
+func (r *PicuinhaRepository) ListEntriesByPerson(ctx context.Context, personID int32) ([]picuinha.Entry, error) {
 	rows, err := r.q.ListEntriesByPerson(ctx, personID)
 	if err != nil {
 		return nil, err
@@ -112,16 +162,144 @@ func (r *PicuinhaRepository) ListEntries(ctx context.Context, personID int32) ([
 		if row.CashFlowID.Valid {
 			retCfID = &row.CashFlowID.Int32
 		}
+		var retPmID *int32
+		if row.PaymentMethodID.Valid {
+			retPmID = &row.PaymentMethodID.Int32
+		}
 		entries[i] = picuinha.Entry{
-			ID:         row.PicuinhaEntryID,
-			PersonID:   row.PersonID,
-			Date:       row.Date.Time,
-			Kind:       row.Kind,
-			Amount:     val.Float64,
-			CashFlowID: retCfID,
+			ID:              row.PicuinhaEntryID,
+			PersonID:        row.PersonID,
+			Date:            row.Date.Time,
+			Kind:            row.Kind,
+			Amount:          val.Float64,
+			CashFlowID:      retCfID,
+			PaymentMethodID: retPmID,
+			CardOwner:       row.CardOwner,
 		}
 	}
 	return entries, nil
+}
+
+func (r *PicuinhaRepository) ListEntries(ctx context.Context) ([]picuinha.Entry, error) {
+	rows, err := r.q.ListEntries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]picuinha.Entry, len(rows))
+	for i, row := range rows {
+		val, _ := row.Amount.Float64Value()
+		var retCfID *int32
+		if row.CashFlowID.Valid {
+			retCfID = &row.CashFlowID.Int32
+		}
+		var retPmID *int32
+		if row.PaymentMethodID.Valid {
+			retPmID = &row.PaymentMethodID.Int32
+		}
+		entries[i] = picuinha.Entry{
+			ID:              row.PicuinhaEntryID,
+			PersonID:        row.PersonID,
+			Date:            row.Date.Time,
+			Kind:            row.Kind,
+			Amount:          val.Float64,
+			CashFlowID:      retCfID,
+			PaymentMethodID: retPmID,
+			CardOwner:       row.CardOwner,
+		}
+	}
+	return entries, nil
+}
+
+func (r *PicuinhaRepository) GetEntry(ctx context.Context, id int32) (*picuinha.Entry, error) {
+	row, err := r.q.GetEntry(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	val, _ := row.Amount.Float64Value()
+	var retCfID *int32
+	if row.CashFlowID.Valid {
+		retCfID = &row.CashFlowID.Int32
+	}
+	var retPmID *int32
+	if row.PaymentMethodID.Valid {
+		retPmID = &row.PaymentMethodID.Int32
+	}
+
+	return &picuinha.Entry{
+		ID:              row.PicuinhaEntryID,
+		PersonID:        row.PersonID,
+		Date:            row.Date.Time,
+		Kind:            row.Kind,
+		Amount:          val.Float64,
+		CashFlowID:      retCfID,
+		PaymentMethodID: retPmID,
+		CardOwner:       row.CardOwner,
+	}, nil
+}
+
+func (r *PicuinhaRepository) UpdateEntry(ctx context.Context, entry *picuinha.Entry) (*picuinha.Entry, error) {
+	var amount pgtype.Numeric
+	amount.Scan(fmt.Sprintf("%.2f", entry.Amount))
+
+	cfID := pgtype.Int4{Valid: false}
+	if entry.CashFlowID != nil {
+		cfID = pgtype.Int4{Int32: *entry.CashFlowID, Valid: true}
+	}
+
+	pmID := pgtype.Int4{Valid: false}
+	if entry.PaymentMethodID != nil {
+		pmID = pgtype.Int4{Int32: *entry.PaymentMethodID, Valid: true}
+	}
+
+	cardOwner := entry.CardOwner
+	if cardOwner == "" {
+		cardOwner = picuinha.CardOwnerSelf
+	}
+
+	row, err := r.q.UpdatePicuinhaEntry(ctx, sqlc.UpdatePicuinhaEntryParams{
+		PicuinhaEntryID: entry.ID,
+		PersonID:        entry.PersonID,
+		Kind:            entry.Kind,
+		Amount:          amount,
+		CashFlowID:      cfID,
+		PaymentMethodID: pmID,
+		CardOwner:       cardOwner,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	val, _ := row.Amount.Float64Value()
+	var retCfID *int32
+	if row.CashFlowID.Valid {
+		retCfID = &row.CashFlowID.Int32
+	}
+	var retPmID *int32
+	if row.PaymentMethodID.Valid {
+		retPmID = &row.PaymentMethodID.Int32
+	}
+
+	return &picuinha.Entry{
+		ID:              row.PicuinhaEntryID,
+		PersonID:        row.PersonID,
+		Date:            row.Date.Time,
+		Kind:            row.Kind,
+		Amount:          val.Float64,
+		CashFlowID:      retCfID,
+		PaymentMethodID: retPmID,
+		CardOwner:       row.CardOwner,
+	}, nil
+}
+
+func (r *PicuinhaRepository) DeleteEntry(ctx context.Context, id int32) error {
+	return r.q.DeletePicuinhaEntry(ctx, id)
 }
 
 func (r *PicuinhaRepository) GetBalance(ctx context.Context, personID int32) (float64, error) {

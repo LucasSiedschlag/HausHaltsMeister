@@ -37,6 +37,12 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 - `layers/shared`: UI Kit (shadcn), utilitários globais, estilos base.
 - `layers/core`: Layouts principais, páginas base (Home), navegação.
 - `layers/dashboard`: Exemplo de feature/domínio específico.
+- `layers/picuinhas`: Pessoas e lançamentos de picuinhas.
+
+## Rotas de Picuinhas
+
+- `/picuinhas/pessoas`: cadastro e listagem de pessoas.
+- `/picuinhas/lancamentos`: lançamentos vinculados às pessoas (depende do cadastro em Pessoas).
 
 ## Adicionando um novo Módulo (Layer)
 

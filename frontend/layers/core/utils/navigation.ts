@@ -22,6 +22,21 @@ export const mainNavigation: NavigationItem[] = [
     icon: "Wallet",
   },
   {
+    title: "Picuinhas",
+    href: "/picuinhas/pessoas",
+    icon: "Users",
+    children: [
+      {
+        title: "Pessoas",
+        href: "/picuinhas/pessoas",
+      },
+      {
+        title: "Lançamentos",
+        href: "/picuinhas/lancamentos",
+      },
+    ],
+  },
+  {
     title: "Transactions",
     href: "/transactions",
     icon: "DollarSign",

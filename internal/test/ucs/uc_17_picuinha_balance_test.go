@@ -39,8 +39,8 @@ func TestUC17_PicuinhaBalance(t *testing.T) {
 	person, _ := picService.CreatePerson(ctx, "Dave", "")
 
 	// Manually add entries via Service to check balance calculation
-	picService.AddDiff(ctx, person.ID, 100.0, "PLUS", nil, false)
-	picService.AddDiff(ctx, person.ID, 30.0, "MINUS", nil, false)
+	picService.AddDiff(ctx, person.ID, 100.0, "PLUS", nil, nil, picuinha.CardOwnerSelf, false)
+	picService.AddDiff(ctx, person.ID, 30.0, "MINUS", nil, nil, picuinha.CardOwnerSelf, false)
 
 	t.Run("Verify Balance in List", func(t *testing.T) {
 		rec := client.Request(t, "GET", "/picuinhas/persons", nil)

@@ -31,6 +31,14 @@ frontend/
 │       ├── composables/  # Lógica específica do domínio
 │       └── nuxt.config.ts
 │
+│   └── picuinhas/        # Feature Layer: Picuinhas (Pessoas + Lançamentos)
+│       ├── components/   # Componentes específicos do domínio
+│       ├── pages/        # Rotas /picuinhas/...
+│       ├── services/     # Integração com API de picuinhas
+│       ├── types/        # DTOs do domínio
+│       ├── validation/   # Validação de formulários
+│       └── nuxt.config.ts
+│
 ├── public/               # Assets estáticos
 ├── nuxt.config.ts        # Ponto de entrada e registro de layers
 ├── tailwind.config.ts    # Configuração do Tailwind (estende shared se necessário)
@@ -66,6 +74,12 @@ frontend/
   - Componentes "smart" (com lógica de negócio).
   - Composables de domínio (ex: `useRevenueStats`).
 - **Regras de Dependência**: Depende de `shared`. Idealmente não deve depender diretamente de outro layer de feature (acoplamento horizontal), mas pode ser orquestrado pelo `core` ou comunicar via eventos/estado global se estritamente necessário.
+
+#### Domínios atuais
+
+- `layers/categories`: cadastro de categorias.
+- `layers/budget`: orçamento mensal.
+- `layers/picuinhas`: pessoas e lançamentos de picuinhas.
 
 ## Estratégias
 

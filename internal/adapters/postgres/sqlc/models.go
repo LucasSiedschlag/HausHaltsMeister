@@ -49,11 +49,11 @@ type ExpenseDetail struct {
 
 // Categorias de ENTRADA (ex.: Ganho, Investimento) e de SAÍDA (ex.: Custos Fixos, Prazeres, Veículo/Transporte etc.)
 type FlowCategory struct {
-	CategoryID       int32
-	Name             string
-	Direction        string
-	IsBudgetRelevant bool
-	IsActive         bool
+	CategoryID        int32
+	Name              string
+	Direction         string
+	IsBudgetRelevant  bool
+	IsActive          bool
 	InactiveFromMonth pgtype.Date
 }
 
@@ -87,6 +87,8 @@ type PicuinhaEntry struct {
 	Kind            string
 	Amount          pgtype.Numeric
 	CashFlowID      pgtype.Int4
+	PaymentMethodID pgtype.Int4
+	CardOwner       string
 }
 
 type PicuinhaPerson struct {
