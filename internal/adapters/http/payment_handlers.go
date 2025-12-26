@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -40,6 +41,10 @@ func (h *PaymentHandler) Create(c echo.Context) error {
 		req.Name, req.Kind, req.BankName, req.ClosingDay, req.DueDay,
 	)
 	if err != nil {
+		if errors.Is(err, payment.ErrNameRequired) || errors.Is(err, payment.ErrKindRequired) ||
+			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create payment method: %v", err)})
 	}
 
@@ -67,6 +72,90 @@ func (h *PaymentHandler) List(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, resp)
+}
+
+// Update updates an existing payment method.
+// @Summary Atualizar Meio de Pagamento
+// @Description Updates a payment method by ID.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Param id path int true "Payment Method ID"
+// @Param payload body dto.UpdatePaymentMethodRequest true "Payment Method Payload"
+// @Success 200 {object} dto.PaymentMethodResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /payment-methods/{id} [put]
+func (h *PaymentHandler) Update(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	var req dto.UpdatePaymentMethodRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
+	}
+	if req.Name == nil || req.Kind == nil || req.IsActive == nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "missing required fields"})
+	}
+
+	bankName := ""
+	if req.BankName != nil {
+		bankName = *req.BankName
+	}
+
+	updated, err := h.service.UpdatePaymentMethod(
+		c.Request().Context(),
+		id,
+		*req.Name,
+		*req.Kind,
+		bankName,
+		req.ClosingDay,
+		req.DueDay,
+		*req.IsActive,
+	)
+	if err != nil {
+		if errors.Is(err, payment.ErrNameRequired) || errors.Is(err, payment.ErrKindRequired) ||
+			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
+		if errors.Is(err, payment.ErrPaymentMethodNotFound) {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to update payment method"})
+	}
+
+	return c.JSON(http.StatusOK, toPaymentMethodResponse(updated))
+}
+
+// Delete deactivates a payment method.
+// @Summary Excluir Meio de Pagamento
+// @Description Deactivates a payment method by ID.
+// @Tags Cards
+// @Accept json
+// @Produce json
+// @Param id path int true "Payment Method ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /payment-methods/{id} [delete]
+func (h *PaymentHandler) Delete(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	if err := h.service.DeletePaymentMethod(c.Request().Context(), id); err != nil {
+		if errors.Is(err, payment.ErrPaymentMethodNotFound) {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to delete payment method"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // GetInvoice returns the invoice details for a specific credit card and month.
@@ -124,6 +213,8 @@ func RegisterPaymentRoutes(e *echo.Echo, h *PaymentHandler) {
 	g := e.Group("/payment-methods")
 	g.POST("", h.Create)
 	g.GET("", h.List)
+	g.PUT("/:id", h.Update)
+	g.DELETE("/:id", h.Delete)
 	g.GET("/:id/invoice", h.GetInvoice)
 }
 

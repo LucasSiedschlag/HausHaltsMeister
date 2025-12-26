@@ -14,6 +14,17 @@ SELECT payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
 FROM payment_methods
 WHERE payment_method_id = $1;
 
+-- name: UpdatePaymentMethod :one
+UPDATE payment_methods
+SET name = $2,
+    kind = $3,
+    bank_name = $4,
+    closing_day = $5,
+    due_day = $6,
+    is_active = $7
+WHERE payment_method_id = $1
+RETURNING payment_method_id, name, kind, bank_name, closing_day, due_day, is_active;
+
 -- name: GetInvoiceEntries :many
 SELECT 
     cf.cash_flow_id, 

@@ -39,6 +39,14 @@ frontend/
 │       ├── validation/   # Validação de formulários
 │       └── nuxt.config.ts
 │
+│   └── payment-methods/  # Feature Layer: Meios de Pagamento
+│       ├── components/   # Componentes específicos do domínio
+│       ├── pages/        # Rotas /meios-de-pagamento
+│       ├── services/     # Integração com API de pagamentos
+│       ├── types/        # DTOs do domínio
+│       ├── validation/   # Validação de formulários
+│       └── nuxt.config.ts
+│
 ├── public/               # Assets estáticos
 ├── nuxt.config.ts        # Ponto de entrada e registro de layers
 ├── tailwind.config.ts    # Configuração do Tailwind (estende shared se necessário)
@@ -79,6 +87,7 @@ frontend/
 
 - `layers/categories`: cadastro de categorias.
 - `layers/budget`: orçamento mensal.
+- `layers/payment-methods`: meios de pagamento.
 - `layers/picuinhas`: pessoas e lançamentos de picuinhas.
 
 ## Estratégias

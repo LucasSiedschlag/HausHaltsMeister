@@ -571,6 +571,51 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
 ]
 ```
 
+### 5.1.2 Atualizar Meio de Pagamento
+
+**Endpoint:** `PUT /payment-methods/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "name": "Nubank",
+  "kind": "CREDIT_CARD",
+  "bank_name": "Nu Pagamentos",
+  "closing_day": 1,
+  "due_day": 7,
+  "is_active": true
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": 1,
+  "name": "Nubank",
+  "kind": "CREDIT_CARD",
+  "bank_name": "Nu Pagamentos",
+  "closing_day": 1,
+  "due_day": 7,
+  "is_active": true
+}
+```
+
+### 5.1.3 Excluir Meio de Pagamento
+
+**Endpoint:** `DELETE /payment-methods/{id}`
+
+**Obs:** a exclusão é lógica (is_active = false) para preservar histórico.
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "deleted"
+}
+```
+
 ### 5.2 Criar Compra Parcelada
 
 **Endpoint:** `POST /installments`

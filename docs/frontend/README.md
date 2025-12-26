@@ -37,12 +37,17 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 - `layers/shared`: UI Kit (shadcn), utilitários globais, estilos base.
 - `layers/core`: Layouts principais, páginas base (Home), navegação.
 - `layers/dashboard`: Exemplo de feature/domínio específico.
+- `layers/payment-methods`: Cadastro de meios de pagamento.
 - `layers/picuinhas`: Pessoas e lançamentos de picuinhas.
 
 ## Rotas de Picuinhas
 
 - `/picuinhas/pessoas`: cadastro e listagem de pessoas.
 - `/picuinhas/lancamentos`: lançamentos vinculados às pessoas (depende do cadastro em Pessoas).
+
+## Rotas de Meios de Pagamento
+
+- `/meios-de-pagamento`: cadastro e listagem de cartões e outros meios.
 
 ## Adicionando um novo Módulo (Layer)
 

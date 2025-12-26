@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     './layers/core',
     './layers/categories',
     './layers/budget',
+    './layers/payment-methods',
     './layers/picuinhas',
     './layers/dashboard'
   ],

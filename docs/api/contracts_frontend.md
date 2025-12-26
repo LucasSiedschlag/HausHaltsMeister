@@ -323,10 +323,28 @@ interface UpdateEntryRequest {
 interface PaymentMethod {
   id: number;
   name: string;
-  kind: "CREDIT_CARD";
-  bank_name: string;
+  kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
+  bank_name?: string;
   closing_day?: number;
   due_day?: number;
+  is_active: boolean;
+}
+
+interface CreatePaymentMethodRequest {
+  name: string;
+  kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
+  bank_name?: string;
+  closing_day?: number;
+  due_day?: number;
+}
+
+interface UpdatePaymentMethodRequest {
+  name: string;
+  kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
+  bank_name?: string;
+  closing_day?: number;
+  due_day?: number;
+  is_active: boolean;
 }
 
 interface CreateInstallmentRequest {
@@ -360,6 +378,15 @@ interface Invoice {
 **GET /payment-methods**
 
 - Response: `PaymentMethod[]`
+
+**PUT /payment-methods/:id**
+
+- Body: `UpdatePaymentMethodRequest`
+- Response: `PaymentMethod`
+
+**DELETE /payment-methods/:id**
+
+- Response: `{ status: "deleted" }`
 
 **POST /installments**
 

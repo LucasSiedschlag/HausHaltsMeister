@@ -123,6 +123,51 @@ func (q *Queries) GetPaymentMethod(ctx context.Context, paymentMethodID int32) (
 	return i, err
 }
 
+const updatePaymentMethod = `-- name: UpdatePaymentMethod :one
+UPDATE payment_methods
+SET name = $2,
+    kind = $3,
+    bank_name = $4,
+    closing_day = $5,
+    due_day = $6,
+    is_active = $7
+WHERE payment_method_id = $1
+RETURNING payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
+`
+
+type UpdatePaymentMethodParams struct {
+	PaymentMethodID int32
+	Name            string
+	Kind            string
+	BankName        pgtype.Text
+	ClosingDay      pgtype.Int4
+	DueDay          pgtype.Int4
+	IsActive        bool
+}
+
+func (q *Queries) UpdatePaymentMethod(ctx context.Context, arg UpdatePaymentMethodParams) (PaymentMethod, error) {
+	row := q.db.QueryRow(ctx, updatePaymentMethod,
+		arg.PaymentMethodID,
+		arg.Name,
+		arg.Kind,
+		arg.BankName,
+		arg.ClosingDay,
+		arg.DueDay,
+		arg.IsActive,
+	)
+	var i PaymentMethod
+	err := row.Scan(
+		&i.PaymentMethodID,
+		&i.Name,
+		&i.Kind,
+		&i.BankName,
+		&i.ClosingDay,
+		&i.DueDay,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const listPaymentMethods = `-- name: ListPaymentMethods :many
 SELECT payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
 FROM payment_methods

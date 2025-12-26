@@ -22,6 +22,11 @@ export const mainNavigation: NavigationItem[] = [
     icon: "Wallet",
   },
   {
+    title: "Meios de Pagamento",
+    href: "/meios-de-pagamento",
+    icon: "CreditCard",
+  },
+  {
     title: "Picuinhas",
     href: "/picuinhas/pessoas",
     icon: "Users",

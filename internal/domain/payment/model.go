@@ -7,6 +7,7 @@ var (
 	ErrKindRequired      = errors.New("kind is required")
 	ErrInvalidClosingDay = errors.New("closing day must be between 1 and 31")
 	ErrInvalidDueDay     = errors.New("due day must be between 1 and 31")
+	ErrPaymentMethodNotFound = errors.New("payment method not found")
 )
 
 const (
