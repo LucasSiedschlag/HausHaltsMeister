@@ -6,6 +6,7 @@ export interface Category {
   direction: Direction
   is_budget_relevant: boolean
   is_active: boolean
+  inactive_from_month?: string
 }
 
 export interface CreateCategoryRequest {

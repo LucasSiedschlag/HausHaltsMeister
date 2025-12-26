@@ -24,6 +24,7 @@ export function useApiClient() {
   const config = useRuntimeConfig()
   const baseURL = config.public.apiBaseUrl || '/api'
   const token = config.public.apiToken
+  const timeoutMs = Number(config.public.apiTimeoutMs || 15000) || 15000
 
   const request = async <T>(path: string, options: any = {}): Promise<T> => {
     const headers = new Headers(options.headers || {})
@@ -34,6 +35,7 @@ export function useApiClient() {
     try {
       return await $fetch<T>(path, {
         baseURL,
+        timeout: options.timeout ?? timeoutMs,
         ...options,
         headers,
       })

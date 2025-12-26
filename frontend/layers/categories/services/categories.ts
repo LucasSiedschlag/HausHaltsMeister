@@ -4,9 +4,9 @@ import { useApiClient } from '~/layers/shared/utils/api'
 export function useCategoriesService() {
   const { request } = useApiClient()
 
-  const listCategories = async (activeOnly = true) => {
+  const listCategories = async (activeOnly = true, month?: string) => {
     return request<Category[]>('/categories', {
-      query: { active: activeOnly },
+      query: { active: activeOnly, month },
     })
   }
 
@@ -17,9 +17,10 @@ export function useCategoriesService() {
     })
   }
 
-  const deactivateCategory = async (id: number) => {
+  const deactivateCategory = async (id: number, effectiveMonth?: string) => {
     return request<{ status: string }>(`/categories/${id}/deactivate`, {
       method: 'PATCH',
+      query: effectiveMonth ? { effective_month: effectiveMonth } : undefined,
     })
   }
 

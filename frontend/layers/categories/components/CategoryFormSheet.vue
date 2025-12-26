@@ -35,6 +35,8 @@ const form = reactive<{ name: string; direction: Direction; is_budget_relevant: 
   is_active: true,
 })
 
+const initialActive = ref(true)
+
 const errors = ref<{ name?: string; direction?: string }>({})
 
 const sheetTitle = computed(() => (props.mode === 'edit' ? 'Editar categoria' : 'Nova categoria'))
@@ -45,11 +47,13 @@ function resetForm() {
     form.direction = props.category.direction
     form.is_budget_relevant = props.category.is_budget_relevant
     form.is_active = props.category.is_active
+    initialActive.value = props.category.is_active
   } else {
     form.name = ''
     form.direction = 'OUT'
     form.is_budget_relevant = true
     form.is_active = true
+    initialActive.value = true
   }
   errors.value = {}
 }
@@ -96,7 +100,7 @@ watch(
             id="category-name"
             v-model="form.name"
             :disabled="props.submitting"
-            placeholder="Ex: Alimentação"
+            placeholder="Ex: Freelance, Moradia, Transporte"
           />
           <p v-if="errors.name" class="text-xs text-destructive">{{ errors.name }}</p>
         </div>
@@ -122,12 +126,35 @@ watch(
           <Switch v-model="form.is_budget_relevant" :disabled="props.submitting" />
         </div>
 
-        <div v-if="props.mode === 'edit'" class="flex items-center justify-between rounded-md border p-3">
-          <div>
-            <p class="text-sm font-medium">Categoria ativa</p>
-            <p class="text-xs text-muted-foreground">Desative para esconder da lista principal.</p>
+        <div v-if="props.mode === 'edit'" class="rounded-md border p-3">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-sm font-medium">
+                {{
+                  initialActive
+                    ? 'Categoria ativa'
+                    : form.is_active
+                      ? 'Reativar categoria'
+                      : 'Categoria inativa'
+                }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{
+                  initialActive
+                    ? 'Para desativar, use o botão Desativar na lista.'
+                    : form.is_active
+                      ? 'A categoria será reativada quando você salvar.'
+                      : 'Reative para voltar a usar nos lançamentos e orçamentos.'
+                }}
+              </p>
+            </div>
+            <Switch
+              v-if="!initialActive"
+              v-model="form.is_active"
+              :disabled="props.submitting"
+              aria-label="Reativar categoria"
+            />
           </div>
-          <Switch v-model="form.is_active" :disabled="props.submitting" />
         </div>
       </div>
 

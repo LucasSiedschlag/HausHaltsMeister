@@ -9,6 +9,7 @@ export default defineNuxtConfig({
     './layers/shared',
     './layers/core',
     './layers/categories',
+    './layers/budget',
     './layers/dashboard'
   ],
   modules: [
@@ -25,7 +26,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
-      apiToken: process.env.NUXT_PUBLIC_API_TOKEN || ''
+      apiToken: process.env.NUXT_PUBLIC_API_TOKEN || '',
+      apiTimeoutMs: Number(process.env.NUXT_PUBLIC_API_TIMEOUT_MS || 15000),
     }
   },
   nitro: {

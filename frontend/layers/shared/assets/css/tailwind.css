@@ -77,4 +77,14 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  input[type='date'],
+  input[type='month'] {
+    color-scheme: light;
+  }
+
+  .dark input[type='date'],
+  .dark input[type='month'] {
+    color-scheme: dark;
+  }
 }

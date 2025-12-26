@@ -17,6 +17,11 @@ export const mainNavigation: NavigationItem[] = [
     icon: "Tags",
   },
   {
+    title: "Orçamento",
+    href: "/orcamento",
+    icon: "Wallet",
+  },
+  {
     title: "Transactions",
     href: "/transactions",
     icon: "DollarSign",

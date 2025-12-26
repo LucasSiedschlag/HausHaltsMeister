@@ -115,7 +115,7 @@ function statusBadgeClass(isActive: boolean) {
               <div class="inline-flex items-center gap-2">
                 <Button variant="secondary" size="sm" @click="emit('edit', category)">Editar</Button>
                 <Button variant="destructive" size="sm" @click="emit('remove', category)">
-                  Excluir
+                  Desativar
                 </Button>
               </div>
             </TableCell>

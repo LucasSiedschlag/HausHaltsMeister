@@ -32,11 +32,26 @@ const feedback = ref<{ type: 'success' | 'error'; message: string } | null>(null
 
 const pageSubtitle = computed(() => 'Cadastro e manutenção das categorias do sistema.')
 
+function monthParamFromDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}-01`
+}
+
+function getCurrentMonthParam() {
+  return monthParamFromDate(new Date())
+}
+
+function getNextMonthParam() {
+  const now = new Date()
+  return monthParamFromDate(new Date(now.getFullYear(), now.getMonth() + 1, 1))
+}
+
 async function fetchCategories() {
   loading.value = true
   loadError.value = null
   try {
-    categories.value = await listCategories(true)
+    categories.value = await listCategories(false)
   } catch (error) {
     loadError.value = getApiErrorMessage(error)
   } finally {
@@ -89,13 +104,17 @@ function requestDelete(category: Category) {
   deleteOpen.value = true
 }
 
-async function confirmDelete() {
+async function confirmDelete(scope: 'current' | 'next') {
   if (!deleteTarget.value) return
   deleting.value = true
   try {
-    await deactivateCategory(deleteTarget.value.id)
-    categories.value = categories.value.filter((item) => item.id !== deleteTarget.value?.id)
-    feedback.value = { type: 'success', message: 'Categoria excluída com sucesso.' }
+    const effectiveMonth = scope === 'next' ? getNextMonthParam() : getCurrentMonthParam()
+    await deactivateCategory(deleteTarget.value.id, effectiveMonth)
+    await fetchCategories()
+    feedback.value = {
+      type: 'success',
+      message: scope === 'next' ? 'Categoria desativada a partir do próximo mês.' : 'Categoria desativada para o mês atual.',
+    }
     deleteOpen.value = false
   } catch (error) {
     feedback.value = { type: 'error', message: getApiErrorMessage(error) }
