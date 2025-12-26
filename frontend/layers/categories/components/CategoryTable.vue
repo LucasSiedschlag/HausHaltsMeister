@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-vue-next'
 import { Button } from '~/layers/shared/components/ui/button'
 import { Badge } from '~/layers/shared/components/ui/badge'
 import {
@@ -21,12 +23,20 @@ const props = withDefaults(defineProps<Props>(), {
   error: null,
 })
 
+type SortKey = 'name' | 'direction' | 'is_budget_relevant' | 'is_active'
+type SortDir = 'asc' | 'desc'
+
+const sortKey = ref<SortKey | null>(null)
+const sortDir = ref<SortDir>('asc')
+
 const emit = defineEmits<{
   create: []
   edit: [category: Category]
   remove: [category: Category]
   retry: []
 }>()
+
+const defaultSortOrder: SortKey[] = ['is_active', 'direction', 'is_budget_relevant', 'name']
 
 function directionLabel(direction: string) {
   return direction === 'IN' ? 'Entrada' : 'Saída'
@@ -45,6 +55,70 @@ function statusBadgeClass(isActive: boolean) {
   }
   return 'border-red-500/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-300'
 }
+
+function defaultDirectionFor(key: SortKey): SortDir {
+  switch (key) {
+    case 'name':
+      return 'asc'
+    case 'direction':
+      return 'asc'
+    case 'is_budget_relevant':
+    case 'is_active':
+      return 'desc'
+    default:
+      return 'asc'
+  }
+}
+
+function directionWeight(value: string) {
+  return value === 'IN' ? 0 : 1
+}
+
+function compareValues(a: Category, b: Category, key: SortKey, dir: SortDir) {
+  let result = 0
+  if (key === 'name') {
+    result = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+  } else if (key === 'direction') {
+    result = directionWeight(a.direction) - directionWeight(b.direction)
+  } else if (key === 'is_budget_relevant') {
+    result = Number(a.is_budget_relevant) - Number(b.is_budget_relevant)
+  } else {
+    result = Number(a.is_active) - Number(b.is_active)
+  }
+
+  return dir === 'desc' ? -result : result
+}
+
+function setSort(key: SortKey) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortKey.value = key
+  sortDir.value = defaultDirectionFor(key)
+}
+
+function sortIcon(key: SortKey) {
+  if (sortKey.value !== key) return ChevronsUpDown
+  return sortDir.value === 'asc' ? ChevronUp : ChevronDown
+}
+
+const sortedCategories = computed(() => {
+  const rows = props.categories.map((category, index) => ({ category, index }))
+  const primaryKey = sortKey.value
+  const keys = primaryKey ? [primaryKey, ...defaultSortOrder.filter((item) => item !== primaryKey)] : defaultSortOrder
+
+  rows.sort((a, b) => {
+    for (const key of keys) {
+      const dir = key === primaryKey ? sortDir.value : defaultDirectionFor(key)
+      const result = compareValues(a.category, b.category, key, dir)
+      if (result !== 0) return result
+    }
+    return a.index - b.index
+  })
+
+  return rows.map((row) => row.category)
+})
 </script>
 
 <template>
@@ -86,15 +160,39 @@ function statusBadgeClass(isActive: boolean) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Direção</TableHead>
-            <TableHead>Orcamento</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>
+              <button type="button" class="inline-flex items-center gap-1 text-sm font-medium" @click="setSort('name')">
+                Nome
+                <component :is="sortIcon('name')" class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </TableHead>
+            <TableHead>
+              <button type="button" class="inline-flex items-center gap-1 text-sm font-medium" @click="setSort('direction')">
+                Direção
+                <component :is="sortIcon('direction')" class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </TableHead>
+            <TableHead>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 text-sm font-medium"
+                @click="setSort('is_budget_relevant')"
+              >
+                Orçamento
+                <component :is="sortIcon('is_budget_relevant')" class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </TableHead>
+            <TableHead>
+              <button type="button" class="inline-flex items-center gap-1 text-sm font-medium" @click="setSort('is_active')">
+                Status
+                <component :is="sortIcon('is_active')" class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </TableHead>
             <TableHead class="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="category in props.categories" :key="category.id">
+          <TableRow v-for="category in sortedCategories" :key="category.id">
             <TableCell class="font-medium">{{ category.name }}</TableCell>
             <TableCell>
               <Badge variant="outline" :class="directionBadgeClass(category.direction)">
