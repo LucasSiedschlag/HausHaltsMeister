@@ -19,4 +19,5 @@ type CategoryResponse struct {
 	Direction        string `json:"direction"`
 	IsBudgetRelevant bool   `json:"is_budget_relevant"`
 	IsActive         bool   `json:"is_active"`
+	InactiveFromMonth string `json:"inactive_from_month,omitempty"`
 }

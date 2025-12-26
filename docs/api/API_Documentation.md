@@ -66,7 +66,8 @@ Respostas comuns:
   "name": "Educação",
   "direction": "OUT",
   "is_budget_relevant": true,
-  "is_active": true
+  "is_active": true,
+  "inactive_from_month": null
 }
 ```
 
@@ -77,6 +78,7 @@ Respostas comuns:
 **Query Params:**
 
 - `active` (bool): `true` para apenas ativas.
+- `month` (string YYYY-MM-DD): filtra categorias válidas para o mês informado.
 
 **Response (200 OK):**
 
@@ -87,7 +89,8 @@ Respostas comuns:
     "name": "Salário",
     "direction": "IN",
     "is_budget_relevant": true,
-    "is_active": true
+    "is_active": true,
+    "inactive_from_month": null
   }
 ]
 ```
@@ -117,7 +120,8 @@ Respostas comuns:
   "name": "Educação",
   "direction": "OUT",
   "is_budget_relevant": true,
-  "is_active": true
+  "is_active": true,
+  "inactive_from_month": null
 }
 ```
 
@@ -127,6 +131,24 @@ Respostas comuns:
 {
   "error": "category name cannot be empty",
   "request_id": "req-123456"
+}
+```
+
+---
+
+### 1.4 Desativar Categoria
+
+**Endpoint:** `PATCH /categories/{id}/deactivate`
+
+**Query Params:**
+
+- `effective_month` (string YYYY-MM-DD): mês a partir do qual a categoria deixa de aparecer.
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "deactivated"
 }
 ```
 
@@ -232,6 +254,9 @@ Respostas comuns:
 
 ## 3. Domínio: Orçamento (`budget`)
 
+Notas:
+- `PERCENT_OF_INCOME` usa como base a soma das entradas (`direction = IN`) cujas categorias estão marcadas com `is_budget_relevant = true` no mês.
+
 ### 3.1 Definir Item de Orçamento
 
 **Endpoint:** `POST /budgets/:month/items`
@@ -243,13 +268,60 @@ Respostas comuns:
 ```json
 {
   "category_id": 10,
-  "planned_amount": 2000.0
+  "mode": "PERCENT_OF_INCOME",
+  "target_percent": 25
+}
+```
+
+Modos suportados:
+- `PERCENT_OF_INCOME`: percentual sobre a soma das entradas (`direction = IN`) com `is_budget_relevant = true`.
+- `ABSOLUTE`: valor absoluto (usa `planned_amount`).
+`target_percent` deve ser entre 0 e 100.
+
+**Response (200 OK):** BudgetItem object.
+
+### 3.2 Definir Itens de Orçamento em Lote (mês)
+
+**Endpoint:** `PUT /budgets/:month/items`
+
+**Path Params:** `month` (YYYY-MM-DD).
+
+**Payload (JSON):**
+
+```json
+[
+  {
+    "category_id": 10,
+    "target_percent": 25
+  },
+  {
+    "category_id": 11,
+    "target_percent": 15
+  }
+]
+```
+
+Regras:
+- A soma de `target_percent` deve ser 100.
+
+**Response (200 OK):** `{"status": "success"}`
+
+### 3.3 Atualizar Item de Orçamento
+
+**Endpoint:** `PUT /budgets/items/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "mode": "PERCENT_OF_INCOME",
+  "target_percent": 30
 }
 ```
 
 **Response (200 OK):** BudgetItem object.
 
-### 3.2 Definir Orçamento em Lote (Batch)
+### 3.4 Definir Orçamento em Lote (Batch)
 
 **Endpoint:** `POST /budgets/batch`
 
@@ -262,13 +334,14 @@ Use para aplicar o mesmo valor a vários meses futuros.
   "start_month": "2024-04-01",
   "end_month": "2024-12-01",
   "category_id": 10,
-  "planned_amount": 2000.0
+  "mode": "PERCENT_OF_INCOME",
+  "target_percent": 15
 }
 ```
 
 **Response (200 OK):** `{"status": "success"}`
 
-### 3.3 Visualizar Orçamento (Planned vs Actual)
+### 3.5 Visualizar Orçamento (Planned vs Actual)
 
 **Endpoint:** `GET /budgets/:month/summary`
 
@@ -277,15 +350,17 @@ Use para aplicar o mesmo valor a vários meses futuros.
 ```json
 {
   "month": "2024-03-01",
+  "total_income": 5000.0,
   "items": [
     {
       "id": 5,
       "budget_period_id": 10,
       "category_id": 10,
       "category_name": "Alimentação",
-      "mode": "ABSOLUTE",
-      "planned_amount": 2000.0,
-      "actual_amount": 1200.0
+      "mode": "PERCENT_OF_INCOME",
+      "planned_amount": 1250.0,
+      "actual_amount": 1200.0,
+      "target_percent": 25
     }
   ]
 }

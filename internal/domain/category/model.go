@@ -2,6 +2,7 @@ package category
 
 import (
 	"errors"
+	"time"
 )
 
 // Direction types
@@ -22,6 +23,7 @@ type Category struct {
 	Direction        string
 	IsBudgetRelevant bool
 	IsActive         bool
+	InactiveFromMonth *time.Time
 }
 
 func New(name, direction string, isBudgetRelevant bool) (*Category, error) {

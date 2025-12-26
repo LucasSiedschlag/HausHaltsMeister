@@ -3,6 +3,7 @@ package category
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type CategoryService struct {
@@ -30,7 +31,11 @@ func (s *CategoryService) ListCategories(ctx context.Context, activeOnly bool) (
 	return s.repo.List(ctx, activeOnly)
 }
 
-func (s *CategoryService) DeactivateCategory(ctx context.Context, id int32) error {
+func (s *CategoryService) ListCategoriesByMonth(ctx context.Context, activeOnly bool, month time.Time) ([]*Category, error) {
+	return s.repo.ListByMonth(ctx, activeOnly, month)
+}
+
+func (s *CategoryService) DeactivateCategory(ctx context.Context, id int32, inactiveFromMonth time.Time) error {
 	existing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate category: %w", err)
@@ -39,8 +44,7 @@ func (s *CategoryService) DeactivateCategory(ctx context.Context, id int32) erro
 		return ErrCategoryNotFound
 	}
 
-	existing.IsActive = false
-	_, err = s.repo.Update(ctx, existing)
+	_, err = s.repo.Deactivate(ctx, id, inactiveFromMonth)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate category: %w", err)
 	}
@@ -62,6 +66,7 @@ func (s *CategoryService) UpdateCategory(ctx context.Context, id int32, name, di
 	}
 	updated.ID = id
 	updated.IsActive = isActive
+	updated.InactiveFromMonth = existing.InactiveFromMonth
 
 	updated, err = s.repo.Update(ctx, updated)
 	if err != nil {

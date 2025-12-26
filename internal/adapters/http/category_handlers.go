@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
@@ -58,8 +59,21 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 // @Router /categories [get]
 func (h *CategoryHandler) List(c echo.Context) error {
 	activeOnly := c.QueryParam("active") == "true"
+	monthParam := c.QueryParam("month")
 
-	list, err := h.service.ListCategories(c.Request().Context(), activeOnly)
+	var (
+		list []*category.Category
+		err  error
+	)
+	if monthParam != "" {
+		parsedMonth, parseErr := time.Parse("2006-01-02", monthParam)
+		if parseErr != nil {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format"})
+		}
+		list, err = h.service.ListCategoriesByMonth(c.Request().Context(), activeOnly, parsedMonth)
+	} else {
+		list, err = h.service.ListCategories(c.Request().Context(), activeOnly)
+	}
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list categories"})
 	}
@@ -89,8 +103,22 @@ func (h *CategoryHandler) Deactivate(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
 	}
 
-	err := h.service.DeactivateCategory(c.Request().Context(), id)
+	effectiveMonth := c.QueryParam("effective_month")
+	month := time.Now().UTC()
+	month = time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if effectiveMonth != "" {
+		parsedMonth, parseErr := time.Parse("2006-01-02", effectiveMonth)
+		if parseErr != nil {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format"})
+		}
+		month = parsedMonth
+	}
+
+	err := h.service.DeactivateCategory(c.Request().Context(), id, month)
 	if err != nil {
+		if errors.Is(err, category.ErrCategoryNotFound) {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to deactivate category"})
 	}
 
@@ -147,11 +175,16 @@ func RegisterCategoryRoutes(e *echo.Echo, h *CategoryHandler) {
 }
 
 func toCategoryResponse(c *category.Category) dto.CategoryResponse {
+	var inactiveFromMonth string
+	if c.InactiveFromMonth != nil {
+		inactiveFromMonth = c.InactiveFromMonth.Format("2006-01-02")
+	}
 	return dto.CategoryResponse{
 		ID:               c.ID,
 		Name:             c.Name,
 		Direction:        c.Direction,
 		IsBudgetRelevant: c.IsBudgetRelevant,
 		IsActive:         c.IsActive,
+		InactiveFromMonth: inactiveFromMonth,
 	}
 }

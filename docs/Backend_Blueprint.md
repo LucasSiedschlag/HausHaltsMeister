@@ -192,6 +192,7 @@ Objetivo: orçamento mensal por categoria de SAÍDA.
 • Regras:
 • budget_items.category.direction deve ser OUT
 • mode = ABSOLUTE | PERCENT_OF_INCOME
+• PERCENT_OF_INCOME = percentual sobre a soma das entradas (IN) com isBudgetRelevant = true no mês
 • permitir alterar % para um mês ou em lote
 
 7.3 Domain: Picuinhas

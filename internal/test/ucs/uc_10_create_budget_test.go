@@ -44,11 +44,14 @@ func TestUC10_BudgetManagement(t *testing.T) {
 
 	// Setup Data
 	ctx := context.Background()
-	foodCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true})
+	foodCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
+	incomeCat, _ := catRepo.Create(ctx, &category.Category{Name: "Ganho", Direction: "IN", IsActive: true, IsBudgetRelevant: true})
 
 	// 1. Create CashFlow for Mar 2024 to verify "Used" amount logic
 	mar1 := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
 	_, err := cfService.CreateCashFlow(ctx, mar1, foodCat.ID, "OUT", "Groceries", 150.0, false)
+	require.NoError(t, err)
+	_, err = cfService.CreateCashFlow(ctx, mar1, incomeCat.ID, "IN", "Salario", 1000.0, false)
 	require.NoError(t, err)
 
 	monthParam := "2024-03-01"
@@ -57,7 +60,8 @@ func TestUC10_BudgetManagement(t *testing.T) {
 	// Endpoint: POST /budgets/:month/items
 	itemPayload := map[string]interface{}{
 		"category_id":    foodCat.ID,
-		"planned_amount": 500.0,
+		"mode":           budget.ModePercentOfIncome,
+		"target_percent": 50.0,
 	}
 	path := fmt.Sprintf("/budgets/%s/items", monthParam)
 	rec := client.Request(t, "POST", path, itemPayload)
@@ -66,7 +70,7 @@ func TestUC10_BudgetManagement(t *testing.T) {
 	var itemRes map[string]interface{}
 	err = json.Unmarshal(rec.Body.Bytes(), &itemRes)
 	require.NoError(t, err)
-	assert.Equal(t, 500.0, itemRes["planned_amount"])
+	assert.Equal(t, 50.0, itemRes["target_percent"])
 
 	// 3. Verify Budget Summary (UC-10 verify)
 	// Endpoint: GET /budgets/:month/summary

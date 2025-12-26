@@ -6,15 +6,17 @@ import (
 )
 
 var (
-	ErrInvalidMonth    = errors.New("invalid month")
-	ErrInvalidCategory = errors.New("invalid category for budget")
-	ErrInvalidAmount   = errors.New("amount must be non-negative")
-	ErrInvalidMode     = errors.New("invalid budget mode")
+	ErrInvalidMonth       = errors.New("invalid month")
+	ErrInvalidCategory    = errors.New("invalid category for budget")
+	ErrInvalidAmount      = errors.New("amount must be non-negative")
+	ErrInvalidPercent     = errors.New("percent must be between 0 and 100")
+	ErrInvalidMode        = errors.New("invalid budget mode")
+	ErrBudgetItemNotFound = errors.New("budget item not found")
 )
 
 const (
-	ModeAbsolute = "ABSOLUTE"
-	ModePercent  = "PERCENT"
+	ModeAbsolute        = "ABSOLUTE"
+	ModePercentOfIncome = "PERCENT_OF_INCOME"
 )
 
 type BudgetPeriod struct {
@@ -22,6 +24,7 @@ type BudgetPeriod struct {
 	Month        time.Time
 	AnalysisMode string
 	IsClosed     bool
+	TotalIncome  float64
 	Items        []BudgetItem
 }
 

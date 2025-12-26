@@ -225,7 +225,7 @@ O sistema deve permitir criar um orçamento para um mês específico.
 O orçamento é composto por:
 
 - Itens por categoria de saída
-- Valores absolutos ou percentuais da renda
+- Valores absolutos ou percentuais da renda (percentual calculado sobre entradas com categoria relevante para orçamento)
 
 ---
 

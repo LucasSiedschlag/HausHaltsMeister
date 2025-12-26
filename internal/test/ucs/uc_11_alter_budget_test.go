@@ -6,6 +6,7 @@ import (
 	"fmt"
 	std_http "net/http"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -14,6 +15,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
@@ -41,7 +43,12 @@ func TestUC11_AlterBudget(t *testing.T) {
 
 	// Setup Data
 	ctx := context.Background()
-	otherCat, _ := catRepo.Create(ctx, &category.Category{Name: "Other", Direction: "OUT", IsActive: true})
+	otherCat, _ := catRepo.Create(ctx, &category.Category{Name: "Other", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
+	incomeCat, _ := catRepo.Create(ctx, &category.Category{Name: "Ganho", Direction: "IN", IsActive: true, IsBudgetRelevant: true})
+
+	cfService := cashflow.NewService(cfRepo, catRepo)
+	_, err := cfService.CreateCashFlow(ctx, time.Date(2024, 4, 10, 0, 0, 0, 0, time.UTC), incomeCat.ID, "IN", "Salario", 2000.0, false)
+	require.NoError(t, err)
 
 	monthParam := "2024-04-01"
 	path := fmt.Sprintf("/budgets/%s/items", monthParam)
@@ -49,22 +56,24 @@ func TestUC11_AlterBudget(t *testing.T) {
 	// 1. Create Initial Item
 	payload := map[string]interface{}{
 		"category_id":    otherCat.ID,
-		"planned_amount": 200.0,
+		"mode":           budget.ModePercentOfIncome,
+		"target_percent": 20.0,
 	}
 	client.Request(t, "POST", path, payload)
 
 	t.Run("Alter Budget Item (UC-11)", func(t *testing.T) {
-		// Change planned amount to 350.0
+		// Change percent to 35
 		updatePayload := map[string]interface{}{
 			"category_id":    otherCat.ID,
-			"planned_amount": 350.0,
+			"mode":           budget.ModePercentOfIncome,
+			"target_percent": 35.0,
 		}
 		rec := client.Request(t, "POST", path, updatePayload)
 		require.Equal(t, std_http.StatusOK, rec.Code)
 
 		var resp map[string]interface{}
 		json.Unmarshal(rec.Body.Bytes(), &resp)
-		assert.Equal(t, 350.0, resp["planned_amount"])
+		assert.Equal(t, 35.0, resp["target_percent"])
 
 		// Verify via Summary
 		summaryPath := fmt.Sprintf("/budgets/%s/summary", monthParam)
@@ -72,6 +81,6 @@ func TestUC11_AlterBudget(t *testing.T) {
 		var sumResp map[string]interface{}
 		json.Unmarshal(sumRec.Body.Bytes(), &sumResp)
 		items := sumResp["items"].([]interface{})
-		assert.Equal(t, 350.0, items[0].(map[string]interface{})["planned_amount"])
+		assert.Equal(t, 35.0, items[0].(map[string]interface{})["target_percent"])
 	})
 }

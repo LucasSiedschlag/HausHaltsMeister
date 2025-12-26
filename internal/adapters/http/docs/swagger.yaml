@@ -267,6 +267,23 @@ definitions:
       planned_amount:
         type: number
     type: object
+  dto.UpdateBudgetItemRequest:
+    properties:
+      planned_amount:
+        type: number
+    type: object
+  dto.UpdateCategoryRequest:
+    properties:
+      direction:
+        description: IN or OUT
+        type: string
+      is_active:
+        type: boolean
+      is_budget_relevant:
+        type: boolean
+      name:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -382,6 +399,41 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Definir Orçamento em Lote
+      tags:
+      - Budgets
+  /budgets/items/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates the planned amount for a specific budget item.
+      parameters:
+      - description: Budget Item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Budget Item Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateBudgetItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BudgetItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Item de Orçamento
       tags:
       - Budgets
   /cashflows:
@@ -598,6 +650,41 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Create Categoria
+      tags:
+      - Categories
+  /categories/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates a category by ID.
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Category Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Categoria
       tags:
       - Categories
   /categories/{id}/deactivate:

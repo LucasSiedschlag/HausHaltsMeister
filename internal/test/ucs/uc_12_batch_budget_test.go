@@ -40,14 +40,15 @@ func TestUC12_BatchBudget(t *testing.T) {
 
 	// Setup Data
 	ctx := context.Background()
-	foodCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true})
+	foodCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
 
 	t.Run("Apply Budget in Batch (UC-12)", func(t *testing.T) {
 		payload := map[string]interface{}{
 			"start_month":    "2024-06-01",
 			"end_month":      "2024-08-01", // June, July, August
 			"category_id":    foodCat.ID,
-			"planned_amount": 600.0,
+			"mode":           budget.ModePercentOfIncome,
+			"target_percent": 15.0,
 		}
 		rec := client.Request(t, "POST", "/budgets/batch", payload)
 		require.Equal(t, std_http.StatusOK, rec.Code)
@@ -57,13 +58,13 @@ func TestUC12_BatchBudget(t *testing.T) {
 		var respJune map[string]interface{}
 		json.Unmarshal(recJune.Body.Bytes(), &respJune)
 		itemsJune := respJune["items"].([]interface{})
-		assert.Equal(t, 600.0, itemsJune[0].(map[string]interface{})["planned_amount"])
+		assert.Equal(t, 15.0, itemsJune[0].(map[string]interface{})["target_percent"])
 
 		// Verify August
 		recAug := client.Request(t, "GET", "/budgets/2024-08-01/summary", nil)
 		var respAug map[string]interface{}
 		json.Unmarshal(recAug.Body.Bytes(), &respAug)
 		itemsAug := respAug["items"].([]interface{})
-		assert.Equal(t, 600.0, itemsAug[0].(map[string]interface{})["planned_amount"])
+		assert.Equal(t, 15.0, itemsAug[0].(map[string]interface{})["target_percent"])
 	})
 }

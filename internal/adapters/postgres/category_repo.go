@@ -3,10 +3,12 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -50,6 +52,7 @@ func (r *CategoryRepository) Create(ctx context.Context, c *category.Category) (
 		Direction:        row.Direction,
 		IsBudgetRelevant: row.IsBudgetRelevant,
 		IsActive:         row.IsActive,
+		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
 
@@ -72,6 +75,31 @@ func (r *CategoryRepository) List(ctx context.Context, activeOnly bool) ([]*cate
 			Direction:        row.Direction,
 			IsBudgetRelevant: row.IsBudgetRelevant,
 			IsActive:         row.IsActive,
+			InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
+		}
+	}
+	return cats, nil
+}
+
+func (r *CategoryRepository) ListByMonth(ctx context.Context, activeOnly bool, month time.Time) ([]*category.Category, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	rows, err := r.q.ListCategoriesByMonth(ctx, sqlc.ListCategoriesByMonthParams{
+		ActiveOnly: activeOnly,
+		Month:      pgDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	cats := make([]*category.Category, len(rows))
+	for i, row := range rows {
+		cats[i] = &category.Category{
+			ID:               row.CategoryID,
+			Name:             row.Name,
+			Direction:        row.Direction,
+			IsBudgetRelevant: row.IsBudgetRelevant,
+			IsActive:         row.IsActive,
+			InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 		}
 	}
 	return cats, nil
@@ -92,6 +120,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*category.C
 		Direction:        row.Direction,
 		IsBudgetRelevant: row.IsBudgetRelevant,
 		IsActive:         row.IsActive,
+		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
 
@@ -118,5 +147,36 @@ func (r *CategoryRepository) Update(ctx context.Context, c *category.Category) (
 		Direction:        row.Direction,
 		IsBudgetRelevant: row.IsBudgetRelevant,
 		IsActive:         row.IsActive,
+		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
+}
+
+func (r *CategoryRepository) Deactivate(ctx context.Context, id int32, inactiveFromMonth time.Time) (*category.Category, error) {
+	pgDate := pgtype.Date{Time: inactiveFromMonth, Valid: true}
+	row, err := r.q.DeactivateCategory(ctx, sqlc.DeactivateCategoryParams{
+		CategoryID:        id,
+		InactiveFromMonth: pgDate,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, category.ErrCategoryNotFound
+		}
+		return nil, err
+	}
+
+	return &category.Category{
+		ID:               row.CategoryID,
+		Name:             row.Name,
+		Direction:        row.Direction,
+		IsBudgetRelevant: row.IsBudgetRelevant,
+		IsActive:         row.IsActive,
+		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
+	}, nil
+}
+
+func toTimePtr(value pgtype.Date) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	return &value.Time
 }

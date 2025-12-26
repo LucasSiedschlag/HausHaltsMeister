@@ -35,6 +35,48 @@ func (q *Queries) CreateBudgetPeriod(ctx context.Context, arg CreateBudgetPeriod
 	return i, err
 }
 
+const getBudgetItemByID = `-- name: GetBudgetItemByID :one
+SELECT 
+    bi.budget_item_id, 
+    bi.budget_period_id, 
+    bi.category_id, 
+    bi.mode, 
+    bi.planned_amount, 
+    bi.target_percent, 
+    bi.notes,
+    fc.name as category_name
+FROM budget_items bi
+JOIN flow_categories fc ON fc.category_id = bi.category_id
+WHERE bi.budget_item_id = $1
+`
+
+type GetBudgetItemByIDRow struct {
+	BudgetItemID   int32
+	BudgetPeriodID int32
+	CategoryID     int32
+	Mode           string
+	PlannedAmount  pgtype.Numeric
+	TargetPercent  pgtype.Numeric
+	Notes          pgtype.Text
+	CategoryName   string
+}
+
+func (q *Queries) GetBudgetItemByID(ctx context.Context, budgetItemID int32) (GetBudgetItemByIDRow, error) {
+	row := q.db.QueryRow(ctx, getBudgetItemByID, budgetItemID)
+	var i GetBudgetItemByIDRow
+	err := row.Scan(
+		&i.BudgetItemID,
+		&i.BudgetPeriodID,
+		&i.CategoryID,
+		&i.Mode,
+		&i.PlannedAmount,
+		&i.TargetPercent,
+		&i.Notes,
+		&i.CategoryName,
+	)
+	return i, err
+}
+
 const getBudgetItemsByPeriod = `-- name: GetBudgetItemsByPeriod :many
 SELECT 
     bi.budget_item_id, 
@@ -104,6 +146,83 @@ func (q *Queries) GetBudgetPeriodByMonth(ctx context.Context, month pgtype.Date)
 		&i.Month,
 		&i.AnalysisMode,
 		&i.IsClosed,
+	)
+	return i, err
+}
+
+const getLatestBudgetPeriodWithItemsBefore = `-- name: GetLatestBudgetPeriodWithItemsBefore :one
+SELECT budget_period_id, month, analysis_mode, is_closed
+FROM budget_periods
+WHERE month < $1
+  AND EXISTS (
+    SELECT 1
+    FROM budget_items
+    WHERE budget_period_id = budget_periods.budget_period_id
+  )
+ORDER BY month DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestBudgetPeriodWithItemsBefore(ctx context.Context, month pgtype.Date) (BudgetPeriod, error) {
+	row := q.db.QueryRow(ctx, getLatestBudgetPeriodWithItemsBefore, month)
+	var i BudgetPeriod
+	err := row.Scan(
+		&i.BudgetPeriodID,
+		&i.Month,
+		&i.AnalysisMode,
+		&i.IsClosed,
+	)
+	return i, err
+}
+
+const updateBudgetItem = `-- name: UpdateBudgetItem :one
+UPDATE budget_items
+SET mode = $2,
+    planned_amount = $3,
+    target_percent = $4,
+    notes = $5
+WHERE budget_item_id = $1
+RETURNING budget_item_id, budget_period_id, category_id, mode, planned_amount, target_percent, notes,
+  (SELECT name FROM flow_categories WHERE category_id = budget_items.category_id) AS category_name
+`
+
+type UpdateBudgetItemParams struct {
+	BudgetItemID  int32
+	Mode          string
+	PlannedAmount pgtype.Numeric
+	TargetPercent pgtype.Numeric
+	Notes         pgtype.Text
+}
+
+type UpdateBudgetItemRow struct {
+	BudgetItemID   int32
+	BudgetPeriodID int32
+	CategoryID     int32
+	Mode           string
+	PlannedAmount  pgtype.Numeric
+	TargetPercent  pgtype.Numeric
+	Notes          pgtype.Text
+	CategoryName   string
+}
+
+func (q *Queries) UpdateBudgetItem(ctx context.Context, arg UpdateBudgetItemParams) (UpdateBudgetItemRow, error) {
+	row := q.db.QueryRow(ctx, updateBudgetItem,
+		arg.BudgetItemID,
+		arg.Mode,
+		arg.PlannedAmount,
+		arg.TargetPercent,
+		arg.Notes,
+	)
+	var i UpdateBudgetItemRow
+	err := row.Scan(
+		&i.BudgetItemID,
+		&i.BudgetPeriodID,
+		&i.CategoryID,
+		&i.Mode,
+		&i.PlannedAmount,
+		&i.TargetPercent,
+		&i.Notes,
+		&i.CategoryName,
 	)
 	return i, err
 }

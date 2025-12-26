@@ -51,6 +51,7 @@ interface Category {
   direction: Direction;
   is_budget_relevant: boolean;
   is_active: boolean;
+  inactive_from_month?: string | null; // YYYY-MM-DD
 }
 
 interface CreateCategoryRequest {
@@ -71,7 +72,7 @@ interface UpdateCategoryRequest {
 
 **GET /categories**
 
-- Query: `?active=true` (opcional)
+- Query: `?active=true` (opcional), `?month=YYYY-MM-DD` (opcional)
 - Response: `Category[]`
 
 **POST /categories**
@@ -83,6 +84,11 @@ interface UpdateCategoryRequest {
 
 - Body: `UpdateCategoryRequest`
 - Response: `Category`
+
+**PATCH /categories/:id/deactivate**
+
+- Query: `?effective_month=YYYY-MM-DD` (opcional)
+- Response: `{ status: string }`
 
 ---
 
@@ -152,25 +158,40 @@ interface CategorySummary {
 ### 4.1 Types
 
 ```typescript
-type BudgetMode = "ABSOLUTE"; // Por enquanto único suportado no front simples
+type BudgetMode = "ABSOLUTE" | "PERCENT_OF_INCOME";
 
 interface BudgetItem {
   id: number;
   budget_period_id: number;
   category_id: number;
   category_name?: string;
-  mode: string;
+  mode: BudgetMode;
   planned_amount: number;
   actual_amount: number;
+  target_percent: number;
 }
 
 interface SetBudgetItemRequest {
   category_id: number;
-  planned_amount: number;
+  mode: BudgetMode;
+  planned_amount?: number;
+  target_percent?: number;
+}
+
+interface SetBudgetItemsBulkRequest {
+  category_id: number;
+  target_percent: number;
+}
+
+interface UpdateBudgetItemRequest {
+  mode: BudgetMode;
+  planned_amount?: number;
+  target_percent?: number;
 }
 
 interface BudgetSummary {
   month: string;
+  total_income: number;
   items: BudgetItem[];
 }
 ```
@@ -186,6 +207,17 @@ interface BudgetSummary {
 
 - Params: `month`
 - Body: `SetBudgetItemRequest`
+- Response: `BudgetItem`
+
+**PUT /budgets/:month/items**
+
+- Params: `month`
+- Body: `SetBudgetItemsBulkRequest[]`
+- Response: `{ status: string }`
+
+**PUT /budgets/items/:id**
+
+- Body: `UpdateBudgetItemRequest`
 - Response: `BudgetItem`
 
 ---

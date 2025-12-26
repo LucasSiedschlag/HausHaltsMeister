@@ -281,6 +281,7 @@ Planejar distribuição do dinheiro do mês.
 
 - Orçamento é informativo (planejado x realizado).
 - Não impede lançamentos se exceder o valor.
+- Quando em percentual, o total é calculado sobre entradas (direction = IN) com categoria marcada como relevante para orçamento.
 
 ---
 

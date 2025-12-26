@@ -54,6 +54,7 @@ type FlowCategory struct {
 	Direction        string
 	IsBudgetRelevant bool
 	IsActive         bool
+	InactiveFromMonth pgtype.Date
 }
 
 // As parcelas individuais serão representadas por vários cash_flows (SAÍDAS), cada um amarrado ao installment_plan via expense_details.
