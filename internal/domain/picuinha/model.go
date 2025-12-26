@@ -6,14 +6,23 @@ import (
 )
 
 var (
-	ErrPersonNameRequired   = errors.New("person name is required")
-	ErrAmountRequired       = errors.New("amount must be greater than zero")
-	ErrInvalidKind          = errors.New("invalid kind (must be 'PLUS' or 'MINUS')")
-	ErrPersonNotFound       = errors.New("person not found")
-	ErrEntryNotFound        = errors.New("entry not found")
-	ErrPersonHasEntries     = errors.New("person has entries")
-	ErrInvalidCardOwner     = errors.New("invalid card owner (must be 'SELF' or 'THIRD')")
-	ErrCardOwnerUnsupported = errors.New("card owner 'THIRD' not supported yet")
+	ErrPersonNameRequired    = errors.New("person name is required")
+	ErrAmountRequired        = errors.New("amount must be greater than zero")
+	ErrInvalidKind           = errors.New("invalid kind (must be 'PLUS' or 'MINUS')")
+	ErrPersonNotFound        = errors.New("person not found")
+	ErrEntryNotFound         = errors.New("entry not found")
+	ErrPersonHasEntries      = errors.New("person has entries")
+	ErrInvalidCardOwner      = errors.New("invalid card owner (must be 'SELF' or 'THIRD')")
+	ErrCardOwnerUnsupported  = errors.New("card owner 'THIRD' not supported yet")
+	ErrCaseTitleRequired     = errors.New("case title is required")
+	ErrCaseTypeInvalid       = errors.New("invalid case type")
+	ErrInstallmentCount      = errors.New("installment count must be greater than zero")
+	ErrStartDateRequired     = errors.New("start date is required")
+	ErrInstallmentNotFound   = errors.New("installment not found")
+	ErrCaseNotFound          = errors.New("case not found")
+	ErrPaymentMethodRequired = errors.New("payment method is required for card cases")
+	ErrInterestRateUnit      = errors.New("invalid interest rate unit")
+	ErrRecurrenceInterval    = errors.New("recurrence interval must be greater than zero")
 )
 
 const (
@@ -44,6 +53,18 @@ const (
 	CardOwnerThird = "THIRD"
 )
 
+const (
+	CaseTypeOneOff        = "ONE_OFF"
+	CaseTypeInstallment   = "INSTALLMENT"
+	CaseTypeRecurring     = "RECURRING"
+	CaseTypeCardInstall   = "CARD_INSTALLMENT"
+	InterestRateMonthly   = "MONTHLY"
+	InterestRateAnnual    = "ANNUAL"
+	StatusOpen            = "OPEN"
+	StatusPaid            = "PAID"
+	StatusRecurringActive = "RECURRING"
+)
+
 type Person struct {
 	ID      int32
 	Name    string
@@ -60,4 +81,63 @@ type Entry struct {
 	CashFlowID      *int32 // Optional link directly to a transaction (e.g. I paid the bar tab)
 	PaymentMethodID *int32
 	CardOwner       string
+}
+
+type Case struct {
+	ID                       int32
+	PersonID                 int32
+	Title                    string
+	CaseType                 string
+	TotalAmount              *float64
+	InstallmentCount         *int32
+	InstallmentAmount        *float64
+	StartDate                time.Time
+	PaymentMethodID          *int32
+	InstallmentPlanID        *int32
+	CategoryID               *int32
+	InterestRate             *float64
+	InterestRateUnit         string
+	RecurrenceIntervalMonths *int32
+	CreatedAt                time.Time
+}
+
+type CaseSummary struct {
+	Case
+	InstallmentsTotal int32
+	InstallmentsPaid  int32
+	AmountPaid        float64
+	AmountRemaining   float64
+	Status            string
+}
+
+type CaseInstallment struct {
+	ID                int32
+	CaseID            int32
+	InstallmentNumber int32
+	DueDate           time.Time
+	Amount            float64
+	ExtraAmount       float64
+	IsPaid            bool
+	PaidAt            *time.Time
+}
+
+type CreateCaseRequest struct {
+	PersonID                 int32
+	Title                    string
+	CaseType                 string
+	TotalAmount              float64
+	InstallmentCount         int32
+	InstallmentAmount        float64
+	StartDate                time.Time
+	PaymentMethodID          *int32
+	InstallmentPlanID        *int32
+	CategoryID               *int32
+	InterestRate             *float64
+	InterestRateUnit         string
+	RecurrenceIntervalMonths *int32
+}
+
+type UpdateInstallmentRequest struct {
+	IsPaid      bool
+	ExtraAmount float64
 }

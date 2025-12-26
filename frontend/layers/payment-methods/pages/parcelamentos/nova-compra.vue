@@ -4,6 +4,8 @@ import InstallmentFormCard from '../../components/InstallmentFormCard.vue'
 import type { InstallmentCategoryOption } from '../../types/installment'
 import type { PaymentMethod } from '../../types/payment-method'
 import { useInstallmentsService } from '../../services/installments'
+import type { Person } from '~/layers/picuinhas/types/picuinha'
+import { usePicuinhasService } from '~/layers/picuinhas/services/picuinhas'
 import { getApiErrorMessage } from '~/layers/shared/utils/api'
 import { Button } from '~/layers/shared/components/ui/button'
 
@@ -12,9 +14,11 @@ definePageMeta({
 })
 
 const { listPaymentMethods, listCategories, createInstallment } = useInstallmentsService()
+const { listPersons, createCase } = usePicuinhasService()
 
 const categories = ref<InstallmentCategoryOption[]>([])
 const paymentMethods = ref<PaymentMethod[]>([])
+const persons = ref<Person[]>([])
 const loading = ref(true)
 const loadError = ref<string | null>(null)
 
@@ -50,10 +54,18 @@ async function fetchPaymentMethods() {
   }
 }
 
+async function fetchPersons() {
+  try {
+    persons.value = await listPersons()
+  } catch (error) {
+    loadError.value = getApiErrorMessage(error)
+  }
+}
+
 async function refreshBaseData() {
   loading.value = true
   loadError.value = null
-  await Promise.all([fetchCategories(), fetchPaymentMethods()])
+  await Promise.all([fetchCategories(), fetchPaymentMethods(), fetchPersons()])
   loading.value = false
 }
 
@@ -66,11 +78,27 @@ async function handleCreate(payload: {
   category_id: number
   payment_method_id: number
   purchase_date: string
+  person_id?: number
 }) {
   submitting.value = true
   formError.value = null
   try {
-    await createInstallment(payload)
+    const { person_id, ...installmentPayload } = payload
+    const plan = await createInstallment(installmentPayload)
+    if (person_id) {
+      await createCase({
+        person_id,
+        title: payload.description,
+        case_type: 'CARD_INSTALLMENT',
+        total_amount: plan.total_amount,
+        installment_count: plan.installment_count,
+        installment_amount: plan.installment_amount,
+        start_date: plan.start_month,
+        payment_method_id: plan.payment_method_id,
+        installment_plan_id: plan.id,
+        category_id: payload.category_id,
+      })
+    }
     feedback.value = { type: 'success', message: 'Parcelamento registrado com sucesso.' }
   } catch (error) {
     formError.value = getApiErrorMessage(error)
@@ -110,6 +138,7 @@ onMounted(refreshBaseData)
     <InstallmentFormCard
       :categories="categories"
       :payment-methods="paymentMethods"
+      :persons="persons"
       :categories-loading="categoriesLoading"
       :payment-methods-loading="paymentMethodsLoading"
       :submitting="submitting"

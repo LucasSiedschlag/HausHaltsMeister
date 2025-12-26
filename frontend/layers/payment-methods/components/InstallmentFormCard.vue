@@ -6,11 +6,13 @@ import { Label } from '~/layers/shared/components/ui/label'
 import { Select } from '~/layers/shared/components/ui/select'
 import type { InstallmentCategoryOption } from '../types/installment'
 import type { PaymentMethod } from '../types/payment-method'
+import type { Person } from '~/layers/picuinhas/types/picuinha'
 import { validateInstallmentInput } from '../validation/installment'
 
 interface Props {
   categories: InstallmentCategoryOption[]
   paymentMethods: PaymentMethod[]
+  persons?: Person[]
   categoriesLoading?: boolean
   paymentMethodsLoading?: boolean
   submitting?: boolean
@@ -20,6 +22,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   categories: () => [],
   paymentMethods: () => [],
+  persons: () => [],
   categoriesLoading: false,
   paymentMethodsLoading: false,
   submitting: false,
@@ -36,6 +39,7 @@ const emit = defineEmits<{
     category_id: number
     payment_method_id: number
     purchase_date: string
+    person_id?: number
   }]
 }>()
 
@@ -48,6 +52,7 @@ const form = reactive({
   category_id: '',
   payment_method_id: '',
   purchase_date: '',
+  person_id: '',
 })
 
 const errors = ref<Record<string, string | undefined>>({})
@@ -77,7 +82,10 @@ function handleSubmit() {
   })
   errors.value = result.errors
   if (!result.valid) return
-  emit('submit', result.values)
+  emit('submit', {
+    ...result.values,
+    person_id: form.person_id ? Number(form.person_id) : undefined,
+  })
 }
 
 watch(
@@ -118,6 +126,17 @@ watch(
           placeholder="Ex: TV Samsung 55"
         />
         <p v-if="errors.description" class="text-xs text-destructive">{{ errors.description }}</p>
+      </div>
+
+      <div class="space-y-2">
+        <Label for="installment-person">Pessoa (picuinha)</Label>
+        <Select id="installment-person" v-model="form.person_id" :disabled="props.submitting">
+          <option value="">Sem pessoa selecionada</option>
+          <option v-for="person in props.persons" :key="person.id" :value="String(person.id)">
+            {{ person.name }}
+          </option>
+        </Select>
+        <p class="text-xs text-muted-foreground">Selecione se a compra pertence a alguém.</p>
       </div>
 
       <div class="grid gap-4 md:grid-cols-2">
@@ -178,9 +197,9 @@ watch(
         </div>
       </div>
 
-      <div class="space-y-2">
+      <div class="flex flex-col gap-2">
         <Label>Modo de valor</Label>
-        <div class="mt-2 inline-flex rounded-md border bg-muted/30 p-1">
+        <div class="flex w-fit flex-wrap gap-1 rounded-md border bg-muted/30 p-1">
           <Button
             type="button"
             size="sm"

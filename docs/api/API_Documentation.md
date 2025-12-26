@@ -533,6 +533,130 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
 
 ---
 
+### 4.9 Criar Picuinha (Caso)
+
+**Endpoint:** `POST /picuinhas/cases`
+
+**Payload (JSON):**
+
+```json
+{
+  "person_id": 1,
+  "title": "TV Samsung",
+  "case_type": "CARD_INSTALLMENT",
+  "total_amount": 2000.0,
+  "installment_count": 10,
+  "installment_amount": 200.0,
+  "start_date": "2025-01-05",
+  "payment_method_id": 2,
+  "installment_plan_id": 5,
+  "category_id": 9,
+  "interest_rate": 1.5,
+  "interest_rate_unit": "MONTHLY",
+  "recurrence_interval_months": 1
+}
+```
+
+- `case_type`: `ONE_OFF`, `INSTALLMENT`, `CARD_INSTALLMENT`, `RECURRING`.
+- `start_date`: data da primeira parcela (para compras no cartao, usar o `start_month` do plano).
+- `installment_plan_id`: opcional para vincular a um parcelamento existente.
+
+**Response (201 Created):** `CaseResponse`
+
+### 4.10 Listar Picuinhas (Casos)
+
+**Endpoint:** `GET /picuinhas/cases`
+
+**Query Params:**
+
+- `person_id` (int): obrigatório.
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 1,
+    "person_id": 1,
+    "title": "TV Samsung",
+    "case_type": "CARD_INSTALLMENT",
+    "total_amount": 2000.0,
+    "installment_count": 10,
+    "installment_amount": 200.0,
+    "start_date": "2025-01-05",
+    "payment_method_id": 2,
+    "installment_plan_id": 5,
+    "category_id": 9,
+    "interest_rate": 1.5,
+    "interest_rate_unit": "MONTHLY",
+    "recurrence_interval_months": 1,
+    "installments_total": 10,
+    "installments_paid": 3,
+    "amount_paid": 600.0,
+    "amount_remaining": 1400.0,
+    "status": "OPEN"
+  }
+]
+```
+
+### 4.11 Listar Parcelas de Picuinha
+
+**Endpoint:** `GET /picuinhas/cases/{id}/installments`
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 10,
+    "case_id": 1,
+    "installment_number": 1,
+    "due_date": "2025-01-05",
+    "amount": 200.0,
+    "extra_amount": 0.0,
+    "is_paid": false,
+    "paid_at": null
+  }
+]
+```
+
+### 4.12 Atualizar Picuinha (Caso)
+
+**Endpoint:** `PUT /picuinhas/cases/{id}`
+
+**Payload (JSON):** mesmo formato de criação.
+
+**Response (200 OK):** `CaseResponse`
+
+### 4.13 Excluir Picuinha (Caso)
+
+**Endpoint:** `DELETE /picuinhas/cases/{id}`
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "deleted"
+}
+```
+
+### 4.14 Atualizar Parcela de Picuinha
+
+**Endpoint:** `PUT /picuinhas/installments/{id}`
+
+**Payload (JSON):**
+
+```json
+{
+  "is_paid": true,
+  "extra_amount": 15.0
+}
+```
+
+**Response (200 OK):** `CaseInstallmentResponse`
+
+---
+
 ## 5. Domínio: Cartões e Parcelamentos (`payment/installment`)
 
 ### 5.1 Criar Meio de Pagamento

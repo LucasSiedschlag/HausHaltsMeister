@@ -29,6 +29,7 @@ const emit = defineEmits<{
   create: []
   edit: [person: Person]
   remove: [person: Person]
+  view: [person: Person]
   retry: []
 }>()
 
@@ -43,10 +44,10 @@ function formatCurrency(value: number) {
 
 function balanceBadgeClass(balance: number) {
   if (balance > 0) {
-    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300'
+    return 'border-red-500/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-300'
   }
   if (balance < 0) {
-    return 'border-red-500/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-300'
+    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300'
   }
   return 'border-muted/50 bg-muted/40 text-muted-foreground'
 }
@@ -58,7 +59,7 @@ function balanceBadgeClass(balance: number) {
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-base font-semibold">Pessoas</h2>
-          <p class="text-sm text-muted-foreground">Cadastre pessoas e acompanhe o saldo.</p>
+          <p class="text-sm text-muted-foreground">Cadastre pessoas e acompanhe o valor em aberto.</p>
         </div>
         <Button @click="emit('create')">Nova pessoa</Button>
       </div>
@@ -93,7 +94,7 @@ function balanceBadgeClass(balance: number) {
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Observações</TableHead>
-            <TableHead>Saldo</TableHead>
+            <TableHead>Em aberto</TableHead>
             <TableHead class="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -108,6 +109,15 @@ function balanceBadgeClass(balance: number) {
             </TableCell>
             <TableCell class="text-right">
               <div class="inline-flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  :disabled="props.actionsDisabled"
+                  :title="props.actionsDisabled ? props.actionsDisabledReason : undefined"
+                  @click="emit('view', person)"
+                >
+                  Picuinhas
+                </Button>
                 <Button
                   variant="secondary"
                   size="sm"

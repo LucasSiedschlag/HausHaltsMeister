@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import PersonTable from '../../components/PersonTable.vue'
 import PersonFormSheet from '../../components/PersonFormSheet.vue'
 import PersonDeleteDialog from '../../components/PersonDeleteDialog.vue'
@@ -13,6 +14,7 @@ definePageMeta({
 })
 
 const { listPersons, createPerson, updatePerson, deletePerson } = usePicuinhasService()
+const router = useRouter()
 
 const persons = ref<Person[]>([])
 const loading = ref(true)
@@ -88,6 +90,10 @@ function requestDelete(person: Person) {
   deleteOpen.value = true
 }
 
+function viewPersonCases(person: Person) {
+  router.push({ path: '/picuinhas/lancamentos', query: { person_id: String(person.id) } })
+}
+
 async function confirmDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
@@ -110,6 +116,7 @@ watch(formOpen, (open) => {
 })
 
 onMounted(fetchPersons)
+onActivated(fetchPersons)
 </script>
 
 <template>
@@ -140,6 +147,7 @@ onMounted(fetchPersons)
       @create="openCreate"
       @edit="openEdit"
       @remove="requestDelete"
+      @view="viewPersonCases"
       @retry="fetchPersons"
     />
 

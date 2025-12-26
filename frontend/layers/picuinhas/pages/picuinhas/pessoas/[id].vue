@@ -1,57 +1,39 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import CaseTable from '../../components/CaseTable.vue'
-import CaseFormSheet from '../../components/CaseFormSheet.vue'
-import CaseInstallmentsSheet from '../../components/CaseInstallmentsSheet.vue'
-import CaseDeleteDialog from '../../components/CaseDeleteDialog.vue'
-import type { PaymentMethod, Person, PicuinhaCase, PicuinhaCaseInstallment } from '../../types/picuinha'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import CaseTable from '../../../components/CaseTable.vue'
+import CaseFormSheet from '../../../components/CaseFormSheet.vue'
+import CaseInstallmentsSheet from '../../../components/CaseInstallmentsSheet.vue'
+import CaseDeleteDialog from '../../../components/CaseDeleteDialog.vue'
+import type { PaymentMethod, Person, PicuinhaCase, PicuinhaCaseInstallment } from '../../../types/picuinha'
 import type { Category } from '~/layers/categories/types/category'
-import { usePicuinhasService } from '../../services/picuinhas'
+import { usePicuinhasService } from '../../../services/picuinhas'
 import { useInstallmentsService } from '~/layers/payment-methods/services/installments'
 import { getApiErrorMessage } from '~/layers/shared/utils/api'
 import { Button } from '~/layers/shared/components/ui/button'
-import { Label } from '~/layers/shared/components/ui/label'
-import { Select } from '~/layers/shared/components/ui/select'
 
 definePageMeta({
   layout: 'default',
 })
 
-const {
-  listPersons,
-  listCases,
-  createCase,
-  deleteCase,
-  listCaseInstallments,
-  updateCaseInstallment,
-  listPaymentMethods,
-  listCategories,
-} = usePicuinhasService()
+const route = useRoute()
+const router = useRouter()
+const personId = Number(route.params.id)
+
+const { listPersons, listCases, createCase, deleteCase, listCaseInstallments, updateCaseInstallment, listPaymentMethods, listCategories } =
+  usePicuinhasService()
 const { createInstallment } = useInstallmentsService()
 
+const person = ref<Person | null>(null)
 const cases = ref<PicuinhaCase[]>([])
-const loading = ref(true)
-const loadError = ref<string | null>(null)
-
-const persons = ref<Person[]>([])
-const personsLoading = ref(false)
-const personsError = ref<string | null>(null)
+const casesLoading = ref(true)
+const casesError = ref<string | null>(null)
 
 const paymentMethods = ref<PaymentMethod[]>([])
-const paymentMethodsLoading = ref(false)
-const paymentMethodsError = ref<string | null>(null)
-
 const categories = ref<Category[]>([])
-const categoriesLoading = ref(false)
-const categoriesError = ref<string | null>(null)
-
-const route = useRoute()
-const selectedPersonId = ref<string>('')
-
 const formOpen = ref(false)
+const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
-const submitting = ref(false)
 
 const installmentsOpen = ref(false)
 const installmentsCase = ref<PicuinhaCase | null>(null)
@@ -64,93 +46,56 @@ const deleteOpen = ref(false)
 const deleteTarget = ref<PicuinhaCase | null>(null)
 const deleting = ref(false)
 
-const feedback = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+const pageSubtitle = computed(() => (person.value ? `Acompanhe as picuinhas de ${person.value.name}.` : ''))
 
-const pageSubtitle = computed(() =>
-  selectedPersonId.value ? 'Acompanhe as picuinhas da pessoa selecionada.' : 'Visão geral de todas as picuinhas.',
-)
-
-const canCreate = computed(() => Boolean(selectedPersonId.value))
-
-async function fetchPersons() {
-  personsLoading.value = true
-  personsError.value = null
-  try {
-    persons.value = await listPersons()
-  } catch (error) {
-    personsError.value = getApiErrorMessage(error)
-  } finally {
-    personsLoading.value = false
+async function fetchPerson() {
+  if (!Number.isFinite(personId)) {
+    throw new Error('Pessoa inválida.')
   }
-}
-
-async function fetchPaymentMethods() {
-  paymentMethodsLoading.value = true
-  paymentMethodsError.value = null
-  try {
-    paymentMethods.value = await listPaymentMethods()
-  } catch (error) {
-    paymentMethodsError.value = getApiErrorMessage(error)
-  } finally {
-    paymentMethodsLoading.value = false
-  }
-}
-
-async function fetchCategories() {
-  categoriesLoading.value = true
-  categoriesError.value = null
-  try {
-    categories.value = await listCategories()
-  } catch (error) {
-    categoriesError.value = getApiErrorMessage(error)
-  } finally {
-    categoriesLoading.value = false
+  const people = await listPersons()
+  person.value = people.find((item) => item.id === personId) || null
+  if (!person.value) {
+    throw new Error('Pessoa não encontrada.')
   }
 }
 
 async function fetchCases() {
-  loading.value = true
-  loadError.value = null
+  casesLoading.value = true
+  casesError.value = null
   try {
-    if (selectedPersonId.value) {
-      cases.value = await listCases(Number(selectedPersonId.value))
-      return
-    }
-    const people = persons.value.length ? persons.value : await listPersons()
-    persons.value = people
-    const results = await Promise.all(
-      people.map((person) =>
-        listCases(person.id).then((items) =>
-          items.map((item) => ({
-            ...item,
-            person_id: person.id,
-            person_name: person.name,
-          })),
-        ),
-      ),
-    )
-    cases.value = results.flat()
+    cases.value = await listCases(personId)
   } catch (error) {
-    loadError.value = getApiErrorMessage(error)
+    casesError.value = getApiErrorMessage(error)
   } finally {
-    loading.value = false
+    casesLoading.value = false
   }
 }
 
-async function refreshData() {
-  await Promise.all([fetchPersons(), fetchCases(), fetchPaymentMethods(), fetchCategories()])
+async function fetchReferenceData() {
+  try {
+    paymentMethods.value = await listPaymentMethods()
+    categories.value = await listCategories()
+  } catch (error) {
+    casesError.value = getApiErrorMessage(error)
+  }
+}
+
+async function refreshAll() {
+  try {
+    await fetchPerson()
+    await fetchCases()
+    await fetchReferenceData()
+  } catch (error) {
+    casesError.value = getApiErrorMessage(error)
+  }
 }
 
 function openCreate() {
-  if (!selectedPersonId.value) {
-    feedback.value = { type: 'error', message: 'Selecione uma pessoa para criar a picuinha.' }
-    return
-  }
   formError.value = null
   formOpen.value = true
 }
 
-async function handleSubmit(payload: {
+async function handleCreate(payload: {
   title: string
   case_type: PicuinhaCase['case_type']
   amount_mode: 'TOTAL' | 'INSTALLMENT'
@@ -165,11 +110,8 @@ async function handleSubmit(payload: {
   interest_rate_unit?: string
   recurrence_interval_months?: number
 }) {
-  if (!selectedPersonId.value) {
-    formError.value = 'Selecione uma pessoa para continuar.'
-    return
-  }
-  submitting.value = true
+  if (!person.value) return
+  formSubmitting.value = true
   formError.value = null
   try {
     if (payload.case_type === 'CARD_INSTALLMENT') {
@@ -187,7 +129,7 @@ async function handleSubmit(payload: {
         purchase_date: payload.purchase_date,
       })
       await createCase({
-        person_id: Number(selectedPersonId.value),
+        person_id: person.value.id,
         title: payload.title,
         case_type: 'CARD_INSTALLMENT',
         total_amount: plan.total_amount,
@@ -203,7 +145,7 @@ async function handleSubmit(payload: {
       })
     } else {
       await createCase({
-        person_id: Number(selectedPersonId.value),
+        person_id: person.value.id,
         title: payload.title,
         case_type: payload.case_type,
         total_amount: payload.total_amount,
@@ -215,13 +157,12 @@ async function handleSubmit(payload: {
         recurrence_interval_months: payload.recurrence_interval_months,
       })
     }
-    feedback.value = { type: 'success', message: 'Picuinha criada com sucesso.' }
-    await fetchCases()
     formOpen.value = false
+    await fetchCases()
   } catch (error) {
     formError.value = getApiErrorMessage(error)
   } finally {
-    submitting.value = false
+    formSubmitting.value = false
   }
 }
 
@@ -267,83 +208,40 @@ async function confirmDelete() {
   try {
     await deleteCase(deleteTarget.value.id)
     cases.value = cases.value.filter((item) => item.id !== deleteTarget.value?.id)
-    feedback.value = { type: 'success', message: 'Picuinha excluída com sucesso.' }
     deleteOpen.value = false
   } catch (error) {
-    feedback.value = { type: 'error', message: getApiErrorMessage(error) }
+    casesError.value = getApiErrorMessage(error)
   } finally {
     deleting.value = false
   }
 }
 
-watch(formOpen, (open) => {
-  if (!open) {
-    formError.value = null
-  }
-})
+function goBack() {
+  router.push('/picuinhas/pessoas')
+}
 
-watch(selectedPersonId, () => {
-  fetchCases()
-})
-
-onMounted(async () => {
-  const personParam = route.query.person_id
-  if (typeof personParam === 'string' && personParam) {
-    selectedPersonId.value = personParam
-  }
-  await refreshData()
-})
+onMounted(refreshAll)
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight">Picuinhas · Lançamentos</h1>
+        <Button variant="ghost" class="px-0" @click="goBack">
+          ← Voltar para pessoas
+        </Button>
+        <h1 class="text-2xl font-semibold tracking-tight">
+          {{ person ? `Picuinhas · ${person.name}` : 'Picuinhas' }}
+        </h1>
         <p class="text-sm text-muted-foreground">{{ pageSubtitle }}</p>
       </div>
-      <Button variant="outline" :disabled="personsLoading" @click="refreshData">Atualizar lista</Button>
-    </div>
-
-    <div
-      v-if="feedback"
-      class="rounded-md border px-4 py-3 text-sm"
-      :class="feedback.type === 'error' ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-primary/30 bg-primary/10 text-primary'"
-    >
-      <div class="flex items-center justify-between gap-4">
-        <span>{{ feedback.message }}</span>
-        <Button variant="ghost" size="sm" @click="feedback = null">Fechar</Button>
-      </div>
-    </div>
-
-    <div v-if="personsError" class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      {{ personsError }}
-    </div>
-
-    <div v-if="paymentMethodsError" class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      {{ paymentMethodsError }}
-    </div>
-
-    <div v-if="categoriesError" class="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      {{ categoriesError }}
-    </div>
-
-    <div class="rounded-lg border bg-card px-4 py-4">
-      <div class="space-y-2">
-        <Label for="picuinha-person">Pessoa</Label>
-        <Select id="picuinha-person" v-model="selectedPersonId" :disabled="personsLoading">
-          <option value="">Selecione uma pessoa</option>
-          <option v-for="person in persons" :key="person.id" :value="String(person.id)">
-            {{ person.name }}
-          </option>
-        </Select>
-      </div>
+      <Button variant="outline" :disabled="casesLoading" @click="fetchCases">Atualizar</Button>
     </div>
 
     <CaseTable
       :cases="cases"
-      :loading="loading || personsLoading || paymentMethodsLoading || categoriesLoading"
-      :error="loadError"
+      :loading="casesLoading"
+      :error="casesError"
       @create="openCreate"
       @viewInstallments="openInstallments"
       @remove="requestDelete"
@@ -352,11 +250,11 @@ onMounted(async () => {
 
     <CaseFormSheet
       v-model:open="formOpen"
-      :submitting="submitting"
+      :submitting="formSubmitting"
       :error-message="formError"
       :payment-methods="paymentMethods"
       :categories="categories"
-      @submit="handleSubmit"
+      @submit="handleCreate"
     />
 
     <CaseInstallmentsSheet

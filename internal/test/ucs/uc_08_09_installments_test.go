@@ -145,9 +145,3 @@ func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 	item := items[0].(map[string]interface{})
 	assert.Equal(t, "MacBook (1/10)", item["title"])
 }
-
-func jsonNumber(i int) string {
-	return string(json.Number(time.Now().Format(""))) // just helper? No, simpler
-	// just sprintf
-	return ""
-}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
@@ -93,6 +94,10 @@ func (r *PicuinhaRepository) DeletePerson(ctx context.Context, id int32) error {
 
 func (r *PicuinhaRepository) CountEntriesByPerson(ctx context.Context, personID int32) (int64, error) {
 	return r.q.CountEntriesByPerson(ctx, personID)
+}
+
+func (r *PicuinhaRepository) CountCasesByPerson(ctx context.Context, personID int32) (int64, error) {
+	return r.q.CountCasesByPerson(ctx, personID)
 }
 
 func (r *PicuinhaRepository) AddEntry(ctx context.Context, entry *picuinha.Entry) (*picuinha.Entry, error) {
@@ -312,4 +317,265 @@ func (r *PicuinhaRepository) GetBalance(ctx context.Context, personID int32) (fl
 	}
 	val, _ := bal.Float64Value()
 	return val.Float64, nil
+}
+
+func (r *PicuinhaRepository) CreateCase(ctx context.Context, picCase *picuinha.Case) (*picuinha.Case, error) {
+	row, err := r.q.CreatePicuinhaCase(ctx, sqlc.CreatePicuinhaCaseParams{
+		PersonID:                 picCase.PersonID,
+		Title:                    picCase.Title,
+		CaseType:                 picCase.CaseType,
+		TotalAmount:              numericFromPtr(picCase.TotalAmount),
+		InstallmentCount:         int4FromPtr(picCase.InstallmentCount),
+		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
+		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
+		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
+		InstallmentPlanID:        int4FromPtr(picCase.InstallmentPlanID),
+		CategoryID:               int4FromPtr(picCase.CategoryID),
+		InterestRate:             numericFromPtr(picCase.InterestRate),
+		InterestRateUnit:         textFromString(picCase.InterestRateUnit),
+		RecurrenceIntervalMonths: int4FromPtr(picCase.RecurrenceIntervalMonths),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapCaseRow(row), nil
+}
+
+func (r *PicuinhaRepository) UpdateCase(ctx context.Context, picCase *picuinha.Case) (*picuinha.Case, error) {
+	row, err := r.q.UpdatePicuinhaCase(ctx, sqlc.UpdatePicuinhaCaseParams{
+		PicuinhaCaseID:           picCase.ID,
+		PersonID:                 picCase.PersonID,
+		Title:                    picCase.Title,
+		CaseType:                 picCase.CaseType,
+		TotalAmount:              numericFromPtr(picCase.TotalAmount),
+		InstallmentCount:         int4FromPtr(picCase.InstallmentCount),
+		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
+		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
+		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
+		InstallmentPlanID:        int4FromPtr(picCase.InstallmentPlanID),
+		CategoryID:               int4FromPtr(picCase.CategoryID),
+		InterestRate:             numericFromPtr(picCase.InterestRate),
+		InterestRateUnit:         textFromString(picCase.InterestRateUnit),
+		RecurrenceIntervalMonths: int4FromPtr(picCase.RecurrenceIntervalMonths),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return mapCaseRow(row), nil
+}
+
+func (r *PicuinhaRepository) DeleteCase(ctx context.Context, id int32) error {
+	return r.q.DeletePicuinhaCase(ctx, id)
+}
+
+func (r *PicuinhaRepository) GetCase(ctx context.Context, id int32) (*picuinha.Case, error) {
+	row, err := r.q.GetPicuinhaCase(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return mapCaseRow(row), nil
+}
+
+func (r *PicuinhaRepository) ListCasesByPerson(ctx context.Context, personID int32) ([]picuinha.CaseSummary, error) {
+	rows, err := r.q.ListPicuinhaCasesByPerson(ctx, personID)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]picuinha.CaseSummary, len(rows))
+	for i, row := range rows {
+		c := mapCaseSummaryRow(row)
+		results[i] = c
+	}
+	return results, nil
+}
+
+func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
+	row, err := r.q.CreatePicuinhaCaseInstallment(ctx, sqlc.CreatePicuinhaCaseInstallmentParams{
+		PicuinhaCaseID:    installment.CaseID,
+		InstallmentNumber: installment.InstallmentNumber,
+		DueDate:           pgtype.Date{Time: installment.DueDate, Valid: true},
+		Amount:            numericFromValue(installment.Amount),
+		ExtraAmount:       numericFromValue(installment.ExtraAmount),
+		IsPaid:            installment.IsPaid,
+		PaidAt:            timestampFromPtr(installment.PaidAt),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapCaseInstallmentRow(row), nil
+}
+
+func (r *PicuinhaRepository) UpdateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
+	row, err := r.q.UpdatePicuinhaCaseInstallment(ctx, sqlc.UpdatePicuinhaCaseInstallmentParams{
+		PicuinhaCaseInstallmentID: installment.ID,
+		Amount:                    numericFromValue(installment.Amount),
+		ExtraAmount:               numericFromValue(installment.ExtraAmount),
+		IsPaid:                    installment.IsPaid,
+		PaidAt:                    timestampFromPtr(installment.PaidAt),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return mapCaseInstallmentRow(row), nil
+}
+
+func (r *PicuinhaRepository) GetInstallment(ctx context.Context, id int32) (*picuinha.CaseInstallment, error) {
+	row, err := r.q.GetPicuinhaCaseInstallment(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return mapCaseInstallmentRow(row), nil
+}
+
+func (r *PicuinhaRepository) ListInstallmentsByCase(ctx context.Context, caseID int32) ([]picuinha.CaseInstallment, error) {
+	rows, err := r.q.ListPicuinhaCaseInstallments(ctx, caseID)
+	if err != nil {
+		return nil, err
+	}
+	installments := make([]picuinha.CaseInstallment, len(rows))
+	for i, row := range rows {
+		installments[i] = *mapCaseInstallmentRow(row)
+	}
+	return installments, nil
+}
+
+func mapCaseRow(row sqlc.PicuinhaCase) *picuinha.Case {
+	return &picuinha.Case{
+		ID:                       row.PicuinhaCaseID,
+		PersonID:                 row.PersonID,
+		Title:                    row.Title,
+		CaseType:                 row.CaseType,
+		TotalAmount:              numericToPtr(row.TotalAmount),
+		InstallmentCount:         int4ToPtr(row.InstallmentCount),
+		InstallmentAmount:        numericToPtr(row.InstallmentAmount),
+		StartDate:                row.StartDate.Time,
+		PaymentMethodID:          int4ToPtr(row.PaymentMethodID),
+		InstallmentPlanID:        int4ToPtr(row.InstallmentPlanID),
+		CategoryID:               int4ToPtr(row.CategoryID),
+		InterestRate:             numericToPtr(row.InterestRate),
+		InterestRateUnit:         row.InterestRateUnit.String,
+		RecurrenceIntervalMonths: int4ToPtr(row.RecurrenceIntervalMonths),
+		CreatedAt:                row.CreatedAt.Time,
+	}
+}
+
+func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSummary {
+	caseData := picuinha.Case{
+		ID:                       row.PicuinhaCaseID,
+		PersonID:                 row.PersonID,
+		Title:                    row.Title,
+		CaseType:                 row.CaseType,
+		TotalAmount:              numericToPtr(row.TotalAmount),
+		InstallmentCount:         int4ToPtr(row.InstallmentCount),
+		InstallmentAmount:        numericToPtr(row.InstallmentAmount),
+		StartDate:                row.StartDate.Time,
+		PaymentMethodID:          int4ToPtr(row.PaymentMethodID),
+		InstallmentPlanID:        int4ToPtr(row.InstallmentPlanID),
+		CategoryID:               int4ToPtr(row.CategoryID),
+		InterestRate:             numericToPtr(row.InterestRate),
+		InterestRateUnit:         row.InterestRateUnit.String,
+		RecurrenceIntervalMonths: int4ToPtr(row.RecurrenceIntervalMonths),
+		CreatedAt:                row.CreatedAt.Time,
+	}
+	paid := int32(row.InstallmentsPaid)
+	total := int32(row.InstallmentsTotal)
+	status := picuinha.StatusOpen
+	if row.CaseType == picuinha.CaseTypeRecurring {
+		status = picuinha.StatusRecurringActive
+	} else if total > 0 && paid >= total {
+		status = picuinha.StatusPaid
+	}
+	return picuinha.CaseSummary{
+		Case:              caseData,
+		InstallmentsTotal: total,
+		InstallmentsPaid:  paid,
+		AmountPaid:        numericToValue(row.AmountPaid),
+		AmountRemaining:   numericToValue(row.AmountRemaining),
+		Status:            status,
+	}
+}
+
+func mapCaseInstallmentRow(row sqlc.PicuinhaCaseInstallment) *picuinha.CaseInstallment {
+	var paidAt *time.Time
+	if row.PaidAt.Valid {
+		paidAt = &row.PaidAt.Time
+	}
+	return &picuinha.CaseInstallment{
+		ID:                row.PicuinhaCaseInstallmentID,
+		CaseID:            row.PicuinhaCaseID,
+		InstallmentNumber: row.InstallmentNumber,
+		DueDate:           row.DueDate.Time,
+		Amount:            numericToValue(row.Amount),
+		ExtraAmount:       numericToValue(row.ExtraAmount),
+		IsPaid:            row.IsPaid,
+		PaidAt:            paidAt,
+	}
+}
+
+func numericFromPtr(value *float64) pgtype.Numeric {
+	if value == nil {
+		return pgtype.Numeric{Valid: false}
+	}
+	return numericFromValue(*value)
+}
+
+func numericFromValue(value float64) pgtype.Numeric {
+	var out pgtype.Numeric
+	out.Scan(fmt.Sprintf("%.2f", value))
+	return out
+}
+
+func numericToPtr(value pgtype.Numeric) *float64 {
+	if !value.Valid {
+		return nil
+	}
+	val, _ := value.Float64Value()
+	return &val.Float64
+}
+
+func numericToValue(value pgtype.Numeric) float64 {
+	val, _ := value.Float64Value()
+	return val.Float64
+}
+
+func int4FromPtr(value *int32) pgtype.Int4 {
+	if value == nil {
+		return pgtype.Int4{Valid: false}
+	}
+	return pgtype.Int4{Int32: *value, Valid: true}
+}
+
+func int4ToPtr(value pgtype.Int4) *int32 {
+	if !value.Valid {
+		return nil
+	}
+	return &value.Int32
+}
+
+func textFromString(value string) pgtype.Text {
+	if value == "" {
+		return pgtype.Text{Valid: false}
+	}
+	return pgtype.Text{String: value, Valid: true}
+}
+
+func timestampFromPtr(value *time.Time) pgtype.Timestamp {
+	if value == nil {
+		return pgtype.Timestamp{Valid: false}
+	}
+	return pgtype.Timestamp{Time: *value, Valid: true}
 }

@@ -255,6 +255,63 @@ interface PicuinhaEntry {
   created_at: string;
 }
 
+type PicuinhaCaseType = "ONE_OFF" | "INSTALLMENT" | "CARD_INSTALLMENT" | "RECURRING";
+type PicuinhaCaseStatus = "OPEN" | "PAID" | "RECURRING";
+
+interface PicuinhaCase {
+  id: number;
+  person_id: number;
+  title: string;
+  case_type: PicuinhaCaseType;
+  total_amount?: number | null;
+  installment_count?: number | null;
+  installment_amount?: number | null;
+  start_date: string;
+  payment_method_id?: number | null;
+  installment_plan_id?: number | null;
+  category_id?: number | null;
+  interest_rate?: number | null;
+  interest_rate_unit?: "MONTHLY" | "ANNUAL" | null;
+  recurrence_interval_months?: number | null;
+  installments_total: number;
+  installments_paid: number;
+  amount_paid: number;
+  amount_remaining: number;
+  status: PicuinhaCaseStatus;
+}
+
+interface CreatePicuinhaCaseRequest {
+  person_id: number;
+  title: string;
+  case_type: PicuinhaCaseType;
+  total_amount?: number;
+  installment_count?: number;
+  installment_amount?: number;
+  start_date: string;
+  payment_method_id?: number;
+  installment_plan_id?: number;
+  category_id?: number;
+  interest_rate?: number;
+  interest_rate_unit?: "MONTHLY" | "ANNUAL";
+  recurrence_interval_months?: number;
+}
+
+interface PicuinhaCaseInstallment {
+  id: number;
+  case_id: number;
+  installment_number: number;
+  due_date: string;
+  amount: number;
+  extra_amount: number;
+  is_paid: boolean;
+  paid_at?: string | null;
+}
+
+interface UpdatePicuinhaInstallmentRequest {
+  is_paid: boolean;
+  extra_amount: number;
+}
+
 interface AddEntryRequest {
   person_id: number;
   kind: "PLUS" | "MINUS"; // PLUS: Aumenta dívida dela. MINUS: Diminui.
@@ -312,6 +369,33 @@ interface UpdateEntryRequest {
 **DELETE /picuinhas/entries/:id**
 
 - Response: `{ status: string }`
+
+**GET /picuinhas/cases?person_id=ID**
+
+- Response: `PicuinhaCase[]`
+
+**POST /picuinhas/cases**
+
+- Body: `CreatePicuinhaCaseRequest`
+- Response: `PicuinhaCase`
+
+**PUT /picuinhas/cases/:id**
+
+- Body: `CreatePicuinhaCaseRequest`
+- Response: `PicuinhaCase`
+
+**DELETE /picuinhas/cases/:id**
+
+- Response: `{ status: string }`
+
+**GET /picuinhas/cases/:id/installments**
+
+- Response: `PicuinhaCaseInstallment[]`
+
+**PUT /picuinhas/installments/:id**
+
+- Body: `UpdatePicuinhaInstallmentRequest`
+- Response: `PicuinhaCaseInstallment`
 
 ---
 

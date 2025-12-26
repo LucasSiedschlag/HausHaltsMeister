@@ -43,6 +43,7 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 ## Rotas de Picuinhas
 
 - `/picuinhas/pessoas`: cadastro e listagem de pessoas.
+- `/picuinhas/pessoas/:id`: detalhamento das picuinhas da pessoa (casos + parcelas).
 - `/picuinhas/lancamentos`: lançamentos vinculados às pessoas (depende do cadastro em Pessoas).
 
 ## Rotas de Meios de Pagamento
