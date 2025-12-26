@@ -546,6 +546,7 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "name": "Nubank",
   "kind": "CREDIT_CARD",
   "bank_name": "Nu Pagamentos",
+  "credit_limit": 5000.0,
   "closing_day": 1,
   "due_day": 7
 }
@@ -564,6 +565,7 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
     "name": "Nubank",
     "kind": "CREDIT_CARD",
     "bank_name": "Nu Pagamentos",
+    "credit_limit": 5000.0,
     "closing_day": 1,
     "due_day": 7,
     "is_active": true
@@ -582,6 +584,7 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "name": "Nubank",
   "kind": "CREDIT_CARD",
   "bank_name": "Nu Pagamentos",
+  "credit_limit": 5000.0,
   "closing_day": 1,
   "due_day": 7,
   "is_active": true
@@ -596,6 +599,7 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
   "name": "Nubank",
   "kind": "CREDIT_CARD",
   "bank_name": "Nu Pagamentos",
+  "credit_limit": 5000.0,
   "closing_day": 1,
   "due_day": 7,
   "is_active": true
@@ -625,7 +629,25 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
 ```json
 {
   "description": "Notebook",
+  "amount_mode": "TOTAL",
   "total_amount": 3000.0,
+  "count": 10,
+  "category_id": 15,
+  "payment_method_id": 1,
+  "purchase_date": "2024-03-15"
+}
+```
+
+**Obs:** preencha apenas um entre `total_amount` e `installment_amount`.  
+`amount_mode` aceita `TOTAL` ou `INSTALLMENT`.
+
+**Exemplo usando valor da parcela:**
+
+```json
+{
+  "description": "Notebook",
+  "amount_mode": "INSTALLMENT",
+  "installment_amount": 300.0,
   "count": 10,
   "category_id": 15,
   "payment_method_id": 1,
@@ -648,6 +670,7 @@ _Note: Balance > 0 means they ensure you (você tem crédito)._
 ```json
 {
   "total": 300.0,
+  "total_remaining": 2700.0,
   "entries": [
     {
       "title": "Notebook (1/10)",

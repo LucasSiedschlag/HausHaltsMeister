@@ -234,7 +234,7 @@ Registrar compra parcelada em cartão de crédito.
 2. Informa:
    - Nome da compra
    - Cartão
-   - Valor total
+   - Valor total **ou** valor da parcela
    - Número de parcelas
    - Mês inicial
 3. Confirma.

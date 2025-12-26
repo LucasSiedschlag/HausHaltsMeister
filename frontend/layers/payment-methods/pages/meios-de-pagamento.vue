@@ -67,6 +67,7 @@ async function handleSubmit(payload: CreatePaymentMethodRequest & { is_active?: 
         name: payload.name,
         kind: payload.kind,
         bank_name: payload.bank_name,
+        credit_limit: payload.credit_limit,
         closing_day: payload.closing_day,
         due_day: payload.due_day,
         is_active: payload.is_active ?? selectedMethod.value.is_active,
@@ -79,6 +80,7 @@ async function handleSubmit(payload: CreatePaymentMethodRequest & { is_active?: 
         name: payload.name,
         kind: payload.kind,
         bank_name: payload.bank_name,
+        credit_limit: payload.credit_limit,
         closing_day: payload.closing_day,
         due_day: payload.due_day,
       }

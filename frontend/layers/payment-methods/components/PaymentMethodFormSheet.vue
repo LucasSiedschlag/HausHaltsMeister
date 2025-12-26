@@ -32,6 +32,7 @@ const form = reactive<{
   name: string
   kind: PaymentMethodKind
   bank_name: string
+  credit_limit: string
   closing_day: string
   due_day: string
   is_active: boolean
@@ -39,12 +40,13 @@ const form = reactive<{
   name: '',
   kind: 'CREDIT_CARD',
   bank_name: '',
+  credit_limit: '',
   closing_day: '',
   due_day: '',
   is_active: true,
 })
 
-const errors = ref<{ name?: string; kind?: string; closing_day?: string; due_day?: string }>({})
+const errors = ref<{ name?: string; kind?: string; credit_limit?: string; closing_day?: string; due_day?: string }>({})
 
 const sheetTitle = computed(() => (props.mode === 'edit' ? 'Editar meio de pagamento' : 'Novo meio de pagamento'))
 const isCreditCard = computed(() => form.kind === 'CREDIT_CARD')
@@ -55,6 +57,7 @@ function resetForm() {
     form.name = props.method.name
     form.kind = props.method.kind as PaymentMethodKind
     form.bank_name = props.method.bank_name || ''
+    form.credit_limit = props.method.credit_limit ? String(props.method.credit_limit) : ''
     form.closing_day = props.method.closing_day ? String(props.method.closing_day) : ''
     form.due_day = props.method.due_day ? String(props.method.due_day) : ''
     form.is_active = props.method.is_active
@@ -63,6 +66,7 @@ function resetForm() {
     form.name = ''
     form.kind = 'CREDIT_CARD'
     form.bank_name = ''
+    form.credit_limit = ''
     form.closing_day = ''
     form.due_day = ''
     form.is_active = true
@@ -132,6 +136,24 @@ watch(
             :disabled="props.submitting"
             placeholder="Ex: Nubank, Itaú"
           />
+        </div>
+
+        <div class="space-y-2">
+          <Label for="payment-method-limit">Limite do cartão</Label>
+          <Input
+            id="payment-method-limit"
+            v-model="form.credit_limit"
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.01"
+            :disabled="props.submitting || !isCreditCard"
+            placeholder="Ex: 5000,00"
+          />
+          <p v-if="errors.credit_limit" class="text-xs text-destructive">{{ errors.credit_limit }}</p>
+          <p v-else-if="!isCreditCard" class="text-xs text-muted-foreground">
+            Disponível apenas para cartão de crédito.
+          </p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

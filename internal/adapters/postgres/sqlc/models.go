@@ -77,6 +77,7 @@ type PaymentMethod struct {
 	ClosingDay      pgtype.Int4
 	DueDay          pgtype.Int4
 	IsActive        bool
+	CreditLimit     pgtype.Numeric
 }
 
 // Você terá o saldo por pessoa somando/subtraindo os amounts conforme o kind. O cash_flow_id conecta com o fluxo real (entradas/saídas).

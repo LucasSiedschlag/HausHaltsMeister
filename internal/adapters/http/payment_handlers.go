@@ -38,11 +38,12 @@ func (h *PaymentHandler) Create(c echo.Context) error {
 
 	created, err := h.service.CreatePaymentMethod(
 		c.Request().Context(),
-		req.Name, req.Kind, req.BankName, req.ClosingDay, req.DueDay,
+		req.Name, req.Kind, req.BankName, req.CreditLimit, req.ClosingDay, req.DueDay,
 	)
 	if err != nil {
 		if errors.Is(err, payment.ErrNameRequired) || errors.Is(err, payment.ErrKindRequired) ||
-			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) {
+			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) ||
+			errors.Is(err, payment.ErrInvalidCreditLimit) {
 			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create payment method: %v", err)})
@@ -112,13 +113,15 @@ func (h *PaymentHandler) Update(c echo.Context) error {
 		*req.Name,
 		*req.Kind,
 		bankName,
+		req.CreditLimit,
 		req.ClosingDay,
 		req.DueDay,
 		*req.IsActive,
 	)
 	if err != nil {
 		if errors.Is(err, payment.ErrNameRequired) || errors.Is(err, payment.ErrKindRequired) ||
-			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) {
+			errors.Is(err, payment.ErrInvalidClosingDay) || errors.Is(err, payment.ErrInvalidDueDay) ||
+			errors.Is(err, payment.ErrInvalidCreditLimit) {
 			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
 		if errors.Is(err, payment.ErrPaymentMethodNotFound) {
@@ -205,6 +208,7 @@ func (h *PaymentHandler) GetInvoice(c echo.Context) error {
 		PaymentMethodID: invoice.PaymentMethodID,
 		Month:           invoice.Month.Format("2006-01-02"),
 		Total:           invoice.Total,
+		TotalRemaining:  invoice.TotalRemaining,
 		Entries:         entries,
 	})
 }
@@ -220,12 +224,13 @@ func RegisterPaymentRoutes(e *echo.Echo, h *PaymentHandler) {
 
 func toPaymentMethodResponse(m *payment.PaymentMethod) dto.PaymentMethodResponse {
 	return dto.PaymentMethodResponse{
-		ID:         m.ID,
-		Name:       m.Name,
-		Kind:       m.Kind,
-		BankName:   m.BankName,
-		ClosingDay: m.ClosingDay,
-		DueDay:     m.DueDay,
-		IsActive:   m.IsActive,
+		ID:          m.ID,
+		Name:        m.Name,
+		Kind:        m.Kind,
+		BankName:    m.BankName,
+		CreditLimit: m.CreditLimit,
+		ClosingDay:  m.ClosingDay,
+		DueDay:      m.DueDay,
+		IsActive:    m.IsActive,
 	}
 }

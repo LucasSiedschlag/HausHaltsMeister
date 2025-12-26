@@ -3,13 +3,14 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 )
 
 type PaymentRepository struct {
@@ -25,6 +26,10 @@ func NewPaymentRepository(db *pgxpool.Pool) *PaymentRepository {
 func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod) (*payment.PaymentMethod, error) {
 	// Nullable handling
 	bank := pgtype.Text{String: m.BankName, Valid: m.BankName != ""}
+	limit := pgtype.Numeric{Valid: false}
+	if m.CreditLimit != nil {
+		limit.Scan(fmt.Sprintf("%.2f", *m.CreditLimit))
+	}
 	cDay := pgtype.Int4{Valid: false}
 	if m.ClosingDay != nil {
 		cDay = pgtype.Int4{Int32: *m.ClosingDay, Valid: true}
@@ -35,18 +40,25 @@ func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod
 	}
 
 	row, err := r.q.CreatePaymentMethod(ctx, sqlc.CreatePaymentMethodParams{
-		Name:       m.Name,
-		Kind:       m.Kind,
-		BankName:   bank,
-		ClosingDay: cDay,
-		DueDay:     dDay,
-		IsActive:   m.IsActive,
+		Name:        m.Name,
+		Kind:        m.Kind,
+		BankName:    bank,
+		CreditLimit: limit,
+		ClosingDay:  cDay,
+		DueDay:      dDay,
+		IsActive:    m.IsActive,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	var closing, due *int32
+	var creditLimit *float64
+	if row.CreditLimit.Valid {
+		limitVal, _ := row.CreditLimit.Float64Value()
+		value := limitVal.Float64
+		creditLimit = &value
+	}
 	if row.ClosingDay.Valid {
 		closing = &row.ClosingDay.Int32
 	}
@@ -55,18 +67,23 @@ func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod
 	}
 
 	return &payment.PaymentMethod{
-		ID:         row.PaymentMethodID,
-		Name:       row.Name,
-		Kind:       row.Kind,
-		BankName:   row.BankName.String,
-		ClosingDay: closing,
-		DueDay:     due,
-		IsActive:   row.IsActive,
+		ID:          row.PaymentMethodID,
+		Name:        row.Name,
+		Kind:        row.Kind,
+		BankName:    row.BankName.String,
+		CreditLimit: creditLimit,
+		ClosingDay:  closing,
+		DueDay:      due,
+		IsActive:    row.IsActive,
 	}, nil
 }
 
 func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod) (*payment.PaymentMethod, error) {
 	bank := pgtype.Text{String: m.BankName, Valid: m.BankName != ""}
+	limit := pgtype.Numeric{Valid: false}
+	if m.CreditLimit != nil {
+		limit.Scan(fmt.Sprintf("%.2f", *m.CreditLimit))
+	}
 	cDay := pgtype.Int4{Valid: false}
 	if m.ClosingDay != nil {
 		cDay = pgtype.Int4{Int32: *m.ClosingDay, Valid: true}
@@ -81,6 +98,7 @@ func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod
 		Name:            m.Name,
 		Kind:            m.Kind,
 		BankName:        bank,
+		CreditLimit:     limit,
 		ClosingDay:      cDay,
 		DueDay:          dDay,
 		IsActive:        m.IsActive,
@@ -93,6 +111,12 @@ func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod
 	}
 
 	var closing, due *int32
+	var creditLimit *float64
+	if row.CreditLimit.Valid {
+		limitVal, _ := row.CreditLimit.Float64Value()
+		value := limitVal.Float64
+		creditLimit = &value
+	}
 	if row.ClosingDay.Valid {
 		closing = &row.ClosingDay.Int32
 	}
@@ -101,13 +125,14 @@ func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod
 	}
 
 	return &payment.PaymentMethod{
-		ID:         row.PaymentMethodID,
-		Name:       row.Name,
-		Kind:       row.Kind,
-		BankName:   row.BankName.String,
-		ClosingDay: closing,
-		DueDay:     due,
-		IsActive:   row.IsActive,
+		ID:          row.PaymentMethodID,
+		Name:        row.Name,
+		Kind:        row.Kind,
+		BankName:    row.BankName.String,
+		CreditLimit: creditLimit,
+		ClosingDay:  closing,
+		DueDay:      due,
+		IsActive:    row.IsActive,
 	}, nil
 }
 
@@ -136,6 +161,12 @@ func (r *PaymentRepository) List(ctx context.Context, activeOnly bool) ([]paymen
 	methods := make([]payment.PaymentMethod, len(rows))
 	for i, row := range rows {
 		var closing, due *int32
+		var creditLimit *float64
+		if row.CreditLimit.Valid {
+			limitVal, _ := row.CreditLimit.Float64Value()
+			value := limitVal.Float64
+			creditLimit = &value
+		}
 		if row.ClosingDay.Valid {
 			closing = &row.ClosingDay.Int32
 		}
@@ -143,13 +174,14 @@ func (r *PaymentRepository) List(ctx context.Context, activeOnly bool) ([]paymen
 			due = &row.DueDay.Int32
 		}
 		methods[i] = payment.PaymentMethod{
-			ID:         row.PaymentMethodID,
-			Name:       row.Name,
-			Kind:       row.Kind,
-			BankName:   row.BankName.String,
-			ClosingDay: closing,
-			DueDay:     due,
-			IsActive:   row.IsActive,
+			ID:          row.PaymentMethodID,
+			Name:        row.Name,
+			Kind:        row.Kind,
+			BankName:    row.BankName.String,
+			CreditLimit: creditLimit,
+			ClosingDay:  closing,
+			DueDay:      due,
+			IsActive:    row.IsActive,
 		}
 	}
 	return methods, nil
@@ -164,6 +196,12 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 		return nil, err
 	}
 	var closing, due *int32
+	var creditLimit *float64
+	if row.CreditLimit.Valid {
+		limitVal, _ := row.CreditLimit.Float64Value()
+		value := limitVal.Float64
+		creditLimit = &value
+	}
 	if row.ClosingDay.Valid {
 		closing = &row.ClosingDay.Int32
 	}
@@ -171,13 +209,14 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 		due = &row.DueDay.Int32
 	}
 	return &payment.PaymentMethod{
-		ID:         row.PaymentMethodID,
-		Name:       row.Name,
-		Kind:       row.Kind,
-		BankName:   row.BankName.String,
-		ClosingDay: closing,
-		DueDay:     due,
-		IsActive:   row.IsActive,
+		ID:          row.PaymentMethodID,
+		Name:        row.Name,
+		Kind:        row.Kind,
+		BankName:    row.BankName.String,
+		CreditLimit: creditLimit,
+		ClosingDay:  closing,
+		DueDay:      due,
+		IsActive:    row.IsActive,
 	}, nil
 }
 
@@ -203,4 +242,12 @@ func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethod
 		}
 	}
 	return entries, nil
+}
+
+func (r *PaymentRepository) GetOutstandingAmount(ctx context.Context, paymentMethodID int32, month time.Time) (float64, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	return r.q.GetOutstandingAmount(ctx, sqlc.GetOutstandingAmountParams{
+		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		Column2:         pgDate,
+	})
 }

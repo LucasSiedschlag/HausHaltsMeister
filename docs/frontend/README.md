@@ -48,6 +48,8 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 ## Rotas de Meios de Pagamento
 
 - `/meios-de-pagamento`: cadastro e listagem de cartões e outros meios.
+- `/parcelamentos/nova-compra`: cadastro de compras parceladas.
+- `/parcelamentos/fatura`: visão da fatura por cartão/mês.
 
 ## Adicionando um novo Módulo (Layer)
 

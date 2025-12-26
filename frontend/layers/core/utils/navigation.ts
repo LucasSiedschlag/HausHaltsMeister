@@ -27,6 +27,21 @@ export const mainNavigation: NavigationItem[] = [
     icon: "CreditCard",
   },
   {
+    title: "Parcelamentos",
+    href: "/parcelamentos/nova-compra",
+    icon: "Receipt",
+    children: [
+      {
+        title: "Nova compra parcelada",
+        href: "/parcelamentos/nova-compra",
+      },
+      {
+        title: "Fatura de cartão",
+        href: "/parcelamentos/fatura",
+      },
+    ],
+  },
+  {
     title: "Picuinhas",
     href: "/picuinhas/pessoas",
     icon: "Users",

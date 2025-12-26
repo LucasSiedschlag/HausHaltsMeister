@@ -191,7 +191,7 @@ Regras:
 
 - O usuário informa:
   - Nome da compra
-  - Valor total
+  - Valor total **ou** valor da parcela
   - Número de parcelas
   - Cartão (banco)
   - Mês inicial da fatura

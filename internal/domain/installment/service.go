@@ -30,11 +30,13 @@ func (s *InstallmentService) CreateInstallmentPurchase(ctx context.Context, desc
 		return nil, fmt.Errorf("failed to get payment method: %w", err)
 	}
 	if pm == nil {
-		return nil, fmt.Errorf("payment method not found")
+		return nil, payment.ErrPaymentMethodNotFound
 	}
 
+	firstDueDate := calculateFirstDueDate(pm, purchaseDate)
+
 	// 2. Initial Plan Object (without ID)
-	plan, err := NewPlan(description, totalAmount, count, purchaseDate, paymentMethodID)
+	plan, err := NewPlan(description, totalAmount, count, firstDueDate, paymentMethodID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,52 +110,7 @@ func (s *InstallmentService) CreateInstallmentPurchase(ctx context.Context, desc
 	//   //   Open Invoice closes on Next occurrence of Closing Day.
 	//   //   Its payment is on the corresponding Due Day.
 
-	currentDueDate := purchaseDate
-	if pm.Kind == "CREDIT_CARD" && pm.ClosingDay != nil && pm.DueDay != nil {
-		cDay := *pm.ClosingDay
-		dDay := *pm.DueDay
-
-		// Find next closing date
-		// Set to current month closing day
-		closingDate := time.Date(purchaseDate.Year(), purchaseDate.Month(), int(cDay), 0, 0, 0, 0, purchaseDate.Location())
-
-		// If closing date is in past or today (assuming closes at end of day, purchase during day),
-		// if purchase >= closingDate -> it's next invoice.
-		// Wait, if closing is 1st. Purchase 20th.
-		// closingDate (this month) = 1st. Purchase > Closing.
-		// Next Closing = Next Month 1st.
-
-		if purchaseDate.Day() >= int(cDay) {
-			closingDate = closingDate.AddDate(0, 1, 0)
-		}
-
-		// Now we have the Closing Date of the invoice.
-		// The Due Date is usually X days after closing.
-		// Or strictly on Due Day of ... same month? Or next?
-		// If Closing 1st, Due 7th -> Same Month.
-		// If Closing 25th, Due 5th -> Next Month.
-
-		// We can infer match based on Days.
-		// If DueDay > ClosingDay -> Same Month.
-		// If DueDay <= ClosingDay -> Next Month.
-
-		dueMonth := closingDate
-		if int(dDay) <= int(cDay) {
-			dueMonth = dueMonth.AddDate(0, 1, 0)
-		}
-
-		currentDueDate = time.Date(dueMonth.Year(), dueMonth.Month(), int(dDay), 0, 0, 0, 0, dueMonth.Location())
-	} else {
-		// Not Credit Card, just monthly starting next month?
-		// Or start immediately?
-		// Let's start immediately (today/purchase date) for 1st installment?
-		// Or 1 month from now?
-		// Assuming Loan: 1st payment 1 month from now?
-		// Let's assume currentDueDate = purchaseDate (immediate) or purchaseDate + 1 month?
-		// Better: Input said "StartMonth". We used purchaseDate as StartMonth.
-		// Let's use it as first due date if not card.
-		currentDueDate = purchaseDate
-	}
+	currentDueDate := firstDueDate
 
 	for i := 0; i < int(count); i++ {
 		title := fmt.Sprintf("%s (%d/%d)", description, i+1, count)
@@ -177,4 +134,25 @@ func (s *InstallmentService) CreateInstallmentPurchase(ctx context.Context, desc
 	}
 
 	return createdPlan, nil
+}
+
+func calculateFirstDueDate(pm *payment.PaymentMethod, purchaseDate time.Time) time.Time {
+	if pm.Kind != payment.KindCreditCard || pm.ClosingDay == nil || pm.DueDay == nil {
+		return purchaseDate
+	}
+
+	cDay := *pm.ClosingDay
+	dDay := *pm.DueDay
+
+	closingDate := time.Date(purchaseDate.Year(), purchaseDate.Month(), int(cDay), 0, 0, 0, 0, purchaseDate.Location())
+	if purchaseDate.Day() >= int(cDay) {
+		closingDate = closingDate.AddDate(0, 1, 0)
+	}
+
+	dueMonth := closingDate
+	if int(dDay) <= int(cDay) {
+		dueMonth = dueMonth.AddDate(0, 1, 0)
+	}
+
+	return time.Date(dueMonth.Year(), dueMonth.Month(), int(dDay), 0, 0, 0, 0, dueMonth.Location())
 }

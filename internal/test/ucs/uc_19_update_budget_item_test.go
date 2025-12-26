@@ -15,7 +15,6 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )

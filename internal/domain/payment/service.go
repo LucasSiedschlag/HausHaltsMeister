@@ -13,14 +13,15 @@ func NewService(repo Repository) *PaymentService {
 	return &PaymentService{repo: repo}
 }
 
-func (s *PaymentService) CreatePaymentMethod(ctx context.Context, name, kind, bankName string, closingDay, dueDay *int32) (*PaymentMethod, error) {
+func (s *PaymentService) CreatePaymentMethod(ctx context.Context, name, kind, bankName string, creditLimit *float64, closingDay, dueDay *int32) (*PaymentMethod, error) {
 	m := &PaymentMethod{
-		Name:       name,
-		Kind:       kind,
-		BankName:   bankName,
-		ClosingDay: closingDay,
-		DueDay:     dueDay,
-		IsActive:   true,
+		Name:        name,
+		Kind:        kind,
+		BankName:    bankName,
+		CreditLimit: creditLimit,
+		ClosingDay:  closingDay,
+		DueDay:      dueDay,
+		IsActive:    true,
 	}
 	if err := m.Validate(); err != nil {
 		return nil, err
@@ -33,7 +34,7 @@ func (s *PaymentService) ListPaymentMethods(ctx context.Context) ([]PaymentMetho
 	return s.repo.List(ctx, false)
 }
 
-func (s *PaymentService) UpdatePaymentMethod(ctx context.Context, id int32, name, kind, bankName string, closingDay, dueDay *int32, isActive bool) (*PaymentMethod, error) {
+func (s *PaymentService) UpdatePaymentMethod(ctx context.Context, id int32, name, kind, bankName string, creditLimit *float64, closingDay, dueDay *int32, isActive bool) (*PaymentMethod, error) {
 	existing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -43,13 +44,14 @@ func (s *PaymentService) UpdatePaymentMethod(ctx context.Context, id int32, name
 	}
 
 	updated := &PaymentMethod{
-		ID:         id,
-		Name:       name,
-		Kind:       kind,
-		BankName:   bankName,
-		ClosingDay: closingDay,
-		DueDay:     dueDay,
-		IsActive:   isActive,
+		ID:          id,
+		Name:        name,
+		Kind:        kind,
+		BankName:    bankName,
+		CreditLimit: creditLimit,
+		ClosingDay:  closingDay,
+		DueDay:      dueDay,
+		IsActive:    isActive,
 	}
 	if err := updated.Validate(); err != nil {
 		return nil, err
@@ -87,10 +89,16 @@ func (s *PaymentService) GetInvoice(ctx context.Context, paymentMethodID int32, 
 		total += e.Amount
 	}
 
+	totalRemaining, err := s.repo.GetOutstandingAmount(ctx, paymentMethodID, month)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Invoice{
 		PaymentMethodID: paymentMethodID,
 		Month:           month,
 		Total:           total,
+		TotalRemaining:  totalRemaining,
 		Entries:         entries,
 	}, nil
 }

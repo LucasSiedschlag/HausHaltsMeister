@@ -12,35 +12,49 @@ import (
 )
 
 const createPaymentMethod = `-- name: CreatePaymentMethod :one
-INSERT INTO payment_methods (name, kind, bank_name, closing_day, due_day, is_active)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
+INSERT INTO payment_methods (name, kind, bank_name, credit_limit, closing_day, due_day, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING payment_method_id, name, kind, bank_name, credit_limit, closing_day, due_day, is_active
 `
 
 type CreatePaymentMethodParams struct {
-	Name       string
-	Kind       string
-	BankName   pgtype.Text
-	ClosingDay pgtype.Int4
-	DueDay     pgtype.Int4
-	IsActive   bool
+	Name        string
+	Kind        string
+	BankName    pgtype.Text
+	CreditLimit pgtype.Numeric
+	ClosingDay  pgtype.Int4
+	DueDay      pgtype.Int4
+	IsActive    bool
 }
 
-func (q *Queries) CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) (PaymentMethod, error) {
+type CreatePaymentMethodRow struct {
+	PaymentMethodID int32
+	Name            string
+	Kind            string
+	BankName        pgtype.Text
+	CreditLimit     pgtype.Numeric
+	ClosingDay      pgtype.Int4
+	DueDay          pgtype.Int4
+	IsActive        bool
+}
+
+func (q *Queries) CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) (CreatePaymentMethodRow, error) {
 	row := q.db.QueryRow(ctx, createPaymentMethod,
 		arg.Name,
 		arg.Kind,
 		arg.BankName,
+		arg.CreditLimit,
 		arg.ClosingDay,
 		arg.DueDay,
 		arg.IsActive,
 	)
-	var i PaymentMethod
+	var i CreatePaymentMethodRow
 	err := row.Scan(
 		&i.PaymentMethodID,
 		&i.Name,
 		&i.Kind,
 		&i.BankName,
+		&i.CreditLimit,
 		&i.ClosingDay,
 		&i.DueDay,
 		&i.IsActive,
@@ -102,65 +116,53 @@ func (q *Queries) GetInvoiceEntries(ctx context.Context, arg GetInvoiceEntriesPa
 	return items, nil
 }
 
+const getOutstandingAmount = `-- name: GetOutstandingAmount :one
+SELECT COALESCE(SUM(cf.amount), 0)::float
+FROM cash_flows cf
+JOIN expense_details ed ON cf.cash_flow_id = ed.cash_flow_id
+WHERE ed.payment_method_id = $1
+  AND ed.affects_card_invoice = true
+  AND DATE_TRUNC('month', cf.date) >= DATE_TRUNC('month', $2::date)
+`
+
+type GetOutstandingAmountParams struct {
+	PaymentMethodID pgtype.Int4
+	Column2         pgtype.Date
+}
+
+func (q *Queries) GetOutstandingAmount(ctx context.Context, arg GetOutstandingAmountParams) (float64, error) {
+	row := q.db.QueryRow(ctx, getOutstandingAmount, arg.PaymentMethodID, arg.Column2)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getPaymentMethod = `-- name: GetPaymentMethod :one
-SELECT payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
+SELECT payment_method_id, name, kind, bank_name, credit_limit, closing_day, due_day, is_active
 FROM payment_methods
 WHERE payment_method_id = $1
 `
 
-func (q *Queries) GetPaymentMethod(ctx context.Context, paymentMethodID int32) (PaymentMethod, error) {
-	row := q.db.QueryRow(ctx, getPaymentMethod, paymentMethodID)
-	var i PaymentMethod
-	err := row.Scan(
-		&i.PaymentMethodID,
-		&i.Name,
-		&i.Kind,
-		&i.BankName,
-		&i.ClosingDay,
-		&i.DueDay,
-		&i.IsActive,
-	)
-	return i, err
-}
-
-const updatePaymentMethod = `-- name: UpdatePaymentMethod :one
-UPDATE payment_methods
-SET name = $2,
-    kind = $3,
-    bank_name = $4,
-    closing_day = $5,
-    due_day = $6,
-    is_active = $7
-WHERE payment_method_id = $1
-RETURNING payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
-`
-
-type UpdatePaymentMethodParams struct {
+type GetPaymentMethodRow struct {
 	PaymentMethodID int32
 	Name            string
 	Kind            string
 	BankName        pgtype.Text
+	CreditLimit     pgtype.Numeric
 	ClosingDay      pgtype.Int4
 	DueDay          pgtype.Int4
 	IsActive        bool
 }
 
-func (q *Queries) UpdatePaymentMethod(ctx context.Context, arg UpdatePaymentMethodParams) (PaymentMethod, error) {
-	row := q.db.QueryRow(ctx, updatePaymentMethod,
-		arg.PaymentMethodID,
-		arg.Name,
-		arg.Kind,
-		arg.BankName,
-		arg.ClosingDay,
-		arg.DueDay,
-		arg.IsActive,
-	)
-	var i PaymentMethod
+func (q *Queries) GetPaymentMethod(ctx context.Context, paymentMethodID int32) (GetPaymentMethodRow, error) {
+	row := q.db.QueryRow(ctx, getPaymentMethod, paymentMethodID)
+	var i GetPaymentMethodRow
 	err := row.Scan(
 		&i.PaymentMethodID,
 		&i.Name,
 		&i.Kind,
 		&i.BankName,
+		&i.CreditLimit,
 		&i.ClosingDay,
 		&i.DueDay,
 		&i.IsActive,
@@ -169,26 +171,38 @@ func (q *Queries) UpdatePaymentMethod(ctx context.Context, arg UpdatePaymentMeth
 }
 
 const listPaymentMethods = `-- name: ListPaymentMethods :many
-SELECT payment_method_id, name, kind, bank_name, closing_day, due_day, is_active
+SELECT payment_method_id, name, kind, bank_name, credit_limit, closing_day, due_day, is_active
 FROM payment_methods
 WHERE ($1::boolean IS NULL OR is_active = $1)
 ORDER BY name
 `
 
-func (q *Queries) ListPaymentMethods(ctx context.Context, isActive pgtype.Bool) ([]PaymentMethod, error) {
+type ListPaymentMethodsRow struct {
+	PaymentMethodID int32
+	Name            string
+	Kind            string
+	BankName        pgtype.Text
+	CreditLimit     pgtype.Numeric
+	ClosingDay      pgtype.Int4
+	DueDay          pgtype.Int4
+	IsActive        bool
+}
+
+func (q *Queries) ListPaymentMethods(ctx context.Context, isActive pgtype.Bool) ([]ListPaymentMethodsRow, error) {
 	rows, err := q.db.Query(ctx, listPaymentMethods, isActive)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PaymentMethod
+	var items []ListPaymentMethodsRow
 	for rows.Next() {
-		var i PaymentMethod
+		var i ListPaymentMethodsRow
 		if err := rows.Scan(
 			&i.PaymentMethodID,
 			&i.Name,
 			&i.Kind,
 			&i.BankName,
+			&i.CreditLimit,
 			&i.ClosingDay,
 			&i.DueDay,
 			&i.IsActive,
@@ -201,4 +215,64 @@ func (q *Queries) ListPaymentMethods(ctx context.Context, isActive pgtype.Bool) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePaymentMethod = `-- name: UpdatePaymentMethod :one
+UPDATE payment_methods
+SET name = $2,
+    kind = $3,
+    bank_name = $4,
+    credit_limit = $5,
+    closing_day = $6,
+    due_day = $7,
+    is_active = $8
+WHERE payment_method_id = $1
+RETURNING payment_method_id, name, kind, bank_name, credit_limit, closing_day, due_day, is_active
+`
+
+type UpdatePaymentMethodParams struct {
+	PaymentMethodID int32
+	Name            string
+	Kind            string
+	BankName        pgtype.Text
+	CreditLimit     pgtype.Numeric
+	ClosingDay      pgtype.Int4
+	DueDay          pgtype.Int4
+	IsActive        bool
+}
+
+type UpdatePaymentMethodRow struct {
+	PaymentMethodID int32
+	Name            string
+	Kind            string
+	BankName        pgtype.Text
+	CreditLimit     pgtype.Numeric
+	ClosingDay      pgtype.Int4
+	DueDay          pgtype.Int4
+	IsActive        bool
+}
+
+func (q *Queries) UpdatePaymentMethod(ctx context.Context, arg UpdatePaymentMethodParams) (UpdatePaymentMethodRow, error) {
+	row := q.db.QueryRow(ctx, updatePaymentMethod,
+		arg.PaymentMethodID,
+		arg.Name,
+		arg.Kind,
+		arg.BankName,
+		arg.CreditLimit,
+		arg.ClosingDay,
+		arg.DueDay,
+		arg.IsActive,
+	)
+	var i UpdatePaymentMethodRow
+	err := row.Scan(
+		&i.PaymentMethodID,
+		&i.Name,
+		&i.Kind,
+		&i.BankName,
+		&i.CreditLimit,
+		&i.ClosingDay,
+		&i.DueDay,
+		&i.IsActive,
+	)
+	return i, err
 }

@@ -325,6 +325,7 @@ interface PaymentMethod {
   name: string;
   kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
   bank_name?: string;
+  credit_limit?: number;
   closing_day?: number;
   due_day?: number;
   is_active: boolean;
@@ -334,6 +335,7 @@ interface CreatePaymentMethodRequest {
   name: string;
   kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
   bank_name?: string;
+  credit_limit?: number;
   closing_day?: number;
   due_day?: number;
 }
@@ -342,6 +344,7 @@ interface UpdatePaymentMethodRequest {
   name: string;
   kind: "CREDIT_CARD" | "DEBIT_CARD" | "CASH" | "PIX" | "BANK_SLIP";
   bank_name?: string;
+  credit_limit?: number;
   closing_day?: number;
   due_day?: number;
   is_active: boolean;
@@ -349,7 +352,9 @@ interface UpdatePaymentMethodRequest {
 
 interface CreateInstallmentRequest {
   description: string;
-  total_amount: number;
+  amount_mode?: "TOTAL" | "INSTALLMENT";
+  total_amount?: number;
+  installment_amount?: number;
   count: number;
   category_id: number;
   payment_method_id: number;
@@ -359,6 +364,7 @@ interface CreateInstallmentRequest {
 interface Invoice {
   month: string;
   total: number;
+  total_remaining: number;
   entries: {
     date: string;
     title: string;

@@ -4,6 +4,7 @@ export interface PaymentMethodFormInput {
   name: string
   kind: string
   bank_name: string
+  credit_limit: string
   closing_day: string
   due_day: string
 }
@@ -11,6 +12,7 @@ export interface PaymentMethodFormInput {
 export interface PaymentMethodFormErrors {
   name?: string
   kind?: string
+  credit_limit?: string
   closing_day?: string
   due_day?: string
 }
@@ -46,6 +48,16 @@ export function validatePaymentMethodInput(input: PaymentMethodFormInput) {
   }
 
   const isCreditCard = kind === 'CREDIT_CARD'
+  let creditLimit: number | undefined
+  if (input.credit_limit.trim()) {
+    const normalizedLimit = input.credit_limit.trim().replace(',', '.')
+    const parsedLimit = Number(normalizedLimit)
+    if (Number.isNaN(parsedLimit) || parsedLimit <= 0) {
+      errors.credit_limit = 'Informe um limite válido.'
+    } else {
+      creditLimit = parsedLimit
+    }
+  }
   const closingDay = isCreditCard ? parseDay(input.closing_day, 'closing_day', errors) : undefined
   const dueDay = isCreditCard ? parseDay(input.due_day, 'due_day', errors) : undefined
 
@@ -56,6 +68,7 @@ export function validatePaymentMethodInput(input: PaymentMethodFormInput) {
       name,
       kind: kind || 'CREDIT_CARD',
       bank_name: input.bank_name.trim(),
+      credit_limit: creditLimit,
       closing_day: closingDay,
       due_day: dueDay,
     } as PaymentMethodFormValues,
