@@ -45,6 +45,7 @@ func (s *PaymentService) UpdatePaymentMethod(ctx context.Context, id int32, name
 
 	updated := &PaymentMethod{
 		ID:          id,
+		AccountID:   existing.AccountID,
 		Name:        name,
 		Kind:        kind,
 		BankName:    bankName,

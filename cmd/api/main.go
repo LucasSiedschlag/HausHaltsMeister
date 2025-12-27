@@ -67,8 +67,8 @@ func main() {
 	bgService := budget.NewService(bgRepo, catRepo, ledgerRepo)
 	picService := picuinha.NewService(picRepo)
 	payService := payment.NewService(payRepo)
-	instService := installment.NewService(instRepo, cfService, payRepo)
 	ledgerService := ledger.NewService(ledgerRepo)
+	instService := installment.NewService(instRepo, catRepo, ledgerService, payRepo)
 
 	// 5. Setup handlers
 	catHandler := httpAdapter.NewCategoryHandler(catService)

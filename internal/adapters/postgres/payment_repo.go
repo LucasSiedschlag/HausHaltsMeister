@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	ledgerSqlc "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc-ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,17 +15,31 @@ import (
 )
 
 type PaymentRepository struct {
-	q *sqlc.Queries
+	q *ledgerSqlc.Queries
 }
 
 func NewPaymentRepository(db *pgxpool.Pool) *PaymentRepository {
 	return &PaymentRepository{
-		q: sqlc.New(db),
+		q: ledgerSqlc.New(db),
 	}
 }
 
 func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod) (*payment.PaymentMethod, error) {
-	// Nullable handling
+	accountID := m.AccountID
+	if accountID == 0 {
+		accountType := accountTypeForPaymentKind(m.Kind)
+		account, err := r.q.CreateLedgerAccount(ctx, ledgerSqlc.CreateLedgerAccountParams{
+			Name:     m.Name,
+			Type:     accountType,
+			Currency: "BRL",
+			IsActive: m.IsActive,
+		})
+		if err != nil {
+			return nil, err
+		}
+		accountID = account.AccountID
+	}
+
 	bank := pgtype.Text{String: m.BankName, Valid: m.BankName != ""}
 	limit := pgtype.Numeric{Valid: false}
 	if m.CreditLimit != nil {
@@ -39,7 +54,8 @@ func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod
 		dDay = pgtype.Int4{Int32: *m.DueDay, Valid: true}
 	}
 
-	row, err := r.q.CreatePaymentMethod(ctx, sqlc.CreatePaymentMethodParams{
+	row, err := r.q.CreatePaymentMethod(ctx, ledgerSqlc.CreatePaymentMethodParams{
+		AccountID:   accountID,
 		Name:        m.Name,
 		Kind:        m.Kind,
 		BankName:    bank,
@@ -52,33 +68,24 @@ func (r *PaymentRepository) Create(ctx context.Context, m *payment.PaymentMethod
 		return nil, err
 	}
 
-	var closing, due *int32
-	var creditLimit *float64
-	if row.CreditLimit.Valid {
-		limitVal, _ := row.CreditLimit.Float64Value()
-		value := limitVal.Float64
-		creditLimit = &value
-	}
-	if row.ClosingDay.Valid {
-		closing = &row.ClosingDay.Int32
-	}
-	if row.DueDay.Valid {
-		due = &row.DueDay.Int32
-	}
-
-	return &payment.PaymentMethod{
-		ID:          row.PaymentMethodID,
-		Name:        row.Name,
-		Kind:        row.Kind,
-		BankName:    row.BankName.String,
-		CreditLimit: creditLimit,
-		ClosingDay:  closing,
-		DueDay:      due,
-		IsActive:    row.IsActive,
-	}, nil
+	return mapPaymentMethodRow(row)
 }
 
 func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod) (*payment.PaymentMethod, error) {
+	if m.AccountID == 0 {
+		return nil, fmt.Errorf("account_id is required for payment method update")
+	}
+
+	accountType := accountTypeForPaymentKind(m.Kind)
+	if _, err := r.q.UpdateLedgerAccount(ctx, ledgerSqlc.UpdateLedgerAccountParams{
+		AccountID: m.AccountID,
+		Name:      m.Name,
+		Type:      accountType,
+		IsActive:  m.IsActive,
+	}); err != nil {
+		return nil, err
+	}
+
 	bank := pgtype.Text{String: m.BankName, Valid: m.BankName != ""}
 	limit := pgtype.Numeric{Valid: false}
 	if m.CreditLimit != nil {
@@ -93,8 +100,9 @@ func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod
 		dDay = pgtype.Int4{Int32: *m.DueDay, Valid: true}
 	}
 
-	row, err := r.q.UpdatePaymentMethod(ctx, sqlc.UpdatePaymentMethodParams{
+	row, err := r.q.UpdatePaymentMethod(ctx, ledgerSqlc.UpdatePaymentMethodParams{
 		PaymentMethodID: m.ID,
+		AccountID:       m.AccountID,
 		Name:            m.Name,
 		Kind:            m.Kind,
 		BankName:        bank,
@@ -110,47 +118,13 @@ func (r *PaymentRepository) Update(ctx context.Context, m *payment.PaymentMethod
 		return nil, err
 	}
 
-	var closing, due *int32
-	var creditLimit *float64
-	if row.CreditLimit.Valid {
-		limitVal, _ := row.CreditLimit.Float64Value()
-		value := limitVal.Float64
-		creditLimit = &value
-	}
-	if row.ClosingDay.Valid {
-		closing = &row.ClosingDay.Int32
-	}
-	if row.DueDay.Valid {
-		due = &row.DueDay.Int32
-	}
-
-	return &payment.PaymentMethod{
-		ID:          row.PaymentMethodID,
-		Name:        row.Name,
-		Kind:        row.Kind,
-		BankName:    row.BankName.String,
-		CreditLimit: creditLimit,
-		ClosingDay:  closing,
-		DueDay:      due,
-		IsActive:    row.IsActive,
-	}, nil
+	return mapPaymentMethodRow(row)
 }
 
 func (r *PaymentRepository) List(ctx context.Context, activeOnly bool) ([]payment.PaymentMethod, error) {
-	// Filter handling
-	// Query: WHERE ($1::boolean IS NULL OR is_active = $1)
-	// If activeOnly is true, we pass true. If we want all, we pass NULL?
-	// But bool cannot be NULL in Go.
-	// We need sqlc params to accept pgtype.Bool/Int or handle it.
-	// Let's check generated code signature.
-	// Likely: func (q *Queries) ListPaymentMethods(ctx context.Context, dollar_1 pgtype.Bool)
-
 	filter := pgtype.Bool{Bool: true, Valid: activeOnly}
 	if !activeOnly {
-		// If we want ALL, we want Param to be NULL.
 		filter = pgtype.Bool{Valid: false}
-		// Wait, user might want INACTIVE only.
-		// My interface says `activeOnly`. I assume implementation: if activeOnly=true, return active. If false, return ALL.
 	}
 
 	rows, err := r.q.ListPaymentMethods(ctx, filter)
@@ -160,29 +134,11 @@ func (r *PaymentRepository) List(ctx context.Context, activeOnly bool) ([]paymen
 
 	methods := make([]payment.PaymentMethod, len(rows))
 	for i, row := range rows {
-		var closing, due *int32
-		var creditLimit *float64
-		if row.CreditLimit.Valid {
-			limitVal, _ := row.CreditLimit.Float64Value()
-			value := limitVal.Float64
-			creditLimit = &value
+		method, err := mapPaymentMethodRow(row)
+		if err != nil {
+			return nil, err
 		}
-		if row.ClosingDay.Valid {
-			closing = &row.ClosingDay.Int32
-		}
-		if row.DueDay.Valid {
-			due = &row.DueDay.Int32
-		}
-		methods[i] = payment.PaymentMethod{
-			ID:          row.PaymentMethodID,
-			Name:        row.Name,
-			Kind:        row.Kind,
-			BankName:    row.BankName.String,
-			CreditLimit: creditLimit,
-			ClosingDay:  closing,
-			DueDay:      due,
-			IsActive:    row.IsActive,
-		}
+		methods[i] = *method
 	}
 	return methods, nil
 }
@@ -195,6 +151,49 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 		}
 		return nil, err
 	}
+	return mapPaymentMethodRow(row)
+}
+
+func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethodID int32, month time.Time) ([]payment.InvoiceEntry, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	rows, err := r.q.GetInvoiceEntries(ctx, ledgerSqlc.GetInvoiceEntriesParams{
+		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		Column2:         pgDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]payment.InvoiceEntry, len(rows))
+	for i, row := range rows {
+		title := ""
+		switch value := row.Title.(type) {
+		case string:
+			title = value
+		case []byte:
+			title = string(value)
+		}
+		amt := float64(row.Amount)
+		entries[i] = payment.InvoiceEntry{
+			CashFlowID:   row.InstallmentPlanItemID,
+			Date:         row.DueDate.Time,
+			Title:        title,
+			Amount:       amt,
+			CategoryName: row.CategoryName,
+		}
+	}
+	return entries, nil
+}
+
+func (r *PaymentRepository) GetOutstandingAmount(ctx context.Context, paymentMethodID int32, month time.Time) (float64, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	return r.q.GetOutstandingAmount(ctx, ledgerSqlc.GetOutstandingAmountParams{
+		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		Column2:         pgDate,
+	})
+}
+
+func mapPaymentMethodRow(row ledgerSqlc.PaymentMethod) (*payment.PaymentMethod, error) {
 	var closing, due *int32
 	var creditLimit *float64
 	if row.CreditLimit.Valid {
@@ -208,8 +207,10 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 	if row.DueDay.Valid {
 		due = &row.DueDay.Int32
 	}
+
 	return &payment.PaymentMethod{
 		ID:          row.PaymentMethodID,
+		AccountID:   row.AccountID,
 		Name:        row.Name,
 		Kind:        row.Kind,
 		BankName:    row.BankName.String,
@@ -220,34 +221,13 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 	}, nil
 }
 
-func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethodID int32, month time.Time) ([]payment.InvoiceEntry, error) {
-	pgDate := pgtype.Date{Time: month, Valid: true}
-	rows, err := r.q.GetInvoiceEntries(ctx, sqlc.GetInvoiceEntriesParams{
-		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
-		Column2:         pgDate,
-	})
-	if err != nil {
-		return nil, err
+func accountTypeForPaymentKind(kind string) string {
+	switch kind {
+	case payment.KindCreditCard:
+		return ledger.AccountTypeLiability
+	case payment.KindDebitCard, payment.KindCash, payment.KindPix, payment.KindBankSlip:
+		return ledger.AccountTypeAsset
+	default:
+		return ledger.AccountTypeAsset
 	}
-
-	entries := make([]payment.InvoiceEntry, len(rows))
-	for i, row := range rows {
-		amt, _ := row.Amount.Float64Value()
-		entries[i] = payment.InvoiceEntry{
-			CashFlowID:   row.CashFlowID,
-			Date:         row.Date.Time,
-			Title:        row.Title,
-			Amount:       amt.Float64,
-			CategoryName: row.CategoryName,
-		}
-	}
-	return entries, nil
-}
-
-func (r *PaymentRepository) GetOutstandingAmount(ctx context.Context, paymentMethodID int32, month time.Time) (float64, error) {
-	pgDate := pgtype.Date{Time: month, Valid: true}
-	return r.q.GetOutstandingAmount(ctx, sqlc.GetOutstandingAmountParams{
-		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
-		Column2:         pgDate,
-	})
 }

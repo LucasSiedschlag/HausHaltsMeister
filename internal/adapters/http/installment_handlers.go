@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/labstack/echo/v4"
@@ -97,14 +97,14 @@ func (h *InstallmentHandler) Create(c echo.Context) error {
 		if errors.Is(err, installment.ErrInvalidTotalAmount) || errors.Is(err, installment.ErrInvalidCount) {
 			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
+		if errors.Is(err, installment.ErrInvalidCategory) {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
 		if errors.Is(err, payment.ErrPaymentMethodNotFound) {
 			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
 		}
-		if errors.Is(err, cashflow.ErrCategoryNotFound) {
+		if errors.Is(err, category.ErrCategoryNotFound) {
 			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
-		}
-		if errors.Is(err, cashflow.ErrDirectionMismatch) {
-			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		}
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create installment plan: %v", err)})
 	}
@@ -124,7 +124,7 @@ func toInstallmentPlanResponse(p *installment.InstallmentPlan) dto.InstallmentPl
 		TotalAmount:       p.TotalAmount,
 		InstallmentCount:  p.InstallmentCount,
 		InstallmentAmount: p.InstallmentAmount,
-		StartMonth:        p.StartMonth.Format("2006-01-02"),
+		StartMonth:        p.StartDate.Format("2006-01-02"),
 		PaymentMethodID:   p.PaymentMethodID,
 	}
 }

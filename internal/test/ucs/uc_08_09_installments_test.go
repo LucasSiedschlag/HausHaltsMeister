@@ -14,9 +14,9 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
@@ -29,25 +29,25 @@ func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 	// Clean Stack
 	// Repos
 	catRepo := postgres.NewCategoryRepository(db.Pool)
-	cfRepo := postgres.NewCashFlowRepository(db.Pool)
 	payRepo := postgres.NewPaymentRepository(db.Pool)
 	instRepo := postgres.NewInstallmentRepository(db.Pool)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
 
 	// Services
-	cfService := cashflow.NewService(cfRepo, catRepo)
 	payService := payment.NewService(payRepo) // Invoice uses Repo
-	instService := installment.NewService(instRepo, cfService, payRepo)
+	ledgerService := ledger.NewService(ledgerRepo)
+	instService := installment.NewService(instRepo, catRepo, ledgerService, payRepo)
 
 	// Handlers
-	cfHandler := http.NewCashFlowHandler(cfService)
 	payHandler := http.NewPaymentHandler(payService)
 	instHandler := http.NewInstallmentHandler(instService)
+	ledgerHandler := http.NewLedgerHandler(ledgerService)
 
 	// Echo
 	e := echo.New()
-	http.RegisterCashFlowRoutes(e, cfHandler)
 	http.RegisterPaymentRoutes(e, payHandler)
 	http.RegisterInstallmentRoutes(e, instHandler)
+	http.RegisterLedgerRoutes(e, ledgerHandler)
 	client := harness.NewHTTPClient(e)
 
 	// Seed Category
@@ -96,9 +96,9 @@ func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 100.0, instRes["installment_amount"])
 
-	// 3. Verify CashFlows (Future)
+	// 3. Verify Ledger Transactions (Future)
 	// First payment should be Feb 10.
-	listRec := client.Request(t, "GET", "/cashflows?month=2024-02-01", nil)
+	listRec := client.Request(t, "GET", "/ledger/transactions?month=2024-02-01", nil)
 	require.Equal(t, std_http.StatusOK, listRec.Code)
 
 	var listRes []map[string]interface{}
@@ -106,12 +106,11 @@ func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 	require.NoError(t, err)
 
 	found := false
-	for _, cf := range listRes {
-		if cf["title"] == "MacBook (1/10)" {
+	for _, tx := range listRes {
+		if tx["description"] == "MacBook (1/10)" {
 			found = true
-			assert.Equal(t, 100.0, cf["amount"])
 			// Check date Feb 10
-			dateStr := cf["date"].(string)
+			dateStr := tx["occurred_at"].(string)
 			parsed, _ := time.Parse("2006-01-02", dateStr) // DTO uses Format("2006-01-02")
 			assert.Equal(t, 10, parsed.Day())
 		}
@@ -138,10 +137,12 @@ func TestUC08_09_InstallmentsAndInvoice(t *testing.T) {
 
 	// Expect total amount 100.0
 	assert.Equal(t, 100.0, invRes["total"])
+	assert.Equal(t, 1000.0, invRes["total_remaining"])
 
 	// Expect list items
 	items := invRes["entries"].([]interface{})
 	require.NotEmpty(t, items)
 	item := items[0].(map[string]interface{})
 	assert.Equal(t, "MacBook (1/10)", item["title"])
+	assert.Equal(t, "Electronics", item["category_name"])
 }

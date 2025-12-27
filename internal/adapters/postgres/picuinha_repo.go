@@ -118,7 +118,7 @@ func (r *PicuinhaRepository) CreateCase(ctx context.Context, picCase *picuinha.C
 		Description:              picCase.Title,
 		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
-		InstallmentCount:         count,
+		InstallmentCount:         pgtype.Int4{Int32: count, Valid: true},
 		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
 		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
 		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
@@ -145,7 +145,7 @@ func (r *PicuinhaRepository) UpdateCase(ctx context.Context, picCase *picuinha.C
 		Description:              picCase.Title,
 		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
-		InstallmentCount:         count,
+		InstallmentCount:         pgtype.Int4{Int32: count, Valid: true},
 		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
 		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
 		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
@@ -200,7 +200,7 @@ func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment 
 		Amount:            numericFromValue(installment.Amount),
 		ExtraAmount:       numericFromValue(installment.ExtraAmount),
 		IsPaid:            installment.IsPaid,
-		PaidAt:            timestampFromPtr(installment.PaidAt),
+		PaidAt:            timestamptzFromPtr(installment.PaidAt),
 	})
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (r *PicuinhaRepository) UpdateInstallment(ctx context.Context, installment 
 		Amount:                numericFromValue(installment.Amount),
 		ExtraAmount:           numericFromValue(installment.ExtraAmount),
 		IsPaid:                installment.IsPaid,
-		PaidAt:                timestampFromPtr(installment.PaidAt),
+		PaidAt:                timestamptzFromPtr(installment.PaidAt),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -385,7 +385,8 @@ func int4ToPtr(value pgtype.Int4) *int32 {
 	if !value.Valid {
 		return nil
 	}
-	return &value.Int32
+	copyValue := value.Int32
+	return &copyValue
 }
 
 func textFromString(value string) pgtype.Text {
@@ -395,9 +396,9 @@ func textFromString(value string) pgtype.Text {
 	return pgtype.Text{String: value, Valid: true}
 }
 
-func timestampFromPtr(value *time.Time) pgtype.Timestamp {
+func timestamptzFromPtr(value *time.Time) pgtype.Timestamptz {
 	if value == nil {
-		return pgtype.Timestamp{Valid: false}
+		return pgtype.Timestamptz{Valid: false}
 	}
-	return pgtype.Timestamp{Time: *value, Valid: true}
+	return pgtype.Timestamptz{Time: *value, Valid: true}
 }

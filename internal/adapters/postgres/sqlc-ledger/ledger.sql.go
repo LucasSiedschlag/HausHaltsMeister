@@ -224,3 +224,40 @@ func (q *Queries) ListLedgerTransactionsByMonth(ctx context.Context, occurredAt 
 	}
 	return items, nil
 }
+
+const updateLedgerAccount = `-- name: UpdateLedgerAccount :one
+UPDATE accounts
+SET name = $2,
+    type = $3,
+    is_active = $4,
+    updated_at = now()
+WHERE account_id = $1
+RETURNING account_id, name, type, currency, is_active, created_at, updated_at
+`
+
+type UpdateLedgerAccountParams struct {
+	AccountID int32
+	Name      string
+	Type      string
+	IsActive  bool
+}
+
+func (q *Queries) UpdateLedgerAccount(ctx context.Context, arg UpdateLedgerAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, updateLedgerAccount,
+		arg.AccountID,
+		arg.Name,
+		arg.Type,
+		arg.IsActive,
+	)
+	var i Account
+	err := row.Scan(
+		&i.AccountID,
+		&i.Name,
+		&i.Type,
+		&i.Currency,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

@@ -21,6 +21,7 @@ const (
 
 type PaymentMethod struct {
 	ID          int32
+	AccountID   int32
 	Name        string
 	Kind        string
 	BankName    string   // Optional

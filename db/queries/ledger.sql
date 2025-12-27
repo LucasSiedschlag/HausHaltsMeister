@@ -3,6 +3,15 @@ INSERT INTO accounts (name, type, currency, is_active)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
+-- name: UpdateLedgerAccount :one
+UPDATE accounts
+SET name = $2,
+    type = $3,
+    is_active = $4,
+    updated_at = now()
+WHERE account_id = $1
+RETURNING *;
+
 -- name: ListLedgerAccounts :many
 SELECT *
 FROM accounts

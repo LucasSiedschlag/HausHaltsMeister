@@ -5,9 +5,18 @@ import (
 	"time"
 )
 
+type InstallmentPlanItem struct {
+	ID            int32
+	PlanID        int32
+	Sequence      int32
+	DueDate       time.Time
+	Amount        float64
+	TransactionID *int32
+}
+
 type Repository interface {
 	CreatePlan(ctx context.Context, plan *InstallmentPlan) (*InstallmentPlan, error)
-	CreateExpenseDetail(ctx context.Context, cashFlowID int32, paymentMethodID int32, planID int32, affectsCardInvoice bool) error
+	CreatePlanItem(ctx context.Context, item *InstallmentPlanItem) (*InstallmentPlanItem, error)
 }
 
 type Service interface {
