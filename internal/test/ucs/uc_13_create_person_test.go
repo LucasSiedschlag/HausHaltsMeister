@@ -24,7 +24,7 @@ func TestUC13_CreatePerson(t *testing.T) {
 	picRepo := postgres.NewPicuinhaRepository(db.Pool)
 
 	// Services
-	picService := picuinha.NewService(picRepo, nil, nil)
+	picService := picuinha.NewService(picRepo)
 
 	// Handlers
 	picHandler := http.NewPicuinhaHandler(picService)

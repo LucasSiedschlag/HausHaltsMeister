@@ -127,8 +127,9 @@ haushaltsmeister/
 • payment_methods
 • expense_details
 • installment_plans
+• installment_plan_items
 • budget_periods + budget_items
-• picuinha_persons + picuinha_entries
+• picuinha_persons + (installment_plans/plan_type=picuinhas)
 
 Princípio: entradas (casos 1/2/3) não devem exigir colunas irrelevantes.
 Entradas só usam cash_flows (núcleo). Detalhes opcionais ficam em outras tabelas.
@@ -198,11 +199,11 @@ Objetivo: orçamento mensal por categoria de SAÍDA.
 7.3 Domain: Picuinhas
 
 Objetivo: razão por pessoa + saldo.
-• Entidades: Person, Entry
+• Entidades: Person, Case (installment_plans), InstallmentPlanItem
 • Regras:
-• saldo por pessoa calculado por soma/subtração conforme kind
-• vincular Entry a cash_flow quando mexer no fluxo real
-• Entry pode referenciar payment_method_id e card_owner (SELF/THIRD)
+• saldo por pessoa = soma das parcelas em aberto (installment_plan_items) vinculadas à pessoa
+• casos usam installment_plans com person_id preenchido e plan_type = ONE_OFF | INSTALLMENT | RECURRING | CARD_INSTALLMENT
+• parcelas recorrentes contam apenas mês atual/atrasadas
 
 7.4 Domain: Cards
 
@@ -238,10 +239,12 @@ Picuinhas
 • PUT /picuinhas/persons/:id
 • DELETE /picuinhas/persons/:id
 • GET /picuinhas/persons
-• POST /picuinhas/entries
-• GET /picuinhas/entries?person_id=:id
-• PUT /picuinhas/entries/:id
-• DELETE /picuinhas/entries/:id
+• POST /picuinhas/cases
+• GET /picuinhas/cases?person_id=:id
+• PUT /picuinhas/cases/:id
+• DELETE /picuinhas/cases/:id
+• GET /picuinhas/cases/:id/installments
+• PUT /picuinhas/installments/:id
 
 Cards
 • POST /cards/installments (cria parcelamento)

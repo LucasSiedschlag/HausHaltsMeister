@@ -19,7 +19,7 @@ func TestUC21_PicuinhaCases(t *testing.T) {
 	defer db.Pool.Close()
 
 	picRepo := postgres.NewPicuinhaRepository(db.Pool)
-	picService := picuinha.NewService(picRepo, nil, nil)
+	picService := picuinha.NewService(picRepo)
 	picHandler := httpAdapter.NewPicuinhaHandler(picService)
 
 	e := echo.New()

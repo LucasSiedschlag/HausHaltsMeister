@@ -231,7 +231,7 @@ interface Person {
   id: number;
   name: string;
   notes: string;
-  balance: number; // >0: Você tem crédito (receber). <0: Você deve (pagar).
+  balance: number; // Valor em aberto somado das parcelas pendentes.
 }
 
 interface CreatePersonRequest {
@@ -242,17 +242,6 @@ interface CreatePersonRequest {
 interface UpdatePersonRequest {
   name: string;
   notes: string;
-}
-
-interface PicuinhaEntry {
-  id: number;
-  person_id: number;
-  amount: number;
-  kind: "PLUS" | "MINUS";
-  cash_flow_id?: number | null;
-  payment_method_id?: number | null;
-  card_owner: "SELF" | "THIRD";
-  created_at: string;
 }
 
 type PicuinhaCaseType = "ONE_OFF" | "INSTALLMENT" | "CARD_INSTALLMENT" | "RECURRING";
@@ -311,24 +300,6 @@ interface UpdatePicuinhaInstallmentRequest {
   is_paid: boolean;
   extra_amount: number;
 }
-
-interface AddEntryRequest {
-  person_id: number;
-  kind: "PLUS" | "MINUS"; // PLUS: Aumenta dívida dela. MINUS: Diminui.
-  amount: number;
-  auto_create_flow: boolean; // Se true, cria registro em CashFlow
-  payment_method_id?: number;
-  card_owner?: "SELF" | "THIRD";
-}
-
-interface UpdateEntryRequest {
-  person_id: number;
-  kind: "PLUS" | "MINUS";
-  amount: number;
-  auto_create_flow: boolean;
-  payment_method_id?: number;
-  card_owner?: "SELF" | "THIRD";
-}
 ```
 
 ### 5.2 Endpoints
@@ -348,25 +319,6 @@ interface UpdateEntryRequest {
 - Response: `Person`
 
 **DELETE /picuinhas/persons/:id**
-
-- Response: `{ status: string }`
-
-**GET /picuinhas/entries**
-
-- Query: `?person_id=ID` (opcional)
-- Response: `PicuinhaEntry[]`
-
-**POST /picuinhas/entries**
-
-- Body: `AddEntryRequest`
-- Response: `PicuinhaEntry`
-
-**PUT /picuinhas/entries/:id**
-
-- Body: `UpdateEntryRequest`
-- Response: `PicuinhaEntry`
-
-**DELETE /picuinhas/entries/:id**
 
 - Response: `{ status: string }`
 

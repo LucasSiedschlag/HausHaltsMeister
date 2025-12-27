@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type InstallmentRepository struct {
@@ -25,14 +25,15 @@ func (r *InstallmentRepository) CreatePlan(ctx context.Context, plan *installmen
 	var total, instAmount pgtype.Numeric
 	total.Scan(fmt.Sprintf("%.2f", plan.TotalAmount))
 	instAmount.Scan(fmt.Sprintf("%.2f", plan.InstallmentAmount))
+	pmID := pgtype.Int4{Int32: plan.PaymentMethodID, Valid: true}
 
 	row, err := r.q.CreateInstallmentPlan(ctx, sqlc.CreateInstallmentPlanParams{
 		Description:            plan.Description,
 		TotalAmount:            total,
 		InstallmentCount:       plan.InstallmentCount,
 		InstallmentAmount:      instAmount,
-		StartMonth:             pgDate,
-		PaymentMethodID:        plan.PaymentMethodID,
+		StartDate:              pgDate,
+		PaymentMethodID:        pmID,
 		StartsOnCurrentInvoice: true, // Default for now
 	})
 	if err != nil {
@@ -41,6 +42,10 @@ func (r *InstallmentRepository) CreatePlan(ctx context.Context, plan *installmen
 
 	tVal, _ := row.TotalAmount.Float64Value()
 	iVal, _ := row.InstallmentAmount.Float64Value()
+	methodID := int32(0)
+	if row.PaymentMethodID.Valid {
+		methodID = row.PaymentMethodID.Int32
+	}
 
 	return &installment.InstallmentPlan{
 		ID:                row.InstallmentPlanID,
@@ -48,8 +53,8 @@ func (r *InstallmentRepository) CreatePlan(ctx context.Context, plan *installmen
 		TotalAmount:       tVal.Float64,
 		InstallmentCount:  row.InstallmentCount,
 		InstallmentAmount: iVal.Float64,
-		StartMonth:        row.StartMonth.Time,
-		PaymentMethodID:   row.PaymentMethodID,
+		StartMonth:        row.StartDate.Time,
+		PaymentMethodID:   methodID,
 	}, nil
 }
 

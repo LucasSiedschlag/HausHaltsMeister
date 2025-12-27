@@ -59,14 +59,33 @@ type FlowCategory struct {
 
 // As parcelas individuais serão representadas por vários cash_flows (SAÍDAS), cada um amarrado ao installment_plan via expense_details.
 type InstallmentPlan struct {
-	InstallmentPlanID      int32
-	Description            string
-	TotalAmount            pgtype.Numeric
-	InstallmentCount       int32
-	InstallmentAmount      pgtype.Numeric
-	StartMonth             pgtype.Date
-	PaymentMethodID        int32
-	StartsOnCurrentInvoice bool
+	InstallmentPlanID        int32
+	Description              string
+	TotalAmount              pgtype.Numeric
+	InstallmentCount         int32
+	InstallmentAmount        pgtype.Numeric
+	StartDate                pgtype.Date
+	PaymentMethodID          pgtype.Int4
+	StartsOnCurrentInvoice   bool
+	PlanType                 string
+	PersonID                 pgtype.Int4
+	CategoryID               pgtype.Int4
+	InterestRate             pgtype.Numeric
+	InterestRateUnit         pgtype.Text
+	RecurrenceIntervalMonths pgtype.Int4
+	CreatedAt                pgtype.Timestamp
+}
+
+type InstallmentPlanItem struct {
+	InstallmentPlanItemID int32
+	InstallmentPlanID     int32
+	InstallmentNumber     int32
+	DueDate               pgtype.Date
+	Amount                pgtype.Numeric
+	ExtraAmount           pgtype.Numeric
+	IsPaid                bool
+	PaidAt                pgtype.Timestamp
+	CashFlowID            pgtype.Int4
 }
 
 type PaymentMethod struct {
@@ -78,47 +97,6 @@ type PaymentMethod struct {
 	DueDay          pgtype.Int4
 	IsActive        bool
 	CreditLimit     pgtype.Numeric
-}
-
-type PicuinhaCase struct {
-	PicuinhaCaseID           int32
-	PersonID                 int32
-	Title                    string
-	CaseType                 string
-	TotalAmount              pgtype.Numeric
-	InstallmentCount         pgtype.Int4
-	InstallmentAmount        pgtype.Numeric
-	StartDate                pgtype.Date
-	PaymentMethodID          pgtype.Int4
-	InstallmentPlanID        pgtype.Int4
-	CategoryID               pgtype.Int4
-	InterestRate             pgtype.Numeric
-	InterestRateUnit         pgtype.Text
-	RecurrenceIntervalMonths pgtype.Int4
-	CreatedAt                pgtype.Timestamp
-}
-
-type PicuinhaCaseInstallment struct {
-	PicuinhaCaseInstallmentID int32
-	PicuinhaCaseID            int32
-	InstallmentNumber         int32
-	DueDate                   pgtype.Date
-	Amount                    pgtype.Numeric
-	ExtraAmount               pgtype.Numeric
-	IsPaid                    bool
-	PaidAt                    pgtype.Timestamp
-}
-
-// Você terá o saldo por pessoa somando/subtraindo os amounts conforme o kind. O cash_flow_id conecta com o fluxo real (entradas/saídas).
-type PicuinhaEntry struct {
-	PicuinhaEntryID int32
-	PersonID        int32
-	Date            pgtype.Date
-	Kind            string
-	Amount          pgtype.Numeric
-	CashFlowID      pgtype.Int4
-	PaymentMethodID pgtype.Int4
-	CardOwner       string
 }
 
 type PicuinhaPerson struct {

@@ -92,223 +92,12 @@ func (r *PicuinhaRepository) DeletePerson(ctx context.Context, id int32) error {
 	return r.q.DeletePerson(ctx, id)
 }
 
-func (r *PicuinhaRepository) CountEntriesByPerson(ctx context.Context, personID int32) (int64, error) {
-	return r.q.CountEntriesByPerson(ctx, personID)
-}
-
 func (r *PicuinhaRepository) CountCasesByPerson(ctx context.Context, personID int32) (int64, error) {
-	return r.q.CountCasesByPerson(ctx, personID)
-}
-
-func (r *PicuinhaRepository) AddEntry(ctx context.Context, entry *picuinha.Entry) (*picuinha.Entry, error) {
-	pgDate := pgtype.Date{Time: entry.Date, Valid: true}
-	var am pgtype.Numeric
-	am.Scan(fmt.Sprintf("%.2f", entry.Amount))
-
-	cfID := pgtype.Int4{Valid: false}
-	if entry.CashFlowID != nil {
-		cfID = pgtype.Int4{Int32: *entry.CashFlowID, Valid: true}
-	}
-
-	pmID := pgtype.Int4{Valid: false}
-	if entry.PaymentMethodID != nil {
-		pmID = pgtype.Int4{Int32: *entry.PaymentMethodID, Valid: true}
-	}
-
-	cardOwner := entry.CardOwner
-	if cardOwner == "" {
-		cardOwner = picuinha.CardOwnerSelf
-	}
-
-	row, err := r.q.CreatePicuinhaEntry(ctx, sqlc.CreatePicuinhaEntryParams{
-		PersonID:        entry.PersonID,
-		Date:            pgDate,
-		Kind:            entry.Kind,
-		Amount:          am,
-		CashFlowID:      cfID,
-		PaymentMethodID: pmID,
-		CardOwner:       cardOwner,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	val, _ := row.Amount.Float64Value()
-	var retCfID *int32
-	if row.CashFlowID.Valid {
-		retCfID = &row.CashFlowID.Int32
-	}
-	var retPmID *int32
-	if row.PaymentMethodID.Valid {
-		retPmID = &row.PaymentMethodID.Int32
-	}
-
-	return &picuinha.Entry{
-		ID:              row.PicuinhaEntryID,
-		PersonID:        row.PersonID,
-		Date:            row.Date.Time,
-		Kind:            row.Kind,
-		Amount:          val.Float64,
-		CashFlowID:      retCfID,
-		PaymentMethodID: retPmID,
-		CardOwner:       row.CardOwner,
-	}, nil
-}
-
-func (r *PicuinhaRepository) ListEntriesByPerson(ctx context.Context, personID int32) ([]picuinha.Entry, error) {
-	rows, err := r.q.ListEntriesByPerson(ctx, personID)
-	if err != nil {
-		return nil, err
-	}
-	entries := make([]picuinha.Entry, len(rows))
-	for i, row := range rows {
-		val, _ := row.Amount.Float64Value()
-		var retCfID *int32
-		if row.CashFlowID.Valid {
-			retCfID = &row.CashFlowID.Int32
-		}
-		var retPmID *int32
-		if row.PaymentMethodID.Valid {
-			retPmID = &row.PaymentMethodID.Int32
-		}
-		entries[i] = picuinha.Entry{
-			ID:              row.PicuinhaEntryID,
-			PersonID:        row.PersonID,
-			Date:            row.Date.Time,
-			Kind:            row.Kind,
-			Amount:          val.Float64,
-			CashFlowID:      retCfID,
-			PaymentMethodID: retPmID,
-			CardOwner:       row.CardOwner,
-		}
-	}
-	return entries, nil
-}
-
-func (r *PicuinhaRepository) ListEntries(ctx context.Context) ([]picuinha.Entry, error) {
-	rows, err := r.q.ListEntries(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entries := make([]picuinha.Entry, len(rows))
-	for i, row := range rows {
-		val, _ := row.Amount.Float64Value()
-		var retCfID *int32
-		if row.CashFlowID.Valid {
-			retCfID = &row.CashFlowID.Int32
-		}
-		var retPmID *int32
-		if row.PaymentMethodID.Valid {
-			retPmID = &row.PaymentMethodID.Int32
-		}
-		entries[i] = picuinha.Entry{
-			ID:              row.PicuinhaEntryID,
-			PersonID:        row.PersonID,
-			Date:            row.Date.Time,
-			Kind:            row.Kind,
-			Amount:          val.Float64,
-			CashFlowID:      retCfID,
-			PaymentMethodID: retPmID,
-			CardOwner:       row.CardOwner,
-		}
-	}
-	return entries, nil
-}
-
-func (r *PicuinhaRepository) GetEntry(ctx context.Context, id int32) (*picuinha.Entry, error) {
-	row, err := r.q.GetEntry(ctx, id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	val, _ := row.Amount.Float64Value()
-	var retCfID *int32
-	if row.CashFlowID.Valid {
-		retCfID = &row.CashFlowID.Int32
-	}
-	var retPmID *int32
-	if row.PaymentMethodID.Valid {
-		retPmID = &row.PaymentMethodID.Int32
-	}
-
-	return &picuinha.Entry{
-		ID:              row.PicuinhaEntryID,
-		PersonID:        row.PersonID,
-		Date:            row.Date.Time,
-		Kind:            row.Kind,
-		Amount:          val.Float64,
-		CashFlowID:      retCfID,
-		PaymentMethodID: retPmID,
-		CardOwner:       row.CardOwner,
-	}, nil
-}
-
-func (r *PicuinhaRepository) UpdateEntry(ctx context.Context, entry *picuinha.Entry) (*picuinha.Entry, error) {
-	var amount pgtype.Numeric
-	amount.Scan(fmt.Sprintf("%.2f", entry.Amount))
-
-	cfID := pgtype.Int4{Valid: false}
-	if entry.CashFlowID != nil {
-		cfID = pgtype.Int4{Int32: *entry.CashFlowID, Valid: true}
-	}
-
-	pmID := pgtype.Int4{Valid: false}
-	if entry.PaymentMethodID != nil {
-		pmID = pgtype.Int4{Int32: *entry.PaymentMethodID, Valid: true}
-	}
-
-	cardOwner := entry.CardOwner
-	if cardOwner == "" {
-		cardOwner = picuinha.CardOwnerSelf
-	}
-
-	row, err := r.q.UpdatePicuinhaEntry(ctx, sqlc.UpdatePicuinhaEntryParams{
-		PicuinhaEntryID: entry.ID,
-		PersonID:        entry.PersonID,
-		Kind:            entry.Kind,
-		Amount:          amount,
-		CashFlowID:      cfID,
-		PaymentMethodID: pmID,
-		CardOwner:       cardOwner,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	val, _ := row.Amount.Float64Value()
-	var retCfID *int32
-	if row.CashFlowID.Valid {
-		retCfID = &row.CashFlowID.Int32
-	}
-	var retPmID *int32
-	if row.PaymentMethodID.Valid {
-		retPmID = &row.PaymentMethodID.Int32
-	}
-
-	return &picuinha.Entry{
-		ID:              row.PicuinhaEntryID,
-		PersonID:        row.PersonID,
-		Date:            row.Date.Time,
-		Kind:            row.Kind,
-		Amount:          val.Float64,
-		CashFlowID:      retCfID,
-		PaymentMethodID: retPmID,
-		CardOwner:       row.CardOwner,
-	}, nil
-}
-
-func (r *PicuinhaRepository) DeleteEntry(ctx context.Context, id int32) error {
-	return r.q.DeletePicuinhaEntry(ctx, id)
+	return r.q.CountCasesByPerson(ctx, int4FromPtr(&personID))
 }
 
 func (r *PicuinhaRepository) GetBalance(ctx context.Context, personID int32) (float64, error) {
-	bal, err := r.q.GetPersonBalance(ctx, personID)
+	bal, err := r.q.GetPersonBalance(ctx, int4FromPtr(&personID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nil
@@ -320,16 +109,19 @@ func (r *PicuinhaRepository) GetBalance(ctx context.Context, personID int32) (fl
 }
 
 func (r *PicuinhaRepository) CreateCase(ctx context.Context, picCase *picuinha.Case) (*picuinha.Case, error) {
+	count := int32(1)
+	if picCase.InstallmentCount != nil {
+		count = *picCase.InstallmentCount
+	}
 	row, err := r.q.CreatePicuinhaCase(ctx, sqlc.CreatePicuinhaCaseParams{
-		PersonID:                 picCase.PersonID,
-		Title:                    picCase.Title,
-		CaseType:                 picCase.CaseType,
+		PersonID:                 int4FromPtr(&picCase.PersonID),
+		Description:              picCase.Title,
+		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
-		InstallmentCount:         int4FromPtr(picCase.InstallmentCount),
+		InstallmentCount:         count,
 		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
 		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
 		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
-		InstallmentPlanID:        int4FromPtr(picCase.InstallmentPlanID),
 		CategoryID:               int4FromPtr(picCase.CategoryID),
 		InterestRate:             numericFromPtr(picCase.InterestRate),
 		InterestRateUnit:         textFromString(picCase.InterestRateUnit),
@@ -343,17 +135,20 @@ func (r *PicuinhaRepository) CreateCase(ctx context.Context, picCase *picuinha.C
 }
 
 func (r *PicuinhaRepository) UpdateCase(ctx context.Context, picCase *picuinha.Case) (*picuinha.Case, error) {
+	count := int32(1)
+	if picCase.InstallmentCount != nil {
+		count = *picCase.InstallmentCount
+	}
 	row, err := r.q.UpdatePicuinhaCase(ctx, sqlc.UpdatePicuinhaCaseParams{
-		PicuinhaCaseID:           picCase.ID,
-		PersonID:                 picCase.PersonID,
-		Title:                    picCase.Title,
-		CaseType:                 picCase.CaseType,
+		InstallmentPlanID:        picCase.ID,
+		PersonID:                 int4FromPtr(&picCase.PersonID),
+		Description:              picCase.Title,
+		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
-		InstallmentCount:         int4FromPtr(picCase.InstallmentCount),
+		InstallmentCount:         count,
 		InstallmentAmount:        numericFromPtr(picCase.InstallmentAmount),
 		StartDate:                pgtype.Date{Time: picCase.StartDate, Valid: true},
 		PaymentMethodID:          int4FromPtr(picCase.PaymentMethodID),
-		InstallmentPlanID:        int4FromPtr(picCase.InstallmentPlanID),
 		CategoryID:               int4FromPtr(picCase.CategoryID),
 		InterestRate:             numericFromPtr(picCase.InterestRate),
 		InterestRateUnit:         textFromString(picCase.InterestRateUnit),
@@ -385,7 +180,7 @@ func (r *PicuinhaRepository) GetCase(ctx context.Context, id int32) (*picuinha.C
 }
 
 func (r *PicuinhaRepository) ListCasesByPerson(ctx context.Context, personID int32) ([]picuinha.CaseSummary, error) {
-	rows, err := r.q.ListPicuinhaCasesByPerson(ctx, personID)
+	rows, err := r.q.ListPicuinhaCasesByPerson(ctx, int4FromPtr(&personID))
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +194,7 @@ func (r *PicuinhaRepository) ListCasesByPerson(ctx context.Context, personID int
 
 func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
 	row, err := r.q.CreatePicuinhaCaseInstallment(ctx, sqlc.CreatePicuinhaCaseInstallmentParams{
-		PicuinhaCaseID:    installment.CaseID,
+		InstallmentPlanID: installment.CaseID,
 		InstallmentNumber: installment.InstallmentNumber,
 		DueDate:           pgtype.Date{Time: installment.DueDate, Valid: true},
 		Amount:            numericFromValue(installment.Amount),
@@ -415,11 +210,11 @@ func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment 
 
 func (r *PicuinhaRepository) UpdateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
 	row, err := r.q.UpdatePicuinhaCaseInstallment(ctx, sqlc.UpdatePicuinhaCaseInstallmentParams{
-		PicuinhaCaseInstallmentID: installment.ID,
-		Amount:                    numericFromValue(installment.Amount),
-		ExtraAmount:               numericFromValue(installment.ExtraAmount),
-		IsPaid:                    installment.IsPaid,
-		PaidAt:                    timestampFromPtr(installment.PaidAt),
+		InstallmentPlanItemID: installment.ID,
+		Amount:                numericFromValue(installment.Amount),
+		ExtraAmount:           numericFromValue(installment.ExtraAmount),
+		IsPaid:                installment.IsPaid,
+		PaidAt:                timestampFromPtr(installment.PaidAt),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -453,18 +248,29 @@ func (r *PicuinhaRepository) ListInstallmentsByCase(ctx context.Context, caseID 
 	return installments, nil
 }
 
-func mapCaseRow(row sqlc.PicuinhaCase) *picuinha.Case {
+func mapCaseRow(row sqlc.InstallmentPlan) *picuinha.Case {
+	personID := int32(0)
+	if row.PersonID.Valid {
+		personID = row.PersonID.Int32
+	}
+	var planID *int32
+	if row.PlanType == picuinha.CaseTypeCardInstall {
+		id := row.InstallmentPlanID
+		planID = &id
+	}
+	installmentCount := row.InstallmentCount
+	installmentCountPtr := &installmentCount
 	return &picuinha.Case{
-		ID:                       row.PicuinhaCaseID,
-		PersonID:                 row.PersonID,
-		Title:                    row.Title,
-		CaseType:                 row.CaseType,
+		ID:                       row.InstallmentPlanID,
+		PersonID:                 personID,
+		Title:                    row.Description,
+		CaseType:                 row.PlanType,
 		TotalAmount:              numericToPtr(row.TotalAmount),
-		InstallmentCount:         int4ToPtr(row.InstallmentCount),
+		InstallmentCount:         installmentCountPtr,
 		InstallmentAmount:        numericToPtr(row.InstallmentAmount),
 		StartDate:                row.StartDate.Time,
 		PaymentMethodID:          int4ToPtr(row.PaymentMethodID),
-		InstallmentPlanID:        int4ToPtr(row.InstallmentPlanID),
+		InstallmentPlanID:        planID,
 		CategoryID:               int4ToPtr(row.CategoryID),
 		InterestRate:             numericToPtr(row.InterestRate),
 		InterestRateUnit:         row.InterestRateUnit.String,
@@ -474,17 +280,27 @@ func mapCaseRow(row sqlc.PicuinhaCase) *picuinha.Case {
 }
 
 func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSummary {
+	var planID *int32
+	if row.PlanType == picuinha.CaseTypeCardInstall {
+		id := row.InstallmentPlanID
+		planID = &id
+	}
+	personID := int32(0)
+	if row.PersonID.Valid {
+		personID = row.PersonID.Int32
+	}
+	installmentCount := row.InstallmentCount
 	caseData := picuinha.Case{
-		ID:                       row.PicuinhaCaseID,
-		PersonID:                 row.PersonID,
-		Title:                    row.Title,
-		CaseType:                 row.CaseType,
+		ID:                       row.InstallmentPlanID,
+		PersonID:                 personID,
+		Title:                    row.Description,
+		CaseType:                 row.PlanType,
 		TotalAmount:              numericToPtr(row.TotalAmount),
-		InstallmentCount:         int4ToPtr(row.InstallmentCount),
+		InstallmentCount:         &installmentCount,
 		InstallmentAmount:        numericToPtr(row.InstallmentAmount),
 		StartDate:                row.StartDate.Time,
 		PaymentMethodID:          int4ToPtr(row.PaymentMethodID),
-		InstallmentPlanID:        int4ToPtr(row.InstallmentPlanID),
+		InstallmentPlanID:        planID,
 		CategoryID:               int4ToPtr(row.CategoryID),
 		InterestRate:             numericToPtr(row.InterestRate),
 		InterestRateUnit:         row.InterestRateUnit.String,
@@ -494,7 +310,7 @@ func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSumma
 	paid := int32(row.InstallmentsPaid)
 	total := int32(row.InstallmentsTotal)
 	status := picuinha.StatusOpen
-	if row.CaseType == picuinha.CaseTypeRecurring {
+	if row.PlanType == picuinha.CaseTypeRecurring {
 		status = picuinha.StatusRecurringActive
 	} else if total > 0 && paid >= total {
 		status = picuinha.StatusPaid
@@ -509,14 +325,14 @@ func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSumma
 	}
 }
 
-func mapCaseInstallmentRow(row sqlc.PicuinhaCaseInstallment) *picuinha.CaseInstallment {
+func mapCaseInstallmentRow(row sqlc.InstallmentPlanItem) *picuinha.CaseInstallment {
 	var paidAt *time.Time
 	if row.PaidAt.Valid {
 		paidAt = &row.PaidAt.Time
 	}
 	return &picuinha.CaseInstallment{
-		ID:                row.PicuinhaCaseInstallmentID,
-		CaseID:            row.PicuinhaCaseID,
+		ID:                row.InstallmentPlanItemID,
+		CaseID:            row.InstallmentPlanID,
 		InstallmentNumber: row.InstallmentNumber,
 		DueDate:           row.DueDate.Time,
 		Amount:            numericToValue(row.Amount),

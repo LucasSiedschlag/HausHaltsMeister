@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	std_http "net/http"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestUC17_PicuinhaBalance(t *testing.T) {
 	picRepo := postgres.NewPicuinhaRepository(db.Pool)
 
 	// Services
-	picService := picuinha.NewService(picRepo, nil, nil) // No cf service needed for balance
+	picService := picuinha.NewService(picRepo)
 
 	// Handlers
 	picHandler := http.NewPicuinhaHandler(picService)
@@ -38,9 +39,32 @@ func TestUC17_PicuinhaBalance(t *testing.T) {
 	ctx := context.Background()
 	person, _ := picService.CreatePerson(ctx, "Dave", "")
 
-	// Manually add entries via Service to check balance calculation
-	picService.AddDiff(ctx, person.ID, 100.0, "PLUS", nil, nil, picuinha.CardOwnerSelf, false)
-	picService.AddDiff(ctx, person.ID, 30.0, "MINUS", nil, nil, picuinha.CardOwnerSelf, false)
+	_, err := picService.CreateCase(ctx, picuinha.CreateCaseRequest{
+		PersonID:    person.ID,
+		Title:       "Compra avulsa",
+		CaseType:    picuinha.CaseTypeOneOff,
+		TotalAmount: 100.0,
+		StartDate:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+	})
+	require.NoError(t, err)
+
+	caseTwo, err := picService.CreateCase(ctx, picuinha.CreateCaseRequest{
+		PersonID:    person.ID,
+		Title:       "Compra quitada",
+		CaseType:    picuinha.CaseTypeOneOff,
+		TotalAmount: 30.0,
+		StartDate:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+	})
+	require.NoError(t, err)
+
+	installments, err := picService.ListInstallmentsByCase(ctx, caseTwo.ID)
+	require.NoError(t, err)
+	require.Len(t, installments, 1)
+	_, err = picService.UpdateInstallment(ctx, installments[0].ID, picuinha.UpdateInstallmentRequest{
+		IsPaid:      true,
+		ExtraAmount: 0,
+	})
+	require.NoError(t, err)
 
 	t.Run("Verify Balance in List", func(t *testing.T) {
 		rec := client.Request(t, "GET", "/picuinhas/persons", nil)
@@ -58,6 +82,6 @@ func TestUC17_PicuinhaBalance(t *testing.T) {
 		}
 
 		require.NotNil(t, dave)
-		assert.Equal(t, 70.0, dave["balance"])
+		assert.Equal(t, 100.0, dave["balance"])
 	})
 }

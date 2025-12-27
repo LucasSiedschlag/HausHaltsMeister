@@ -1,11 +1,9 @@
 import type {
-  AddEntryRequest,
   CreatePersonRequest,
   CreatePicuinhaCaseRequest,
   PicuinhaCase,
   PicuinhaCaseInstallment,
   PaymentMethod,
-  PicuinhaEntry,
   Person,
   UpdatePersonRequest,
   UpdatePicuinhaInstallmentRequest,
@@ -40,19 +38,8 @@ export function usePicuinhasService() {
     })
   }
 
-  const addEntry = async (payload: AddEntryRequest) => {
-    return request<PicuinhaEntry>('/picuinhas/entries', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
   const listPaymentMethods = async () => {
     return request<PaymentMethod[]>('/payment-methods')
-  }
-
-  const listEntries = async () => {
-    return request<PicuinhaEntry[]>('/picuinhas/entries')
   }
 
   const listCases = async (personId: number) => {
@@ -94,27 +81,12 @@ export function usePicuinhasService() {
     return request<Category[]>('/categories?active=true')
   }
 
-  const updateEntry = async (id: number, payload: AddEntryRequest) => {
-    return request<PicuinhaEntry>(`/picuinhas/entries/${id}`, {
-      method: 'PUT',
-      body: payload,
-    })
-  }
-
-  const deleteEntry = async (id: number) => {
-    return request<{ status: string }>(`/picuinhas/entries/${id}`, {
-      method: 'DELETE',
-    })
-  }
-
   return {
     listPersons,
     createPerson,
     updatePerson,
     deletePerson,
-    addEntry,
     listPaymentMethods,
-    listEntries,
     listCases,
     createCase,
     updateCase,
@@ -122,7 +94,5 @@ export function usePicuinhasService() {
     listCaseInstallments,
     updateCaseInstallment,
     listCategories,
-    updateEntry,
-    deleteEntry,
   }
 }

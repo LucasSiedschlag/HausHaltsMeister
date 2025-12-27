@@ -85,9 +85,9 @@ func (h *PicuinhaHandler) UpdatePerson(c echo.Context) error {
 	return c.JSON(http.StatusOK, toPersonResponse(person))
 }
 
-// DeletePerson removes a person if no entries exist.
+// DeletePerson removes a person if no cases exist.
 // @Summary Excluir Pessoa
-// @Description Deletes a person (only if no entries exist).
+// @Description Deletes a person (only if no cases exist).
 // @Tags Picuinhas
 // @Accept json
 // @Produce json
@@ -106,6 +106,9 @@ func (h *PicuinhaHandler) DeletePerson(c echo.Context) error {
 
 	err := h.service.DeletePerson(c.Request().Context(), id)
 	if err != nil {
+		if errors.Is(err, picuinha.ErrCaseNotFound) {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
 		if errors.Is(err, picuinha.ErrPersonNotFound) {
 			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
 		}
@@ -136,44 +139,6 @@ func (h *PicuinhaHandler) ListPersons(c echo.Context) error {
 	resp := make([]dto.PersonResponse, len(persons))
 	for i, p := range persons {
 		resp[i] = toPersonResponse(&p)
-	}
-
-	return c.JSON(http.StatusOK, resp)
-}
-
-// ListEntries returns entries optionally filtered by person.
-// @Summary Listar Lançamentos
-// @Description Returns a list of picuinha entries.
-// @Tags Picuinhas
-// @Accept json
-// @Produce json
-// @Param person_id query int false "Person ID"
-// @Success 200 {array} dto.PicuinhaEntryResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Router /picuinhas/entries [get]
-func (h *PicuinhaHandler) ListEntries(c echo.Context) error {
-	personIDParam := c.QueryParam("person_id")
-	var personID *int32
-	if personIDParam != "" {
-		var parsed int32
-		if _, err := fmt.Sscanf(personIDParam, "%d", &parsed); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid person_id"})
-		}
-		personID = &parsed
-	}
-
-	entries, err := h.service.ListEntries(c.Request().Context(), personID)
-	if err != nil {
-		if errors.Is(err, picuinha.ErrPersonNotFound) {
-			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
-		}
-		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list entries"})
-	}
-
-	resp := make([]dto.PicuinhaEntryResponse, len(entries))
-	for i, entry := range entries {
-		resp[i] = toPicuinhaEntryResponse(&entry)
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -433,128 +398,12 @@ func (h *PicuinhaHandler) UpdateCaseInstallment(c echo.Context) error {
 	return c.JSON(http.StatusOK, toCaseInstallmentResponse(updated))
 }
 
-// AddEntry registers a new transaction (IOU) for a person.
-// @Summary Registrar Entrada/Empréstimo
-// @Description Registers a new financial entry for a specific person.
-// @Tags Picuinhas
-// @Accept json
-// @Produce json
-// @Param payload body dto.AddEntryRequest true "Entry Payload"
-// @Success 201 {object} dto.PicuinhaEntryResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Router /picuinhas/entries [post]
-func (h *PicuinhaHandler) AddEntry(c echo.Context) error {
-	var req dto.AddEntryRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
-	}
-
-	entry, err := h.service.AddDiff(
-		c.Request().Context(),
-		req.PersonID,
-		req.Amount,
-		req.Kind,
-		req.CashFlowID,
-		req.PaymentMethodID,
-		req.CardOwner,
-		req.AutoCreateFlow,
-	)
-	if err != nil {
-		if errors.Is(err, picuinha.ErrInvalidKind) || errors.Is(err, picuinha.ErrAmountRequired) || errors.Is(err, picuinha.ErrInvalidCardOwner) || errors.Is(err, picuinha.ErrCardOwnerUnsupported) {
-			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
-		}
-		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
-	}
-
-	return c.JSON(http.StatusCreated, toPicuinhaEntryResponse(entry))
-}
-
-// UpdateEntry updates an existing entry.
-// @Summary Atualizar Lançamento
-// @Description Updates a picuinha entry.
-// @Tags Picuinhas
-// @Accept json
-// @Produce json
-// @Param id path int true "Entry ID"
-// @Param payload body dto.UpdateEntryRequest true "Entry Payload"
-// @Success 200 {object} dto.PicuinhaEntryResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Router /picuinhas/entries/{id} [put]
-func (h *PicuinhaHandler) UpdateEntry(c echo.Context) error {
-	idStr := c.Param("id")
-	var id int32
-	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
-	}
-
-	var req dto.UpdateEntryRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
-	}
-
-	entry, err := h.service.UpdateEntry(
-		c.Request().Context(),
-		id,
-		req.PersonID,
-		req.Amount,
-		req.Kind,
-		req.PaymentMethodID,
-		req.CardOwner,
-		req.AutoCreateFlow,
-	)
-	if err != nil {
-		if errors.Is(err, picuinha.ErrAmountRequired) || errors.Is(err, picuinha.ErrInvalidKind) || errors.Is(err, picuinha.ErrInvalidCardOwner) || errors.Is(err, picuinha.ErrCardOwnerUnsupported) {
-			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
-		}
-		if errors.Is(err, picuinha.ErrEntryNotFound) || errors.Is(err, picuinha.ErrPersonNotFound) {
-			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
-		}
-		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to update entry"})
-	}
-
-	return c.JSON(http.StatusOK, toPicuinhaEntryResponse(entry))
-}
-
-// DeleteEntry removes an entry.
-// @Summary Excluir Lançamento
-// @Description Deletes a picuinha entry.
-// @Tags Picuinhas
-// @Accept json
-// @Produce json
-// @Param id path int true "Entry ID"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Router /picuinhas/entries/{id} [delete]
-func (h *PicuinhaHandler) DeleteEntry(c echo.Context) error {
-	idStr := c.Param("id")
-	var id int32
-	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
-	}
-
-	err := h.service.DeleteEntry(c.Request().Context(), id)
-	if err != nil {
-		if errors.Is(err, picuinha.ErrEntryNotFound) {
-			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
-		}
-		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to delete entry"})
-	}
-
-	return c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
-}
-
 func RegisterPicuinhaRoutes(e *echo.Echo, h *PicuinhaHandler) {
 	g := e.Group("/picuinhas")
 	g.POST("/persons", h.CreatePerson)
 	g.GET("/persons", h.ListPersons)
 	g.PUT("/persons/:id", h.UpdatePerson)
 	g.DELETE("/persons/:id", h.DeletePerson)
-	g.GET("/entries", h.ListEntries)
-	g.POST("/entries", h.AddEntry)
-	g.PUT("/entries/:id", h.UpdateEntry)
-	g.DELETE("/entries/:id", h.DeleteEntry)
 	g.GET("/cases", h.ListCases)
 	g.POST("/cases", h.CreateCase)
 	g.PUT("/cases/:id", h.UpdateCase)
@@ -569,19 +418,6 @@ func toPersonResponse(p *picuinha.Person) dto.PersonResponse {
 		Name:    p.Name,
 		Notes:   p.Notes,
 		Balance: p.Balance,
-	}
-}
-
-func toPicuinhaEntryResponse(e *picuinha.Entry) dto.PicuinhaEntryResponse {
-	return dto.PicuinhaEntryResponse{
-		ID:              e.ID,
-		PersonID:        e.PersonID,
-		Amount:          e.Amount,
-		Kind:            e.Kind,
-		CashFlowID:      e.CashFlowID,
-		PaymentMethodID: e.PaymentMethodID,
-		CardOwner:       e.CardOwner,
-		CreatedAt:       e.Date.Format(time.RFC3339),
 	}
 }
 

@@ -1,5 +1,3 @@
-export type PicuinhaKind = 'PLUS' | 'MINUS'
-export type CardOwner = 'SELF' | 'THIRD'
 export type PicuinhaCaseType = 'ONE_OFF' | 'INSTALLMENT' | 'RECURRING' | 'CARD_INSTALLMENT'
 export type PicuinhaCaseStatus = 'OPEN' | 'PAID' | 'RECURRING'
 
@@ -18,26 +16,6 @@ export interface CreatePersonRequest {
 export interface UpdatePersonRequest {
   name: string
   notes: string
-}
-
-export interface PicuinhaEntry {
-  id: number
-  person_id: number
-  amount: number
-  kind: PicuinhaKind
-  cash_flow_id?: number | null
-  payment_method_id?: number | null
-  card_owner: CardOwner
-  created_at: string
-}
-
-export interface AddEntryRequest {
-  person_id: number
-  amount: number
-  kind: PicuinhaKind
-  auto_create_flow: boolean
-  payment_method_id?: number | null
-  card_owner?: CardOwner
 }
 
 export interface PaymentMethod {

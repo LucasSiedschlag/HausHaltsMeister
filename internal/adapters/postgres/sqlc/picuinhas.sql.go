@@ -13,25 +13,12 @@ import (
 
 const countCasesByPerson = `-- name: CountCasesByPerson :one
 SELECT COUNT(*)
-FROM picuinha_cases
+FROM installment_plans
 WHERE person_id = $1
 `
 
-func (q *Queries) CountCasesByPerson(ctx context.Context, personID int32) (int64, error) {
+func (q *Queries) CountCasesByPerson(ctx context.Context, personID pgtype.Int4) (int64, error) {
 	row := q.db.QueryRow(ctx, countCasesByPerson, personID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countEntriesByPerson = `-- name: CountEntriesByPerson :one
-SELECT COUNT(*)
-FROM picuinha_entries
-WHERE person_id = $1
-`
-
-func (q *Queries) CountEntriesByPerson(ctx context.Context, personID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countEntriesByPerson, personID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -56,71 +43,68 @@ func (q *Queries) CreatePerson(ctx context.Context, arg CreatePersonParams) (Pic
 }
 
 const createPicuinhaCase = `-- name: CreatePicuinhaCase :one
-INSERT INTO picuinha_cases (
+INSERT INTO installment_plans (
   person_id,
-  title,
-  case_type,
+  description,
+  plan_type,
   total_amount,
   installment_count,
   installment_amount,
   start_date,
   payment_method_id,
-  installment_plan_id,
   category_id,
   interest_rate,
   interest_rate_unit,
   recurrence_interval_months
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-RETURNING picuinha_case_id, person_id, title, case_type, total_amount, installment_count, installment_amount,
-  start_date, payment_method_id, installment_plan_id, category_id, interest_rate, interest_rate_unit,
-  recurrence_interval_months, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING installment_plan_id, description, total_amount, installment_count, installment_amount,
+  start_date, payment_method_id, starts_on_current_invoice, plan_type, person_id,
+  category_id, interest_rate, interest_rate_unit, recurrence_interval_months, created_at
 `
 
 type CreatePicuinhaCaseParams struct {
-	PersonID                 int32
-	Title                    string
-	CaseType                 string
+	PersonID                 pgtype.Int4
+	Description              string
+	PlanType                 string
 	TotalAmount              pgtype.Numeric
-	InstallmentCount         pgtype.Int4
+	InstallmentCount         int32
 	InstallmentAmount        pgtype.Numeric
 	StartDate                pgtype.Date
 	PaymentMethodID          pgtype.Int4
-	InstallmentPlanID        pgtype.Int4
 	CategoryID               pgtype.Int4
 	InterestRate             pgtype.Numeric
 	InterestRateUnit         pgtype.Text
 	RecurrenceIntervalMonths pgtype.Int4
 }
 
-func (q *Queries) CreatePicuinhaCase(ctx context.Context, arg CreatePicuinhaCaseParams) (PicuinhaCase, error) {
+func (q *Queries) CreatePicuinhaCase(ctx context.Context, arg CreatePicuinhaCaseParams) (InstallmentPlan, error) {
 	row := q.db.QueryRow(ctx, createPicuinhaCase,
 		arg.PersonID,
-		arg.Title,
-		arg.CaseType,
+		arg.Description,
+		arg.PlanType,
 		arg.TotalAmount,
 		arg.InstallmentCount,
 		arg.InstallmentAmount,
 		arg.StartDate,
 		arg.PaymentMethodID,
-		arg.InstallmentPlanID,
 		arg.CategoryID,
 		arg.InterestRate,
 		arg.InterestRateUnit,
 		arg.RecurrenceIntervalMonths,
 	)
-	var i PicuinhaCase
+	var i InstallmentPlan
 	err := row.Scan(
-		&i.PicuinhaCaseID,
-		&i.PersonID,
-		&i.Title,
-		&i.CaseType,
+		&i.InstallmentPlanID,
+		&i.Description,
 		&i.TotalAmount,
 		&i.InstallmentCount,
 		&i.InstallmentAmount,
 		&i.StartDate,
 		&i.PaymentMethodID,
-		&i.InstallmentPlanID,
+		&i.StartsOnCurrentInvoice,
+		&i.PlanType,
+		&i.PersonID,
 		&i.CategoryID,
 		&i.InterestRate,
 		&i.InterestRateUnit,
@@ -131,8 +115,8 @@ func (q *Queries) CreatePicuinhaCase(ctx context.Context, arg CreatePicuinhaCase
 }
 
 const createPicuinhaCaseInstallment = `-- name: CreatePicuinhaCaseInstallment :one
-INSERT INTO picuinha_case_installments (
-  picuinha_case_id,
+INSERT INTO installment_plan_items (
+  installment_plan_id,
   installment_number,
   due_date,
   amount,
@@ -141,12 +125,12 @@ INSERT INTO picuinha_case_installments (
   paid_at
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING picuinha_case_installment_id, picuinha_case_id, installment_number, due_date,
-  amount, extra_amount, is_paid, paid_at
+RETURNING installment_plan_item_id, installment_plan_id, installment_number, due_date,
+  amount, extra_amount, is_paid, paid_at, cash_flow_id
 `
 
 type CreatePicuinhaCaseInstallmentParams struct {
-	PicuinhaCaseID    int32
+	InstallmentPlanID int32
 	InstallmentNumber int32
 	DueDate           pgtype.Date
 	Amount            pgtype.Numeric
@@ -155,9 +139,9 @@ type CreatePicuinhaCaseInstallmentParams struct {
 	PaidAt            pgtype.Timestamp
 }
 
-func (q *Queries) CreatePicuinhaCaseInstallment(ctx context.Context, arg CreatePicuinhaCaseInstallmentParams) (PicuinhaCaseInstallment, error) {
+func (q *Queries) CreatePicuinhaCaseInstallment(ctx context.Context, arg CreatePicuinhaCaseInstallmentParams) (InstallmentPlanItem, error) {
 	row := q.db.QueryRow(ctx, createPicuinhaCaseInstallment,
-		arg.PicuinhaCaseID,
+		arg.InstallmentPlanID,
 		arg.InstallmentNumber,
 		arg.DueDate,
 		arg.Amount,
@@ -165,56 +149,17 @@ func (q *Queries) CreatePicuinhaCaseInstallment(ctx context.Context, arg CreateP
 		arg.IsPaid,
 		arg.PaidAt,
 	)
-	var i PicuinhaCaseInstallment
+	var i InstallmentPlanItem
 	err := row.Scan(
-		&i.PicuinhaCaseInstallmentID,
-		&i.PicuinhaCaseID,
+		&i.InstallmentPlanItemID,
+		&i.InstallmentPlanID,
 		&i.InstallmentNumber,
 		&i.DueDate,
 		&i.Amount,
 		&i.ExtraAmount,
 		&i.IsPaid,
 		&i.PaidAt,
-	)
-	return i, err
-}
-
-const createPicuinhaEntry = `-- name: CreatePicuinhaEntry :one
-INSERT INTO picuinha_entries (person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
-`
-
-type CreatePicuinhaEntryParams struct {
-	PersonID        int32
-	Date            pgtype.Date
-	Kind            string
-	Amount          pgtype.Numeric
-	CashFlowID      pgtype.Int4
-	PaymentMethodID pgtype.Int4
-	CardOwner       string
-}
-
-func (q *Queries) CreatePicuinhaEntry(ctx context.Context, arg CreatePicuinhaEntryParams) (PicuinhaEntry, error) {
-	row := q.db.QueryRow(ctx, createPicuinhaEntry,
-		arg.PersonID,
-		arg.Date,
-		arg.Kind,
-		arg.Amount,
-		arg.CashFlowID,
-		arg.PaymentMethodID,
-		arg.CardOwner,
-	)
-	var i PicuinhaEntry
-	err := row.Scan(
-		&i.PicuinhaEntryID,
-		&i.PersonID,
-		&i.Date,
-		&i.Kind,
-		&i.Amount,
 		&i.CashFlowID,
-		&i.PaymentMethodID,
-		&i.CardOwner,
 	)
 	return i, err
 }
@@ -230,45 +175,13 @@ func (q *Queries) DeletePerson(ctx context.Context, personID int32) error {
 }
 
 const deletePicuinhaCase = `-- name: DeletePicuinhaCase :exec
-DELETE FROM picuinha_cases
-WHERE picuinha_case_id = $1
+DELETE FROM installment_plans
+WHERE installment_plan_id = $1
 `
 
-func (q *Queries) DeletePicuinhaCase(ctx context.Context, picuinhaCaseID int32) error {
-	_, err := q.db.Exec(ctx, deletePicuinhaCase, picuinhaCaseID)
+func (q *Queries) DeletePicuinhaCase(ctx context.Context, installmentPlanID int32) error {
+	_, err := q.db.Exec(ctx, deletePicuinhaCase, installmentPlanID)
 	return err
-}
-
-const deletePicuinhaEntry = `-- name: DeletePicuinhaEntry :exec
-DELETE FROM picuinha_entries
-WHERE picuinha_entry_id = $1
-`
-
-func (q *Queries) DeletePicuinhaEntry(ctx context.Context, picuinhaEntryID int32) error {
-	_, err := q.db.Exec(ctx, deletePicuinhaEntry, picuinhaEntryID)
-	return err
-}
-
-const getEntry = `-- name: GetEntry :one
-SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
-FROM picuinha_entries
-WHERE picuinha_entry_id = $1
-`
-
-func (q *Queries) GetEntry(ctx context.Context, picuinhaEntryID int32) (PicuinhaEntry, error) {
-	row := q.db.QueryRow(ctx, getEntry, picuinhaEntryID)
-	var i PicuinhaEntry
-	err := row.Scan(
-		&i.PicuinhaEntryID,
-		&i.PersonID,
-		&i.Date,
-		&i.Kind,
-		&i.Amount,
-		&i.CashFlowID,
-		&i.PaymentMethodID,
-		&i.CardOwner,
-	)
-	return i, err
 }
 
 const getPerson = `-- name: GetPerson :one
@@ -288,22 +201,13 @@ const getPersonBalance = `-- name: GetPersonBalance :one
 SELECT (
   COALESCE(
     (
-      SELECT SUM(CASE WHEN kind = 'PLUS' THEN amount ELSE -amount END)
-      FROM picuinha_entries pe
-      WHERE pe.person_id = $1
-    ),
-    0
-  )
-  +
-  COALESCE(
-    (
       SELECT SUM(i.amount + i.extra_amount)
-      FROM picuinha_case_installments i
-      JOIN picuinha_cases c ON c.picuinha_case_id = i.picuinha_case_id
-      WHERE c.person_id = $1
+      FROM installment_plan_items i
+      JOIN installment_plans p ON p.installment_plan_id = i.installment_plan_id
+      WHERE p.person_id = $1
         AND i.is_paid = false
         AND (
-          c.case_type <> 'RECURRING'
+          p.plan_type <> 'RECURRING'
           OR DATE_TRUNC('month', i.due_date) <= DATE_TRUNC('month', CURRENT_DATE)
         )
     ),
@@ -312,7 +216,7 @@ SELECT (
 )::decimal
 `
 
-func (q *Queries) GetPersonBalance(ctx context.Context, personID int32) (pgtype.Numeric, error) {
+func (q *Queries) GetPersonBalance(ctx context.Context, personID pgtype.Int4) (pgtype.Numeric, error) {
 	row := q.db.QueryRow(ctx, getPersonBalance, personID)
 	var column_1 pgtype.Numeric
 	err := row.Scan(&column_1)
@@ -320,27 +224,28 @@ func (q *Queries) GetPersonBalance(ctx context.Context, personID int32) (pgtype.
 }
 
 const getPicuinhaCase = `-- name: GetPicuinhaCase :one
-SELECT picuinha_case_id, person_id, title, case_type, total_amount, installment_count, installment_amount,
-  start_date, payment_method_id, installment_plan_id, category_id, interest_rate, interest_rate_unit,
-  recurrence_interval_months, created_at
-FROM picuinha_cases
-WHERE picuinha_case_id = $1
+SELECT installment_plan_id, description, total_amount, installment_count, installment_amount,
+  start_date, payment_method_id, starts_on_current_invoice, plan_type, person_id,
+  category_id, interest_rate, interest_rate_unit, recurrence_interval_months, created_at
+FROM installment_plans
+WHERE installment_plan_id = $1
+  AND person_id IS NOT NULL
 `
 
-func (q *Queries) GetPicuinhaCase(ctx context.Context, picuinhaCaseID int32) (PicuinhaCase, error) {
-	row := q.db.QueryRow(ctx, getPicuinhaCase, picuinhaCaseID)
-	var i PicuinhaCase
+func (q *Queries) GetPicuinhaCase(ctx context.Context, installmentPlanID int32) (InstallmentPlan, error) {
+	row := q.db.QueryRow(ctx, getPicuinhaCase, installmentPlanID)
+	var i InstallmentPlan
 	err := row.Scan(
-		&i.PicuinhaCaseID,
-		&i.PersonID,
-		&i.Title,
-		&i.CaseType,
+		&i.InstallmentPlanID,
+		&i.Description,
 		&i.TotalAmount,
 		&i.InstallmentCount,
 		&i.InstallmentAmount,
 		&i.StartDate,
 		&i.PaymentMethodID,
-		&i.InstallmentPlanID,
+		&i.StartsOnCurrentInvoice,
+		&i.PlanType,
+		&i.PersonID,
 		&i.CategoryID,
 		&i.InterestRate,
 		&i.InterestRateUnit,
@@ -351,97 +256,27 @@ func (q *Queries) GetPicuinhaCase(ctx context.Context, picuinhaCaseID int32) (Pi
 }
 
 const getPicuinhaCaseInstallment = `-- name: GetPicuinhaCaseInstallment :one
-SELECT picuinha_case_installment_id, picuinha_case_id, installment_number, due_date,
-  amount, extra_amount, is_paid, paid_at
-FROM picuinha_case_installments
-WHERE picuinha_case_installment_id = $1
+SELECT installment_plan_item_id, installment_plan_id, installment_number, due_date,
+  amount, extra_amount, is_paid, paid_at, cash_flow_id
+FROM installment_plan_items
+WHERE installment_plan_item_id = $1
 `
 
-func (q *Queries) GetPicuinhaCaseInstallment(ctx context.Context, picuinhaCaseInstallmentID int32) (PicuinhaCaseInstallment, error) {
-	row := q.db.QueryRow(ctx, getPicuinhaCaseInstallment, picuinhaCaseInstallmentID)
-	var i PicuinhaCaseInstallment
+func (q *Queries) GetPicuinhaCaseInstallment(ctx context.Context, installmentPlanItemID int32) (InstallmentPlanItem, error) {
+	row := q.db.QueryRow(ctx, getPicuinhaCaseInstallment, installmentPlanItemID)
+	var i InstallmentPlanItem
 	err := row.Scan(
-		&i.PicuinhaCaseInstallmentID,
-		&i.PicuinhaCaseID,
+		&i.InstallmentPlanItemID,
+		&i.InstallmentPlanID,
 		&i.InstallmentNumber,
 		&i.DueDate,
 		&i.Amount,
 		&i.ExtraAmount,
 		&i.IsPaid,
 		&i.PaidAt,
+		&i.CashFlowID,
 	)
 	return i, err
-}
-
-const listEntries = `-- name: ListEntries :many
-SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
-FROM picuinha_entries
-ORDER BY date DESC
-`
-
-func (q *Queries) ListEntries(ctx context.Context) ([]PicuinhaEntry, error) {
-	rows, err := q.db.Query(ctx, listEntries)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PicuinhaEntry
-	for rows.Next() {
-		var i PicuinhaEntry
-		if err := rows.Scan(
-			&i.PicuinhaEntryID,
-			&i.PersonID,
-			&i.Date,
-			&i.Kind,
-			&i.Amount,
-			&i.CashFlowID,
-			&i.PaymentMethodID,
-			&i.CardOwner,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listEntriesByPerson = `-- name: ListEntriesByPerson :many
-SELECT picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
-FROM picuinha_entries
-WHERE person_id = $1
-ORDER BY date DESC
-`
-
-func (q *Queries) ListEntriesByPerson(ctx context.Context, personID int32) ([]PicuinhaEntry, error) {
-	rows, err := q.db.Query(ctx, listEntriesByPerson, personID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PicuinhaEntry
-	for rows.Next() {
-		var i PicuinhaEntry
-		if err := rows.Scan(
-			&i.PicuinhaEntryID,
-			&i.PersonID,
-			&i.Date,
-			&i.Kind,
-			&i.Amount,
-			&i.CashFlowID,
-			&i.PaymentMethodID,
-			&i.CardOwner,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listPersons = `-- name: ListPersons :many
@@ -471,31 +306,32 @@ func (q *Queries) ListPersons(ctx context.Context) ([]PicuinhaPerson, error) {
 }
 
 const listPicuinhaCaseInstallments = `-- name: ListPicuinhaCaseInstallments :many
-SELECT picuinha_case_installment_id, picuinha_case_id, installment_number, due_date,
-  amount, extra_amount, is_paid, paid_at
-FROM picuinha_case_installments
-WHERE picuinha_case_id = $1
+SELECT installment_plan_item_id, installment_plan_id, installment_number, due_date,
+  amount, extra_amount, is_paid, paid_at, cash_flow_id
+FROM installment_plan_items
+WHERE installment_plan_id = $1
 ORDER BY due_date ASC, installment_number ASC
 `
 
-func (q *Queries) ListPicuinhaCaseInstallments(ctx context.Context, picuinhaCaseID int32) ([]PicuinhaCaseInstallment, error) {
-	rows, err := q.db.Query(ctx, listPicuinhaCaseInstallments, picuinhaCaseID)
+func (q *Queries) ListPicuinhaCaseInstallments(ctx context.Context, installmentPlanID int32) ([]InstallmentPlanItem, error) {
+	rows, err := q.db.Query(ctx, listPicuinhaCaseInstallments, installmentPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PicuinhaCaseInstallment
+	var items []InstallmentPlanItem
 	for rows.Next() {
-		var i PicuinhaCaseInstallment
+		var i InstallmentPlanItem
 		if err := rows.Scan(
-			&i.PicuinhaCaseInstallmentID,
-			&i.PicuinhaCaseID,
+			&i.InstallmentPlanItemID,
+			&i.InstallmentPlanID,
 			&i.InstallmentNumber,
 			&i.DueDate,
 			&i.Amount,
 			&i.ExtraAmount,
 			&i.IsPaid,
 			&i.PaidAt,
+			&i.CashFlowID,
 		); err != nil {
 			return nil, err
 		}
@@ -509,43 +345,41 @@ func (q *Queries) ListPicuinhaCaseInstallments(ctx context.Context, picuinhaCase
 
 const listPicuinhaCasesByPerson = `-- name: ListPicuinhaCasesByPerson :many
 SELECT
-  c.picuinha_case_id,
-  c.person_id,
-  c.title,
-  c.case_type,
-  c.total_amount,
-  c.installment_count,
-  c.installment_amount,
-  c.start_date,
-  c.payment_method_id,
-  c.installment_plan_id,
-  c.category_id,
-  c.interest_rate,
-  c.interest_rate_unit,
-  c.recurrence_interval_months,
-  c.created_at,
-  COUNT(i.picuinha_case_installment_id) AS installments_total,
-  COUNT(i.picuinha_case_installment_id) FILTER (WHERE i.is_paid) AS installments_paid,
+  p.installment_plan_id,
+  p.person_id,
+  p.description,
+  p.plan_type,
+  p.total_amount,
+  p.installment_count,
+  p.installment_amount,
+  p.start_date,
+  p.payment_method_id,
+  p.category_id,
+  p.interest_rate,
+  p.interest_rate_unit,
+  p.recurrence_interval_months,
+  p.created_at,
+  COUNT(i.installment_plan_item_id) AS installments_total,
+  COUNT(i.installment_plan_item_id) FILTER (WHERE i.is_paid) AS installments_paid,
   COALESCE(SUM(i.amount + i.extra_amount) FILTER (WHERE i.is_paid), 0)::decimal AS amount_paid,
   COALESCE(SUM(i.amount + i.extra_amount) FILTER (WHERE NOT i.is_paid), 0)::decimal AS amount_remaining
-FROM picuinha_cases c
-LEFT JOIN picuinha_case_installments i ON i.picuinha_case_id = c.picuinha_case_id
-WHERE c.person_id = $1
-GROUP BY c.picuinha_case_id
-ORDER BY c.created_at DESC
+FROM installment_plans p
+LEFT JOIN installment_plan_items i ON i.installment_plan_id = p.installment_plan_id
+WHERE p.person_id = $1
+GROUP BY p.installment_plan_id
+ORDER BY p.created_at DESC
 `
 
 type ListPicuinhaCasesByPersonRow struct {
-	PicuinhaCaseID           int32
-	PersonID                 int32
-	Title                    string
-	CaseType                 string
+	InstallmentPlanID        int32
+	PersonID                 pgtype.Int4
+	Description              string
+	PlanType                 string
 	TotalAmount              pgtype.Numeric
-	InstallmentCount         pgtype.Int4
+	InstallmentCount         int32
 	InstallmentAmount        pgtype.Numeric
 	StartDate                pgtype.Date
 	PaymentMethodID          pgtype.Int4
-	InstallmentPlanID        pgtype.Int4
 	CategoryID               pgtype.Int4
 	InterestRate             pgtype.Numeric
 	InterestRateUnit         pgtype.Text
@@ -557,7 +391,7 @@ type ListPicuinhaCasesByPersonRow struct {
 	AmountRemaining          pgtype.Numeric
 }
 
-func (q *Queries) ListPicuinhaCasesByPerson(ctx context.Context, personID int32) ([]ListPicuinhaCasesByPersonRow, error) {
+func (q *Queries) ListPicuinhaCasesByPerson(ctx context.Context, personID pgtype.Int4) ([]ListPicuinhaCasesByPersonRow, error) {
 	rows, err := q.db.Query(ctx, listPicuinhaCasesByPerson, personID)
 	if err != nil {
 		return nil, err
@@ -567,16 +401,15 @@ func (q *Queries) ListPicuinhaCasesByPerson(ctx context.Context, personID int32)
 	for rows.Next() {
 		var i ListPicuinhaCasesByPersonRow
 		if err := rows.Scan(
-			&i.PicuinhaCaseID,
+			&i.InstallmentPlanID,
 			&i.PersonID,
-			&i.Title,
-			&i.CaseType,
+			&i.Description,
+			&i.PlanType,
 			&i.TotalAmount,
 			&i.InstallmentCount,
 			&i.InstallmentAmount,
 			&i.StartDate,
 			&i.PaymentMethodID,
-			&i.InstallmentPlanID,
 			&i.CategoryID,
 			&i.InterestRate,
 			&i.InterestRateUnit,
@@ -619,72 +452,69 @@ func (q *Queries) UpdatePerson(ctx context.Context, arg UpdatePersonParams) (Pic
 }
 
 const updatePicuinhaCase = `-- name: UpdatePicuinhaCase :one
-UPDATE picuinha_cases
+UPDATE installment_plans
 SET person_id = $2,
-    title = $3,
-    case_type = $4,
+    description = $3,
+    plan_type = $4,
     total_amount = $5,
     installment_count = $6,
     installment_amount = $7,
     start_date = $8,
     payment_method_id = $9,
-    installment_plan_id = $10,
-    category_id = $11,
-    interest_rate = $12,
-    interest_rate_unit = $13,
-    recurrence_interval_months = $14
-WHERE picuinha_case_id = $1
-RETURNING picuinha_case_id, person_id, title, case_type, total_amount, installment_count, installment_amount,
-  start_date, payment_method_id, installment_plan_id, category_id, interest_rate, interest_rate_unit,
-  recurrence_interval_months, created_at
+    category_id = $10,
+    interest_rate = $11,
+    interest_rate_unit = $12,
+    recurrence_interval_months = $13
+WHERE installment_plan_id = $1
+RETURNING installment_plan_id, description, total_amount, installment_count, installment_amount,
+  start_date, payment_method_id, starts_on_current_invoice, plan_type, person_id,
+  category_id, interest_rate, interest_rate_unit, recurrence_interval_months, created_at
 `
 
 type UpdatePicuinhaCaseParams struct {
-	PicuinhaCaseID           int32
-	PersonID                 int32
-	Title                    string
-	CaseType                 string
+	InstallmentPlanID        int32
+	PersonID                 pgtype.Int4
+	Description              string
+	PlanType                 string
 	TotalAmount              pgtype.Numeric
-	InstallmentCount         pgtype.Int4
+	InstallmentCount         int32
 	InstallmentAmount        pgtype.Numeric
 	StartDate                pgtype.Date
 	PaymentMethodID          pgtype.Int4
-	InstallmentPlanID        pgtype.Int4
 	CategoryID               pgtype.Int4
 	InterestRate             pgtype.Numeric
 	InterestRateUnit         pgtype.Text
 	RecurrenceIntervalMonths pgtype.Int4
 }
 
-func (q *Queries) UpdatePicuinhaCase(ctx context.Context, arg UpdatePicuinhaCaseParams) (PicuinhaCase, error) {
+func (q *Queries) UpdatePicuinhaCase(ctx context.Context, arg UpdatePicuinhaCaseParams) (InstallmentPlan, error) {
 	row := q.db.QueryRow(ctx, updatePicuinhaCase,
-		arg.PicuinhaCaseID,
+		arg.InstallmentPlanID,
 		arg.PersonID,
-		arg.Title,
-		arg.CaseType,
+		arg.Description,
+		arg.PlanType,
 		arg.TotalAmount,
 		arg.InstallmentCount,
 		arg.InstallmentAmount,
 		arg.StartDate,
 		arg.PaymentMethodID,
-		arg.InstallmentPlanID,
 		arg.CategoryID,
 		arg.InterestRate,
 		arg.InterestRateUnit,
 		arg.RecurrenceIntervalMonths,
 	)
-	var i PicuinhaCase
+	var i InstallmentPlan
 	err := row.Scan(
-		&i.PicuinhaCaseID,
-		&i.PersonID,
-		&i.Title,
-		&i.CaseType,
+		&i.InstallmentPlanID,
+		&i.Description,
 		&i.TotalAmount,
 		&i.InstallmentCount,
 		&i.InstallmentAmount,
 		&i.StartDate,
 		&i.PaymentMethodID,
-		&i.InstallmentPlanID,
+		&i.StartsOnCurrentInvoice,
+		&i.PlanType,
+		&i.PersonID,
 		&i.CategoryID,
 		&i.InterestRate,
 		&i.InterestRateUnit,
@@ -695,88 +525,43 @@ func (q *Queries) UpdatePicuinhaCase(ctx context.Context, arg UpdatePicuinhaCase
 }
 
 const updatePicuinhaCaseInstallment = `-- name: UpdatePicuinhaCaseInstallment :one
-UPDATE picuinha_case_installments
+UPDATE installment_plan_items
 SET amount = $2,
     extra_amount = $3,
     is_paid = $4,
     paid_at = $5
-WHERE picuinha_case_installment_id = $1
-RETURNING picuinha_case_installment_id, picuinha_case_id, installment_number, due_date,
-  amount, extra_amount, is_paid, paid_at
+WHERE installment_plan_item_id = $1
+RETURNING installment_plan_item_id, installment_plan_id, installment_number, due_date,
+  amount, extra_amount, is_paid, paid_at, cash_flow_id
 `
 
 type UpdatePicuinhaCaseInstallmentParams struct {
-	PicuinhaCaseInstallmentID int32
-	Amount                    pgtype.Numeric
-	ExtraAmount               pgtype.Numeric
-	IsPaid                    bool
-	PaidAt                    pgtype.Timestamp
+	InstallmentPlanItemID int32
+	Amount                pgtype.Numeric
+	ExtraAmount           pgtype.Numeric
+	IsPaid                bool
+	PaidAt                pgtype.Timestamp
 }
 
-func (q *Queries) UpdatePicuinhaCaseInstallment(ctx context.Context, arg UpdatePicuinhaCaseInstallmentParams) (PicuinhaCaseInstallment, error) {
+func (q *Queries) UpdatePicuinhaCaseInstallment(ctx context.Context, arg UpdatePicuinhaCaseInstallmentParams) (InstallmentPlanItem, error) {
 	row := q.db.QueryRow(ctx, updatePicuinhaCaseInstallment,
-		arg.PicuinhaCaseInstallmentID,
+		arg.InstallmentPlanItemID,
 		arg.Amount,
 		arg.ExtraAmount,
 		arg.IsPaid,
 		arg.PaidAt,
 	)
-	var i PicuinhaCaseInstallment
+	var i InstallmentPlanItem
 	err := row.Scan(
-		&i.PicuinhaCaseInstallmentID,
-		&i.PicuinhaCaseID,
+		&i.InstallmentPlanItemID,
+		&i.InstallmentPlanID,
 		&i.InstallmentNumber,
 		&i.DueDate,
 		&i.Amount,
 		&i.ExtraAmount,
 		&i.IsPaid,
 		&i.PaidAt,
-	)
-	return i, err
-}
-
-const updatePicuinhaEntry = `-- name: UpdatePicuinhaEntry :one
-UPDATE picuinha_entries
-SET person_id = $2,
-    kind = $3,
-    amount = $4,
-    cash_flow_id = $5,
-    payment_method_id = $6,
-    card_owner = $7
-WHERE picuinha_entry_id = $1
-RETURNING picuinha_entry_id, person_id, date, kind, amount, cash_flow_id, payment_method_id, card_owner
-`
-
-type UpdatePicuinhaEntryParams struct {
-	PicuinhaEntryID int32
-	PersonID        int32
-	Kind            string
-	Amount          pgtype.Numeric
-	CashFlowID      pgtype.Int4
-	PaymentMethodID pgtype.Int4
-	CardOwner       string
-}
-
-func (q *Queries) UpdatePicuinhaEntry(ctx context.Context, arg UpdatePicuinhaEntryParams) (PicuinhaEntry, error) {
-	row := q.db.QueryRow(ctx, updatePicuinhaEntry,
-		arg.PicuinhaEntryID,
-		arg.PersonID,
-		arg.Kind,
-		arg.Amount,
-		arg.CashFlowID,
-		arg.PaymentMethodID,
-		arg.CardOwner,
-	)
-	var i PicuinhaEntry
-	err := row.Scan(
-		&i.PicuinhaEntryID,
-		&i.PersonID,
-		&i.Date,
-		&i.Kind,
-		&i.Amount,
 		&i.CashFlowID,
-		&i.PaymentMethodID,
-		&i.CardOwner,
 	)
 	return i, err
 }

@@ -8,12 +8,8 @@ import (
 var (
 	ErrPersonNameRequired    = errors.New("person name is required")
 	ErrAmountRequired        = errors.New("amount must be greater than zero")
-	ErrInvalidKind           = errors.New("invalid kind (must be 'PLUS' or 'MINUS')")
 	ErrPersonNotFound        = errors.New("person not found")
-	ErrEntryNotFound         = errors.New("entry not found")
 	ErrPersonHasEntries      = errors.New("person has entries")
-	ErrInvalidCardOwner      = errors.New("invalid card owner (must be 'SELF' or 'THIRD')")
-	ErrCardOwnerUnsupported  = errors.New("card owner 'THIRD' not supported yet")
 	ErrCaseTitleRequired     = errors.New("case title is required")
 	ErrCaseTypeInvalid       = errors.New("invalid case type")
 	ErrInstallmentCount      = errors.New("installment count must be greater than zero")
@@ -49,11 +45,6 @@ const (
 )
 
 const (
-	CardOwnerSelf  = "SELF"
-	CardOwnerThird = "THIRD"
-)
-
-const (
 	CaseTypeOneOff        = "ONE_OFF"
 	CaseTypeInstallment   = "INSTALLMENT"
 	CaseTypeRecurring     = "RECURRING"
@@ -70,17 +61,6 @@ type Person struct {
 	Name    string
 	Notes   string
 	Balance float64 // Calculated field
-}
-
-type Entry struct {
-	ID              int32
-	PersonID        int32
-	Date            time.Time
-	Kind            string // PLUS, MINUS
-	Amount          float64
-	CashFlowID      *int32 // Optional link directly to a transaction (e.g. I paid the bar tab)
-	PaymentMethodID *int32
-	CardOwner       string
 }
 
 type Case struct {

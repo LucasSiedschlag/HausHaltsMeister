@@ -21,7 +21,7 @@ func TestUC20_PicuinhaCrud(t *testing.T) {
 	defer db.Pool.Close()
 
 	picRepo := postgres.NewPicuinhaRepository(db.Pool)
-	picService := picuinha.NewService(picRepo, nil, nil)
+	picService := picuinha.NewService(picRepo)
 	picHandler := http.NewPicuinhaHandler(picService)
 
 	e := echo.New()
@@ -51,7 +51,7 @@ func TestUC20_PicuinhaCrud(t *testing.T) {
 		assert.Equal(t, "Ana Maria", updated["name"])
 	})
 
-	t.Run("Entries list/update/delete", func(t *testing.T) {
+	t.Run("Cases list/update/delete", func(t *testing.T) {
 		personPayload := map[string]interface{}{
 			"name":  "Carlos",
 			"notes": "",
@@ -62,37 +62,39 @@ func TestUC20_PicuinhaCrud(t *testing.T) {
 		var person map[string]interface{}
 		require.NoError(t, json.Unmarshal(personRec.Body.Bytes(), &person))
 
-		entryPayload := map[string]interface{}{
-			"person_id":        person["id"],
-			"kind":             "PLUS",
-			"amount":           120.0,
-			"auto_create_flow": false,
+		casePayload := map[string]interface{}{
+			"person_id":    person["id"],
+			"title":        "Compra à vista",
+			"case_type":    "ONE_OFF",
+			"total_amount": 120.0,
+			"start_date":   "2025-02-01",
 		}
-		entryRec := client.Request(t, "POST", "/picuinhas/entries", entryPayload)
-		require.Equal(t, std_http.StatusCreated, entryRec.Code)
+		caseRec := client.Request(t, "POST", "/picuinhas/cases", casePayload)
+		require.Equal(t, std_http.StatusCreated, caseRec.Code)
 
-		listRec := client.Request(t, "GET", "/picuinhas/entries", nil)
+		listRec := client.Request(t, "GET", "/picuinhas/cases?person_id="+toID(person["id"]), nil)
 		require.Equal(t, std_http.StatusOK, listRec.Code)
 
-		var entries []map[string]interface{}
-		require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &entries))
-		require.NotEmpty(t, entries)
+		var cases []map[string]interface{}
+		require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &cases))
+		require.NotEmpty(t, cases)
 
-		entryID := toID(entries[0]["id"])
+		caseID := toID(cases[0]["id"])
 		updatePayload := map[string]interface{}{
-			"person_id":        person["id"],
-			"kind":             "MINUS",
-			"amount":           50.0,
-			"auto_create_flow": false,
+			"person_id":    person["id"],
+			"title":        "Compra ajustada",
+			"case_type":    "ONE_OFF",
+			"total_amount": 50.0,
+			"start_date":   "2025-02-01",
 		}
-		updateRec := client.Request(t, "PUT", "/picuinhas/entries/"+entryID, updatePayload)
+		updateRec := client.Request(t, "PUT", "/picuinhas/cases/"+caseID, updatePayload)
 		require.Equal(t, std_http.StatusOK, updateRec.Code)
 
-		deleteRec := client.Request(t, "DELETE", "/picuinhas/entries/"+entryID, nil)
+		deleteRec := client.Request(t, "DELETE", "/picuinhas/cases/"+caseID, nil)
 		require.Equal(t, std_http.StatusOK, deleteRec.Code)
 	})
 
-	t.Run("Delete person blocked when entries exist", func(t *testing.T) {
+	t.Run("Delete person blocked when cases exist", func(t *testing.T) {
 		personPayload := map[string]interface{}{
 			"name":  "Marina",
 			"notes": "",
@@ -103,14 +105,15 @@ func TestUC20_PicuinhaCrud(t *testing.T) {
 		var person map[string]interface{}
 		require.NoError(t, json.Unmarshal(personRec.Body.Bytes(), &person))
 
-		entryPayload := map[string]interface{}{
-			"person_id":        person["id"],
-			"kind":             "PLUS",
-			"amount":           30.0,
-			"auto_create_flow": false,
+		casePayload := map[string]interface{}{
+			"person_id":    person["id"],
+			"title":        "Pix de apoio",
+			"case_type":    "ONE_OFF",
+			"total_amount": 30.0,
+			"start_date":   "2025-02-01",
 		}
-		entryRec := client.Request(t, "POST", "/picuinhas/entries", entryPayload)
-		require.Equal(t, std_http.StatusCreated, entryRec.Code)
+		caseRec := client.Request(t, "POST", "/picuinhas/cases", casePayload)
+		require.Equal(t, std_http.StatusCreated, caseRec.Code)
 
 		deleteRec := client.Request(t, "DELETE", "/picuinhas/persons/"+toID(person["id"]), nil)
 		require.Equal(t, std_http.StatusConflict, deleteRec.Code)

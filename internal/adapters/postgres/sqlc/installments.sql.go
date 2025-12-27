@@ -34,9 +34,9 @@ func (q *Queries) CreateExpenseDetail(ctx context.Context, arg CreateExpenseDeta
 }
 
 const createInstallmentPlan = `-- name: CreateInstallmentPlan :one
-INSERT INTO installment_plans (description, total_amount, installment_count, installment_amount, start_month, payment_method_id, starts_on_current_invoice)
+INSERT INTO installment_plans (description, total_amount, installment_count, installment_amount, start_date, payment_method_id, starts_on_current_invoice)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING installment_plan_id, description, total_amount, installment_count, installment_amount, start_month, payment_method_id, starts_on_current_invoice
+RETURNING installment_plan_id, description, total_amount, installment_count, installment_amount, start_date, payment_method_id, starts_on_current_invoice, plan_type, person_id, category_id, interest_rate, interest_rate_unit, recurrence_interval_months, created_at
 `
 
 type CreateInstallmentPlanParams struct {
@@ -44,8 +44,8 @@ type CreateInstallmentPlanParams struct {
 	TotalAmount            pgtype.Numeric
 	InstallmentCount       int32
 	InstallmentAmount      pgtype.Numeric
-	StartMonth             pgtype.Date
-	PaymentMethodID        int32
+	StartDate              pgtype.Date
+	PaymentMethodID        pgtype.Int4
 	StartsOnCurrentInvoice bool
 }
 
@@ -55,7 +55,7 @@ func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallme
 		arg.TotalAmount,
 		arg.InstallmentCount,
 		arg.InstallmentAmount,
-		arg.StartMonth,
+		arg.StartDate,
 		arg.PaymentMethodID,
 		arg.StartsOnCurrentInvoice,
 	)
@@ -66,9 +66,16 @@ func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallme
 		&i.TotalAmount,
 		&i.InstallmentCount,
 		&i.InstallmentAmount,
-		&i.StartMonth,
+		&i.StartDate,
 		&i.PaymentMethodID,
 		&i.StartsOnCurrentInvoice,
+		&i.PlanType,
+		&i.PersonID,
+		&i.CategoryID,
+		&i.InterestRate,
+		&i.InterestRateUnit,
+		&i.RecurrenceIntervalMonths,
+		&i.CreatedAt,
 	)
 	return i, err
 }

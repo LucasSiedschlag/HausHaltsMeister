@@ -2,24 +2,16 @@ package picuinha
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 )
 
 type PicuinhaService struct {
-	repo      Repository
-	cfService *cashflow.CashFlowService
-	catRepo   category.Repository
+	repo Repository
 }
 
-func NewService(repo Repository, cfService *cashflow.CashFlowService, catRepo category.Repository) *PicuinhaService {
+func NewService(repo Repository) *PicuinhaService {
 	return &PicuinhaService{
-		repo:      repo,
-		cfService: cfService,
-		catRepo:   catRepo,
+		repo: repo,
 	}
 }
 
@@ -76,13 +68,6 @@ func (s *PicuinhaService) DeletePerson(ctx context.Context, id int32) error {
 		return ErrPersonNotFound
 	}
 
-	count, err := s.repo.CountEntriesByPerson(ctx, id)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return ErrPersonHasEntries
-	}
 	caseCount, err := s.repo.CountCasesByPerson(ctx, id)
 	if err != nil {
 		return err
@@ -94,136 +79,12 @@ func (s *PicuinhaService) DeletePerson(ctx context.Context, id int32) error {
 	return s.repo.DeletePerson(ctx, id)
 }
 
-func (s *PicuinhaService) AddDiff(ctx context.Context, personID int32, amount float64, kind string, cashFlowID *int32, paymentMethodID *int32, cardOwner string, autoCreateFlow bool) (*Entry, error) {
-	if amount <= 0 {
-		return nil, ErrAmountRequired
-	}
-	if kind != "PLUS" && kind != "MINUS" {
-		return nil, ErrInvalidKind
-	}
-
-	normalizedOwner, err := normalizeCardOwner(cardOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	linkedCfID, err := s.ensureCashFlowID(ctx, personID, amount, kind, cashFlowID, autoCreateFlow, normalizedOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	entry := &Entry{
-		PersonID:        personID,
-		Date:            time.Now(),
-		Kind:            kind,
-		Amount:          amount,
-		CashFlowID:      linkedCfID,
-		PaymentMethodID: paymentMethodID,
-		CardOwner:       normalizedOwner,
-	}
-	return s.repo.AddEntry(ctx, entry)
-}
-
-func (s *PicuinhaService) ListEntries(ctx context.Context, personID *int32) ([]Entry, error) {
-	if personID != nil {
-		person, err := s.repo.GetPerson(ctx, *personID)
-		if err != nil {
-			return nil, err
-		}
-		if person == nil {
-			return nil, ErrPersonNotFound
-		}
-		return s.repo.ListEntriesByPerson(ctx, *personID)
-	}
-
-	return s.repo.ListEntries(ctx)
-}
-
-func (s *PicuinhaService) UpdateEntry(ctx context.Context, id int32, personID int32, amount float64, kind string, paymentMethodID *int32, cardOwner string, autoCreateFlow bool) (*Entry, error) {
-	if amount <= 0 {
-		return nil, ErrAmountRequired
-	}
-	if kind != "PLUS" && kind != "MINUS" {
-		return nil, ErrInvalidKind
-	}
-
-	normalizedOwner, err := normalizeCardOwner(cardOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	existing, err := s.repo.GetEntry(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if existing == nil {
-		return nil, ErrCaseNotFound
-	}
-
-	person, err := s.repo.GetPerson(ctx, personID)
-	if err != nil {
-		return nil, err
-	}
-	if person == nil {
-		return nil, ErrPersonNotFound
-	}
-
-	linkedCfID, err := s.ensureCashFlowID(ctx, personID, amount, kind, existing.CashFlowID, autoCreateFlow, normalizedOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	updated := &Entry{
-		ID:              existing.ID,
-		PersonID:        personID,
-		Date:            existing.Date,
-		Kind:            kind,
-		Amount:          amount,
-		CashFlowID:      linkedCfID,
-		PaymentMethodID: paymentMethodID,
-		CardOwner:       normalizedOwner,
-	}
-
-	saved, err := s.repo.UpdateEntry(ctx, updated)
-	if err != nil {
-		return nil, err
-	}
-	if saved == nil {
-		return nil, ErrEntryNotFound
-	}
-	return saved, nil
-}
-
-func (s *PicuinhaService) DeleteEntry(ctx context.Context, id int32) error {
-	entry, err := s.repo.GetEntry(ctx, id)
-	if err != nil {
-		return err
-	}
-	if entry == nil {
-		return ErrEntryNotFound
-	}
-
-	return s.repo.DeleteEntry(ctx, id)
-}
-
 func (s *PicuinhaService) CreateCase(ctx context.Context, req CreateCaseRequest) (*CaseSummary, error) {
 	if req.Title == "" {
 		return nil, ErrCaseTitleRequired
 	}
 	if !isValidCaseType(req.CaseType) {
 		return nil, ErrCaseTypeInvalid
-	}
-	if req.StartDate.IsZero() {
-		return nil, ErrStartDateRequired
-	}
-	if req.CaseType == CaseTypeCardInstall && req.PaymentMethodID == nil {
-		return nil, ErrPaymentMethodRequired
-	}
-	if req.InterestRate != nil && req.InterestRateUnit != "" && req.InterestRateUnit != InterestRateMonthly && req.InterestRateUnit != InterestRateAnnual {
-		return nil, ErrInterestRateUnit
-	}
-	if req.CaseType == CaseTypeRecurring && req.RecurrenceIntervalMonths != nil && *req.RecurrenceIntervalMonths <= 0 {
-		return nil, ErrRecurrenceInterval
 	}
 	if req.StartDate.IsZero() {
 		return nil, ErrStartDateRequired
@@ -267,9 +128,23 @@ func (s *PicuinhaService) CreateCase(ctx context.Context, req CreateCaseRequest)
 		RecurrenceIntervalMonths: recurrenceInterval,
 	}
 
-	created, err := s.repo.CreateCase(ctx, picCase)
-	if err != nil {
-		return nil, err
+	var created *Case
+	if req.InstallmentPlanID != nil {
+		picCase.ID = *req.InstallmentPlanID
+		updated, err := s.repo.UpdateCase(ctx, picCase)
+		if err != nil {
+			return nil, err
+		}
+		if updated == nil {
+			return nil, ErrCaseNotFound
+		}
+		created = updated
+	} else {
+		var err error
+		created, err = s.repo.CreateCase(ctx, picCase)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	count := int32(1)
@@ -286,29 +161,38 @@ func (s *PicuinhaService) CreateCase(ctx context.Context, req CreateCaseRequest)
 		amount = *installmentAmount
 	}
 
-	for i := int32(1); i <= count; i++ {
-		dueDate := created.StartDate.AddDate(0, int(interval*(i-1)), 0)
-		_, err := s.repo.CreateInstallment(ctx, &CaseInstallment{
-			CaseID:            created.ID,
-			InstallmentNumber: i,
-			DueDate:           dueDate,
-			Amount:            amount,
-			ExtraAmount:       0,
-			IsPaid:            false,
-		})
-		if err != nil {
-			return nil, err
+	existingInstallments, err := s.repo.ListInstallmentsByCase(ctx, created.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(existingInstallments) == 0 {
+		for i := int32(1); i <= count; i++ {
+			dueDate := created.StartDate.AddDate(0, int(interval*(i-1)), 0)
+			_, err := s.repo.CreateInstallment(ctx, &CaseInstallment{
+				CaseID:            created.ID,
+				InstallmentNumber: i,
+				DueDate:           dueDate,
+				Amount:            amount,
+				ExtraAmount:       0,
+				IsPaid:            false,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return &CaseSummary{
-		Case:              *created,
-		InstallmentsTotal: count,
-		InstallmentsPaid:  0,
-		AmountPaid:        0,
-		AmountRemaining:   float64(count) * amount,
-		Status:            caseStatus(req.CaseType, 0, count),
-	}, nil
+	summaries, err := s.repo.ListCasesByPerson(ctx, created.PersonID)
+	if err != nil {
+		return nil, err
+	}
+	for _, summary := range summaries {
+		if summary.ID == created.ID {
+			return &summary, nil
+		}
+	}
+
+	return &CaseSummary{Case: *created}, nil
 }
 
 func (s *PicuinhaService) ListCasesByPerson(ctx context.Context, personID int32) ([]CaseSummary, error) {
@@ -424,76 +308,6 @@ func (s *PicuinhaService) UpdateInstallment(ctx context.Context, id int32, req U
 	return s.repo.UpdateInstallment(ctx, updated)
 }
 
-func (s *PicuinhaService) ensureCashFlowID(ctx context.Context, personID int32, amount float64, kind string, cashFlowID *int32, autoCreateFlow bool, cardOwner string) (*int32, error) {
-	if !autoCreateFlow || cashFlowID != nil {
-		return cashFlowID, nil
-	}
-	if cardOwner == CardOwnerThird {
-		return nil, ErrCardOwnerUnsupported
-	}
-	if s.cfService == nil || s.catRepo == nil {
-		return nil, fmt.Errorf("cash flow service unavailable")
-	}
-
-	cfDirection := "OUT"
-	if kind == "MINUS" {
-		cfDirection = "IN"
-	}
-
-	cats, err := s.catRepo.List(ctx, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list categories: %w", err)
-	}
-
-	var foundID int32
-	for _, c := range cats {
-		if c.Name == "Picuinhas" && c.Direction == cfDirection {
-			foundID = c.ID
-			break
-		}
-	}
-
-	if foundID == 0 {
-		return nil, fmt.Errorf("category 'Picuinhas' (%s) not found in system", cfDirection)
-	}
-
-	person, _ := s.repo.GetPerson(ctx, personID)
-	name := "Dívida"
-	if person != nil {
-		name = person.Name
-	}
-	title := fmt.Sprintf("Picuinha: %s", name)
-	if kind == "MINUS" {
-		title = fmt.Sprintf("Recebimento: %s", name)
-	}
-
-	cf, err := s.cfService.CreateCashFlow(ctx, time.Now(), foundID, cfDirection, title, amount, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create automatic cash flow: %w", err)
-	}
-	return &cf.ID, nil
-}
-
-func (s *PicuinhaService) Lend(ctx context.Context, personID int32, amount float64, cashFlowID *int32) (*Entry, error) {
-	// Lend -> Eu emprestei -> Pessoa me deve -> PLUS. Auto-create if not linked.
-	return s.AddDiff(ctx, personID, amount, "PLUS", cashFlowID, nil, CardOwnerSelf, true)
-}
-
-func (s *PicuinhaService) Receive(ctx context.Context, personID int32, amount float64, cashFlowID *int32) (*Entry, error) {
-	// Receive -> Pessoa me pagou -> Dívida diminui -> MINUS. Auto-create if not linked.
-	return s.AddDiff(ctx, personID, amount, "MINUS", cashFlowID, nil, CardOwnerSelf, true)
-}
-
-func normalizeCardOwner(cardOwner string) (string, error) {
-	if cardOwner == "" {
-		return CardOwnerSelf, nil
-	}
-	if cardOwner != CardOwnerSelf && cardOwner != CardOwnerThird {
-		return "", ErrInvalidCardOwner
-	}
-	return cardOwner, nil
-}
-
 func isValidCaseType(caseType string) bool {
 	switch caseType {
 	case CaseTypeOneOff, CaseTypeInstallment, CaseTypeRecurring, CaseTypeCardInstall:
@@ -547,7 +361,8 @@ func normalizeCaseAmounts(req CreateCaseRequest) (*float64, *float64, *int32, *i
 		if req.RecurrenceIntervalMonths != nil && *req.RecurrenceIntervalMonths > 0 {
 			interval = *req.RecurrenceIntervalMonths
 		}
-		return nil, &installmentAmount, &count, &interval, nil
+		total := installmentAmount * float64(count)
+		return &total, &installmentAmount, &count, &interval, nil
 	default:
 		return nil, nil, nil, nil, ErrCaseTypeInvalid
 	}

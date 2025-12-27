@@ -63,7 +63,7 @@ func main() {
 	catService := category.NewService(catRepo)
 	cfService := cashflow.NewService(cfRepo, catRepo)
 	bgService := budget.NewService(bgRepo, catRepo, cfRepo)
-	picService := picuinha.NewService(picRepo, cfService, catRepo)
+	picService := picuinha.NewService(picRepo)
 	payService := payment.NewService(payRepo)
 	instService := installment.NewService(instRepo, cfService, payRepo)
 
