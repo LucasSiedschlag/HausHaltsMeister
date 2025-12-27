@@ -171,13 +171,13 @@ function handleSubmit() {
     total_amount: form.total_amount ? Number(form.total_amount) : undefined,
     installment_amount: form.installment_amount ? Number(form.installment_amount) : undefined,
     installment_count: form.installment_count ? Number(form.installment_count) : undefined,
-    start_date: form.start_date || undefined,
+    start_date: form.start_date || form.purchase_date || undefined,
     purchase_date: form.purchase_date || undefined,
     payment_method_id: form.payment_method_id ? Number(form.payment_method_id) : undefined,
     category_id: form.category_id ? Number(form.category_id) : undefined,
     interest_rate: form.interest_rate ? Number(form.interest_rate) : undefined,
     interest_rate_unit: form.interest_rate ? form.interest_rate_unit : undefined,
-    recurrence_interval_months: form.recurrence_interval_months ? Number(form.recurrence_interval_months) : undefined,
+    recurrence_interval_months: isRecurring.value && form.recurrence_interval_months ? Number(form.recurrence_interval_months) : undefined,
   }
 
   emit('submit', payload)

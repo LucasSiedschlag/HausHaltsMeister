@@ -15,7 +15,11 @@ CREATE TABLE "installment_plans" (
   "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now(),
-  CHECK (payment_method_id IS NOT NULL OR account_id IS NOT NULL)
+  CHECK (
+    plan_type <> 'CARD_INSTALLMENT'
+    OR payment_method_id IS NOT NULL
+    OR account_id IS NOT NULL
+  )
 );
 
 CREATE TABLE "installment_plan_items" (

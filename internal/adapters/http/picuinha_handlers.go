@@ -160,6 +160,7 @@ func (h *PicuinhaHandler) CreateCase(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
+	normalizeCaseRequest(&req)
 
 	startDate, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
@@ -261,6 +262,7 @@ func (h *PicuinhaHandler) UpdateCase(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
+	normalizeCaseRequest(&req)
 	startDate, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid start_date format, use YYYY-MM-DD"})
@@ -460,5 +462,20 @@ func toCaseInstallmentResponse(inst *picuinha.CaseInstallment) dto.CaseInstallme
 		ExtraAmount:       inst.ExtraAmount,
 		IsPaid:            inst.IsPaid,
 		PaidAt:            paidAt,
+	}
+}
+
+func normalizeCaseRequest(req *dto.CreateCaseRequest) {
+	if req.PaymentMethodID != nil && *req.PaymentMethodID <= 0 {
+		req.PaymentMethodID = nil
+	}
+	if req.InstallmentPlanID != nil && *req.InstallmentPlanID <= 0 {
+		req.InstallmentPlanID = nil
+	}
+	if req.CategoryID != nil && *req.CategoryID <= 0 {
+		req.CategoryID = nil
+	}
+	if req.RecurrenceIntervalMonths != nil && *req.RecurrenceIntervalMonths <= 0 {
+		req.RecurrenceIntervalMonths = nil
 	}
 }

@@ -89,7 +89,7 @@ func (s *PicuinhaService) CreateCase(ctx context.Context, req CreateCaseRequest)
 	if req.StartDate.IsZero() {
 		return nil, ErrStartDateRequired
 	}
-	if req.CaseType == CaseTypeCardInstall && req.PaymentMethodID == nil {
+	if req.CaseType == CaseTypeCardInstall && (req.PaymentMethodID == nil || *req.PaymentMethodID <= 0) {
 		return nil, ErrPaymentMethodRequired
 	}
 	if req.InterestRate != nil && req.InterestRateUnit != "" && req.InterestRateUnit != InterestRateMonthly && req.InterestRateUnit != InterestRateAnnual {

@@ -114,6 +114,7 @@ async function handleCreate(payload: {
   formSubmitting.value = true
   formError.value = null
   try {
+    const resolvedStartDate = payload.start_date || payload.purchase_date
     if (payload.case_type === 'CARD_INSTALLMENT') {
       if (!payload.purchase_date || !payload.payment_method_id || !payload.category_id || !payload.installment_count) {
         throw new Error('Dados incompletos para compra no cartão.')
@@ -135,7 +136,7 @@ async function handleCreate(payload: {
         total_amount: plan.total_amount,
         installment_count: plan.installment_count,
         installment_amount: plan.installment_amount,
-        start_date: plan.start_month,
+        start_date: plan.start_month || resolvedStartDate || '',
         payment_method_id: plan.payment_method_id,
         installment_plan_id: plan.id,
         category_id: payload.category_id,
@@ -144,6 +145,9 @@ async function handleCreate(payload: {
         recurrence_interval_months: payload.recurrence_interval_months,
       })
     } else {
+      if (!resolvedStartDate) {
+        throw new Error('Informe a data inicial.')
+      }
       await createCase({
         person_id: person.value.id,
         title: payload.title,
@@ -151,7 +155,7 @@ async function handleCreate(payload: {
         total_amount: payload.total_amount,
         installment_count: payload.installment_count,
         installment_amount: payload.installment_amount,
-        start_date: payload.start_date || '',
+        start_date: resolvedStartDate,
         interest_rate: payload.interest_rate,
         interest_rate_unit: payload.interest_rate_unit,
         recurrence_interval_months: payload.recurrence_interval_months,
