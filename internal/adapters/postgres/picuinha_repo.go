@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	ledgerSqlc "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc-ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,23 +15,23 @@ import (
 )
 
 type PicuinhaRepository struct {
-	q *sqlc.Queries
+	q *ledgerSqlc.Queries
 }
 
 func NewPicuinhaRepository(db *pgxpool.Pool) *PicuinhaRepository {
 	return &PicuinhaRepository{
-		q: sqlc.New(db),
+		q: ledgerSqlc.New(db),
 	}
 }
 
 func (r *PicuinhaRepository) CreatePerson(ctx context.Context, name, notes string) (*picuinha.Person, error) {
 	n := pgtype.Text{String: notes, Valid: notes != ""}
-	row, err := r.q.CreatePerson(ctx, sqlc.CreatePersonParams{Name: name, Notes: n})
+	row, err := r.q.CreatePerson(ctx, ledgerSqlc.CreatePersonParams{Name: name, Notes: n})
 	if err != nil {
 		return nil, err
 	}
 	return &picuinha.Person{
-		ID:    row.PersonID,
+		ID:    row.PartyID,
 		Name:  row.Name,
 		Notes: row.Notes.String,
 	}, nil
@@ -45,7 +45,7 @@ func (r *PicuinhaRepository) ListPersons(ctx context.Context) ([]picuinha.Person
 	persons := make([]picuinha.Person, len(rows))
 	for i, row := range rows {
 		persons[i] = picuinha.Person{
-			ID:    row.PersonID,
+			ID:    row.PartyID,
 			Name:  row.Name,
 			Notes: row.Notes.String,
 		}
@@ -62,7 +62,7 @@ func (r *PicuinhaRepository) GetPerson(ctx context.Context, id int32) (*picuinha
 		return nil, err
 	}
 	return &picuinha.Person{
-		ID:    row.PersonID,
+		ID:    row.PartyID,
 		Name:  row.Name,
 		Notes: row.Notes.String,
 	}, nil
@@ -70,10 +70,10 @@ func (r *PicuinhaRepository) GetPerson(ctx context.Context, id int32) (*picuinha
 
 func (r *PicuinhaRepository) UpdatePerson(ctx context.Context, id int32, name, notes string) (*picuinha.Person, error) {
 	n := pgtype.Text{String: notes, Valid: notes != ""}
-	row, err := r.q.UpdatePerson(ctx, sqlc.UpdatePersonParams{
-		PersonID: id,
-		Name:     name,
-		Notes:    n,
+	row, err := r.q.UpdatePerson(ctx, ledgerSqlc.UpdatePersonParams{
+		PartyID: id,
+		Name:    name,
+		Notes:   n,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -82,7 +82,7 @@ func (r *PicuinhaRepository) UpdatePerson(ctx context.Context, id int32, name, n
 		return nil, err
 	}
 	return &picuinha.Person{
-		ID:    row.PersonID,
+		ID:    row.PartyID,
 		Name:  row.Name,
 		Notes: row.Notes.String,
 	}, nil
@@ -113,8 +113,8 @@ func (r *PicuinhaRepository) CreateCase(ctx context.Context, picCase *picuinha.C
 	if picCase.InstallmentCount != nil {
 		count = *picCase.InstallmentCount
 	}
-	row, err := r.q.CreatePicuinhaCase(ctx, sqlc.CreatePicuinhaCaseParams{
-		PersonID:                 int4FromPtr(&picCase.PersonID),
+	row, err := r.q.CreatePicuinhaCase(ctx, ledgerSqlc.CreatePicuinhaCaseParams{
+		PartyID:                  int4FromPtr(&picCase.PersonID),
 		Description:              picCase.Title,
 		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
@@ -139,9 +139,9 @@ func (r *PicuinhaRepository) UpdateCase(ctx context.Context, picCase *picuinha.C
 	if picCase.InstallmentCount != nil {
 		count = *picCase.InstallmentCount
 	}
-	row, err := r.q.UpdatePicuinhaCase(ctx, sqlc.UpdatePicuinhaCaseParams{
+	row, err := r.q.UpdatePicuinhaCase(ctx, ledgerSqlc.UpdatePicuinhaCaseParams{
 		InstallmentPlanID:        picCase.ID,
-		PersonID:                 int4FromPtr(&picCase.PersonID),
+		PartyID:                  int4FromPtr(&picCase.PersonID),
 		Description:              picCase.Title,
 		PlanType:                 picCase.CaseType,
 		TotalAmount:              numericFromPtr(picCase.TotalAmount),
@@ -193,9 +193,9 @@ func (r *PicuinhaRepository) ListCasesByPerson(ctx context.Context, personID int
 }
 
 func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
-	row, err := r.q.CreatePicuinhaCaseInstallment(ctx, sqlc.CreatePicuinhaCaseInstallmentParams{
+	row, err := r.q.CreatePicuinhaCaseInstallment(ctx, ledgerSqlc.CreatePicuinhaCaseInstallmentParams{
 		InstallmentPlanID: installment.CaseID,
-		InstallmentNumber: installment.InstallmentNumber,
+		Sequence:          installment.InstallmentNumber,
 		DueDate:           pgtype.Date{Time: installment.DueDate, Valid: true},
 		Amount:            numericFromValue(installment.Amount),
 		ExtraAmount:       numericFromValue(installment.ExtraAmount),
@@ -209,7 +209,7 @@ func (r *PicuinhaRepository) CreateInstallment(ctx context.Context, installment 
 }
 
 func (r *PicuinhaRepository) UpdateInstallment(ctx context.Context, installment *picuinha.CaseInstallment) (*picuinha.CaseInstallment, error) {
-	row, err := r.q.UpdatePicuinhaCaseInstallment(ctx, sqlc.UpdatePicuinhaCaseInstallmentParams{
+	row, err := r.q.UpdatePicuinhaCaseInstallment(ctx, ledgerSqlc.UpdatePicuinhaCaseInstallmentParams{
 		InstallmentPlanItemID: installment.ID,
 		Amount:                numericFromValue(installment.Amount),
 		ExtraAmount:           numericFromValue(installment.ExtraAmount),
@@ -248,17 +248,20 @@ func (r *PicuinhaRepository) ListInstallmentsByCase(ctx context.Context, caseID 
 	return installments, nil
 }
 
-func mapCaseRow(row sqlc.InstallmentPlan) *picuinha.Case {
+func mapCaseRow(row ledgerSqlc.InstallmentPlan) *picuinha.Case {
 	personID := int32(0)
-	if row.PersonID.Valid {
-		personID = row.PersonID.Int32
+	if row.PartyID.Valid {
+		personID = row.PartyID.Int32
 	}
 	var planID *int32
 	if row.PlanType == picuinha.CaseTypeCardInstall {
 		id := row.InstallmentPlanID
 		planID = &id
 	}
-	installmentCount := row.InstallmentCount
+	installmentCount := int32(1)
+	if row.InstallmentCount.Valid {
+		installmentCount = row.InstallmentCount.Int32
+	}
 	installmentCountPtr := &installmentCount
 	return &picuinha.Case{
 		ID:                       row.InstallmentPlanID,
@@ -279,17 +282,20 @@ func mapCaseRow(row sqlc.InstallmentPlan) *picuinha.Case {
 	}
 }
 
-func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSummary {
+func mapCaseSummaryRow(row ledgerSqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSummary {
 	var planID *int32
 	if row.PlanType == picuinha.CaseTypeCardInstall {
 		id := row.InstallmentPlanID
 		planID = &id
 	}
 	personID := int32(0)
-	if row.PersonID.Valid {
-		personID = row.PersonID.Int32
+	if row.PartyID.Valid {
+		personID = row.PartyID.Int32
 	}
-	installmentCount := row.InstallmentCount
+	installmentCount := int32(1)
+	if row.InstallmentCount.Valid {
+		installmentCount = row.InstallmentCount.Int32
+	}
 	caseData := picuinha.Case{
 		ID:                       row.InstallmentPlanID,
 		PersonID:                 personID,
@@ -325,7 +331,7 @@ func mapCaseSummaryRow(row sqlc.ListPicuinhaCasesByPersonRow) picuinha.CaseSumma
 	}
 }
 
-func mapCaseInstallmentRow(row sqlc.InstallmentPlanItem) *picuinha.CaseInstallment {
+func mapCaseInstallmentRow(row ledgerSqlc.InstallmentPlanItem) *picuinha.CaseInstallment {
 	var paidAt *time.Time
 	if row.PaidAt.Valid {
 		paidAt = &row.PaidAt.Time
@@ -333,7 +339,7 @@ func mapCaseInstallmentRow(row sqlc.InstallmentPlanItem) *picuinha.CaseInstallme
 	return &picuinha.CaseInstallment{
 		ID:                row.InstallmentPlanItemID,
 		CaseID:            row.InstallmentPlanID,
-		InstallmentNumber: row.InstallmentNumber,
+		InstallmentNumber: row.Sequence,
 		DueDate:           row.DueDate.Time,
 		Amount:            numericToValue(row.Amount),
 		ExtraAmount:       numericToValue(row.ExtraAmount),

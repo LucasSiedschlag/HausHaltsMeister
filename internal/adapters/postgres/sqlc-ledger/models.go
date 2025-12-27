@@ -62,6 +62,8 @@ type InstallmentPlan struct {
 	IsActive                 bool
 	CreatedAt                pgtype.Timestamptz
 	UpdatedAt                pgtype.Timestamptz
+	InterestRateUnit         pgtype.Text
+	StartsOnCurrentInvoice   bool
 }
 
 type InstallmentPlanItem struct {
@@ -74,6 +76,9 @@ type InstallmentPlanItem struct {
 	TransactionID         pgtype.Int4
 	CreatedAt             pgtype.Timestamptz
 	UpdatedAt             pgtype.Timestamptz
+	ExtraAmount           pgtype.Numeric
+	IsPaid                bool
+	PaidAt                pgtype.Timestamptz
 }
 
 type Party struct {

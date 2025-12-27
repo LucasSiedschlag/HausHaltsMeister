@@ -61,6 +61,7 @@ func TestUC21_PicuinhaCases(t *testing.T) {
 	var installments []map[string]interface{}
 	require.NoError(t, json.Unmarshal(instRec.Body.Bytes(), &installments))
 	require.Len(t, installments, 1)
+	require.Equal(t, 1.0, installments[0]["installment_number"])
 
 	installmentID := toID(installments[0]["id"])
 	updatePayload := map[string]interface{}{
