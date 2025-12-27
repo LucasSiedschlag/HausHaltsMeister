@@ -1,20 +1,5 @@
 basePath: /
 definitions:
-  dto.AddEntryRequest:
-    properties:
-      amount:
-        type: number
-      auto_create_flow:
-        type: boolean
-      cash_flow_id:
-        description: Optional
-        type: integer
-      kind:
-        description: PLUS or MINUS
-        type: string
-      person_id:
-        type: integer
-    type: object
   dto.BudgetItemResponse:
     properties:
       actual_amount:
@@ -58,6 +43,66 @@ definitions:
         items:
           $ref: '#/definitions/dto.BulkBudgetItemRequest'
         type: array
+    type: object
+  dto.CaseInstallmentResponse:
+    properties:
+      amount:
+        type: number
+      case_id:
+        type: integer
+      due_date:
+        type: string
+      extra_amount:
+        type: number
+      id:
+        type: integer
+      installment_number:
+        type: integer
+      is_paid:
+        type: boolean
+      paid_at:
+        type: string
+    type: object
+  dto.CaseResponse:
+    properties:
+      amount_paid:
+        type: number
+      amount_remaining:
+        type: number
+      case_type:
+        type: string
+      category_id:
+        type: integer
+      id:
+        type: integer
+      installment_amount:
+        type: number
+      installment_count:
+        type: integer
+      installment_plan_id:
+        type: integer
+      installments_paid:
+        type: integer
+      installments_total:
+        type: integer
+      interest_rate:
+        type: number
+      interest_rate_unit:
+        type: string
+      payment_method_id:
+        type: integer
+      person_id:
+        type: integer
+      recurrence_interval_months:
+        type: integer
+      start_date:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      total_amount:
+        type: number
     type: object
   dto.CashFlowResponse:
     properties:
@@ -107,6 +152,35 @@ definitions:
       to_month:
         type: string
     type: object
+  dto.CreateCaseRequest:
+    properties:
+      case_type:
+        type: string
+      category_id:
+        type: integer
+      installment_amount:
+        type: number
+      installment_count:
+        type: integer
+      installment_plan_id:
+        type: integer
+      interest_rate:
+        type: number
+      interest_rate_unit:
+        type: string
+      payment_method_id:
+        type: integer
+      person_id:
+        type: integer
+      recurrence_interval_months:
+        type: integer
+      start_date:
+        type: string
+      title:
+        type: string
+      total_amount:
+        type: number
+    type: object
   dto.CreateCashFlowRequest:
     properties:
       amount:
@@ -135,12 +209,16 @@ definitions:
     type: object
   dto.CreateInstallmentRequest:
     properties:
+      amount_mode:
+        type: string
       category_id:
         type: integer
       count:
         type: integer
       description:
         type: string
+      installment_amount:
+        type: number
       payment_method_id:
         type: integer
       purchase_date:
@@ -149,12 +227,55 @@ definitions:
       total_amount:
         type: number
     type: object
+  dto.CreateLedgerAccountRequest:
+    properties:
+      currency:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.CreateLedgerPostingRequest:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category_id:
+        type: integer
+      memo:
+        type: string
+      party_id:
+        type: integer
+      side:
+        type: string
+    type: object
+  dto.CreateLedgerTransactionRequest:
+    properties:
+      description:
+        type: string
+      notes:
+        type: string
+      occurred_at:
+        type: string
+      postings:
+        items:
+          $ref: '#/definitions/dto.CreateLedgerPostingRequest'
+        type: array
+      reference:
+        type: string
+    type: object
   dto.CreatePaymentMethodRequest:
     properties:
       bank_name:
         type: string
       closing_day:
         type: integer
+      credit_limit:
+        type: number
       due_day:
         type: integer
       kind:
@@ -216,6 +337,55 @@ definitions:
         type: integer
       total:
         type: number
+      total_remaining:
+        type: number
+    type: object
+  dto.LedgerAccountResponse:
+    properties:
+      currency:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.LedgerPostingResponse:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category_id:
+        type: integer
+      id:
+        type: integer
+      memo:
+        type: string
+      party_id:
+        type: integer
+      side:
+        type: string
+    type: object
+  dto.LedgerTransactionResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      occurred_at:
+        type: string
+      postings:
+        items:
+          $ref: '#/definitions/dto.LedgerPostingResponse'
+        type: array
+      reference:
+        type: string
     type: object
   dto.MonthlySummaryResponse:
     properties:
@@ -232,6 +402,8 @@ definitions:
         type: string
       closing_day:
         type: integer
+      credit_limit:
+        type: number
       due_day:
         type: integer
       id:
@@ -253,21 +425,6 @@ definitions:
         type: string
       notes:
         type: string
-    type: object
-  dto.PicuinhaEntryResponse:
-    properties:
-      amount:
-        type: number
-      cash_flow_id:
-        type: integer
-      created_at:
-        type: string
-      id:
-        type: integer
-      kind:
-        type: string
-      person_id:
-        type: integer
     type: object
   dto.SetBudgetBatchRequest:
     properties:
@@ -304,6 +461,13 @@ definitions:
       target_percent:
         type: number
     type: object
+  dto.UpdateCaseInstallmentRequest:
+    properties:
+      extra_amount:
+        type: number
+      is_paid:
+        type: boolean
+    type: object
   dto.UpdateCategoryRequest:
     properties:
       direction:
@@ -316,17 +480,22 @@ definitions:
       name:
         type: string
     type: object
-  dto.UpdateEntryRequest:
+  dto.UpdatePaymentMethodRequest:
     properties:
-      amount:
+      bank_name:
+        type: string
+      closing_day:
+        type: integer
+      credit_limit:
         type: number
-      auto_create_flow:
+      due_day:
+        type: integer
+      is_active:
         type: boolean
       kind:
-        description: PLUS or MINUS
         type: string
-      person_id:
-        type: integer
+      name:
+        type: string
     type: object
   dto.UpdatePersonRequest:
     properties:
@@ -834,6 +1003,118 @@ paths:
       summary: Criar Compra Parcelada
       tags:
       - Cards
+  /ledger/accounts:
+    get:
+      consumes:
+      - application/json
+      description: Returns all ledger accounts.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.LedgerAccountResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Contas
+      tags:
+      - Ledger
+    post:
+      consumes:
+      - application/json
+      description: Creates a new ledger account.
+      parameters:
+      - description: Account Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateLedgerAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.LedgerAccountResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Conta
+      tags:
+      - Ledger
+  /ledger/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Returns ledger transactions for a reference month.
+      parameters:
+      - description: Reference Month (YYYY-MM-DD)
+        example: "2024-03-01"
+        format: date
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.LedgerTransactionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Transacoes por Mes
+      tags:
+      - Ledger
+    post:
+      consumes:
+      - application/json
+      description: Creates a new ledger transaction with postings.
+      parameters:
+      - description: Transaction Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateLedgerTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.LedgerTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Transacao
+      tags:
+      - Ledger
   /payment-methods:
     get:
       consumes:
@@ -884,6 +1165,71 @@ paths:
       summary: Criar Meio de Pagamento
       tags:
       - Cards
+  /payment-methods/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deactivates a payment method by ID.
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Excluir Meio de Pagamento
+      tags:
+      - Cards
+    put:
+      consumes:
+      - application/json
+      description: Updates a payment method by ID.
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payment Method Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdatePaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentMethodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Meio de Pagamento
+      tags:
+      - Cards
   /payment-methods/{id}/invoice:
     get:
       consumes:
@@ -921,15 +1267,16 @@ paths:
       summary: Visualizar Fatura
       tags:
       - Cards
-  /picuinhas/entries:
+  /picuinhas/cases:
     get:
       consumes:
       - application/json
-      description: Returns a list of picuinha entries.
+      description: Returns a list of cases for a person.
       parameters:
       - description: Person ID
         in: query
         name: person_id
+        required: true
         type: integer
       produces:
       - application/json
@@ -938,7 +1285,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dto.PicuinhaEntryResponse'
+              $ref: '#/definitions/dto.CaseResponse'
             type: array
         "400":
           description: Bad Request
@@ -948,41 +1295,45 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      summary: Listar Lançamentos
+      summary: Listar Picuinhas
       tags:
       - Picuinhas
     post:
       consumes:
       - application/json
-      description: Registers a new financial entry for a specific person.
+      description: Creates a new picuinha case (one-off, installment, recurring).
       parameters:
-      - description: Entry Payload
+      - description: Case Payload
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/dto.AddEntryRequest'
+          $ref: '#/definitions/dto.CreateCaseRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.PicuinhaEntryResponse'
+            $ref: '#/definitions/dto.CaseResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      summary: Registrar Entrada/Empréstimo
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Criar Picuinha
       tags:
       - Picuinhas
-  /picuinhas/entries/{id}:
+  /picuinhas/cases/{id}:
     delete:
       consumes:
       - application/json
-      description: Deletes a picuinha entry.
+      description: Deletes a picuinha case.
       parameters:
-      - description: Entry ID
+      - description: Case ID
         in: path
         name: id
         required: true
@@ -996,40 +1347,36 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      summary: Excluir Lançamento
+      summary: Excluir Picuinha
       tags:
       - Picuinhas
     put:
       consumes:
       - application/json
-      description: Updates a picuinha entry.
+      description: Updates a picuinha case.
       parameters:
-      - description: Entry ID
+      - description: Case ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Entry Payload
+      - description: Case Payload
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdateEntryRequest'
+          $ref: '#/definitions/dto.CreateCaseRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.PicuinhaEntryResponse'
+            $ref: '#/definitions/dto.CaseResponse'
         "400":
           description: Bad Request
           schema:
@@ -1038,7 +1385,65 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      summary: Atualizar Lançamento
+      summary: Atualizar Picuinha
+      tags:
+      - Picuinhas
+  /picuinhas/cases/{id}/installments:
+    get:
+      consumes:
+      - application/json
+      description: Returns installments for a picuinha case.
+      parameters:
+      - description: Case ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CaseInstallmentResponse'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Listar Parcelas de Picuinha
+      tags:
+      - Picuinhas
+  /picuinhas/installments/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates a picuinha installment (paid status/extra).
+      parameters:
+      - description: Installment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Installment Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCaseInstallmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CaseInstallmentResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Parcela de Picuinha
       tags:
       - Picuinhas
   /picuinhas/persons:
@@ -1095,7 +1500,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Deletes a person (only if no entries exist).
+      description: Deletes a person (only if no cases exist).
       parameters:
       - description: Person ID
         in: path

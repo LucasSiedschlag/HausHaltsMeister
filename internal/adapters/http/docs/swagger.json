@@ -741,6 +741,175 @@
                 }
             }
         },
+        "/ledger/accounts": {
+            "get": {
+                "description": "Returns all ledger accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ledger"
+                ],
+                "summary": "Listar Contas",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.LedgerAccountResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new ledger account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ledger"
+                ],
+                "summary": "Criar Conta",
+                "parameters": [
+                    {
+                        "description": "Account Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateLedgerAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LedgerAccountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ledger/transactions": {
+            "get": {
+                "description": "Returns ledger transactions for a reference month.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ledger"
+                ],
+                "summary": "Listar Transacoes por Mes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-03-01",
+                        "description": "Reference Month (YYYY-MM-DD)",
+                        "name": "month",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.LedgerTransactionResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new ledger transaction with postings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ledger"
+                ],
+                "summary": "Criar Transacao",
+                "parameters": [
+                    {
+                        "description": "Transaction Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateLedgerTransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LedgerTransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/payment-methods": {
             "get": {
                 "description": "Returns a list of payment methods.",
@@ -817,6 +986,104 @@
                 }
             }
         },
+        "/payment-methods/{id}": {
+            "put": {
+                "description": "Updates a payment method by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Atualizar Meio de Pagamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment Method Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdatePaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentMethodResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deactivates a payment method by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Excluir Meio de Pagamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/payment-methods/{id}/invoice": {
             "get": {
                 "description": "Returns the invoice for a credit car payment method in a specific month.",
@@ -870,9 +1137,9 @@
                 }
             }
         },
-        "/picuinhas/entries": {
+        "/picuinhas/cases": {
             "get": {
-                "description": "Returns a list of picuinha entries.",
+                "description": "Returns a list of cases for a person.",
                 "consumes": [
                     "application/json"
                 ],
@@ -882,13 +1149,14 @@
                 "tags": [
                     "Picuinhas"
                 ],
-                "summary": "Listar Lançamentos",
+                "summary": "Listar Picuinhas",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "Person ID",
                         "name": "person_id",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -897,7 +1165,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.PicuinhaEntryResponse"
+                                "$ref": "#/definitions/dto.CaseResponse"
                             }
                         }
                     },
@@ -916,7 +1184,7 @@
                 }
             },
             "post": {
-                "description": "Registers a new financial entry for a specific person.",
+                "description": "Creates a new picuinha case (one-off, installment, recurring).",
                 "consumes": [
                     "application/json"
                 ],
@@ -926,15 +1194,15 @@
                 "tags": [
                     "Picuinhas"
                 ],
-                "summary": "Registrar Entrada/Empréstimo",
+                "summary": "Criar Picuinha",
                 "parameters": [
                     {
-                        "description": "Entry Payload",
+                        "description": "Case Payload",
                         "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.AddEntryRequest"
+                            "$ref": "#/definitions/dto.CreateCaseRequest"
                         }
                     }
                 ],
@@ -942,7 +1210,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.PicuinhaEntryResponse"
+                            "$ref": "#/definitions/dto.CaseResponse"
                         }
                     },
                     "400": {
@@ -950,13 +1218,19 @@
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
                     }
                 }
             }
         },
-        "/picuinhas/entries/{id}": {
+        "/picuinhas/cases/{id}": {
             "put": {
-                "description": "Updates a picuinha entry.",
+                "description": "Updates a picuinha case.",
                 "consumes": [
                     "application/json"
                 ],
@@ -966,22 +1240,22 @@
                 "tags": [
                     "Picuinhas"
                 ],
-                "summary": "Atualizar Lançamento",
+                "summary": "Atualizar Picuinha",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Entry ID",
+                        "description": "Case ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Entry Payload",
+                        "description": "Case Payload",
                         "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.UpdateEntryRequest"
+                            "$ref": "#/definitions/dto.CreateCaseRequest"
                         }
                     }
                 ],
@@ -989,7 +1263,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.PicuinhaEntryResponse"
+                            "$ref": "#/definitions/dto.CaseResponse"
                         }
                     },
                     "400": {
@@ -1007,7 +1281,7 @@
                 }
             },
             "delete": {
-                "description": "Deletes a picuinha entry.",
+                "description": "Deletes a picuinha case.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1017,11 +1291,11 @@
                 "tags": [
                     "Picuinhas"
                 ],
-                "summary": "Excluir Lançamento",
+                "summary": "Excluir Picuinha",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Entry ID",
+                        "description": "Case ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1037,10 +1311,92 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/picuinhas/cases/{id}/installments": {
+            "get": {
+                "description": "Returns installments for a picuinha case.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Listar Parcelas de Picuinha",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Case ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.CaseInstallmentResponse"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/picuinhas/installments/{id}": {
+            "put": {
+                "description": "Updates a picuinha installment (paid status/extra).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picuinhas"
+                ],
+                "summary": "Atualizar Parcela de Picuinha",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Installment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Installment Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateCaseInstallmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CaseInstallmentResponse"
                         }
                     },
                     "404": {
@@ -1181,7 +1537,7 @@
                 }
             },
             "delete": {
-                "description": "Deletes a person (only if no entries exist).",
+                "description": "Deletes a person (only if no cases exist).",
                 "consumes": [
                     "application/json"
                 ],
@@ -1234,28 +1590,6 @@
         }
     },
     "definitions": {
-        "dto.AddEntryRequest": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "auto_create_flow": {
-                    "type": "boolean"
-                },
-                "cash_flow_id": {
-                    "description": "Optional",
-                    "type": "integer"
-                },
-                "kind": {
-                    "description": "PLUS or MINUS",
-                    "type": "string"
-                },
-                "person_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "dto.BudgetItemResponse": {
             "type": "object",
             "properties": {
@@ -1321,6 +1655,97 @@
                     "items": {
                         "$ref": "#/definitions/dto.BulkBudgetItemRequest"
                     }
+                }
+            }
+        },
+        "dto.CaseInstallmentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "case_id": {
+                    "type": "integer"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "extra_amount": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "installment_number": {
+                    "type": "integer"
+                },
+                "is_paid": {
+                    "type": "boolean"
+                },
+                "paid_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CaseResponse": {
+            "type": "object",
+            "properties": {
+                "amount_paid": {
+                    "type": "number"
+                },
+                "amount_remaining": {
+                    "type": "number"
+                },
+                "case_type": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "installment_amount": {
+                    "type": "number"
+                },
+                "installment_count": {
+                    "type": "integer"
+                },
+                "installment_plan_id": {
+                    "type": "integer"
+                },
+                "installments_paid": {
+                    "type": "integer"
+                },
+                "installments_total": {
+                    "type": "integer"
+                },
+                "interest_rate": {
+                    "type": "number"
+                },
+                "interest_rate_unit": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                },
+                "person_id": {
+                    "type": "integer"
+                },
+                "recurrence_interval_months": {
+                    "type": "integer"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
                 }
             }
         },
@@ -1398,6 +1823,50 @@
                 }
             }
         },
+        "dto.CreateCaseRequest": {
+            "type": "object",
+            "properties": {
+                "case_type": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "installment_amount": {
+                    "type": "number"
+                },
+                "installment_count": {
+                    "type": "integer"
+                },
+                "installment_plan_id": {
+                    "type": "integer"
+                },
+                "interest_rate": {
+                    "type": "number"
+                },
+                "interest_rate_unit": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                },
+                "person_id": {
+                    "type": "integer"
+                },
+                "recurrence_interval_months": {
+                    "type": "integer"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.CreateCashFlowRequest": {
             "type": "object",
             "properties": {
@@ -1440,6 +1909,9 @@
         "dto.CreateInstallmentRequest": {
             "type": "object",
             "properties": {
+                "amount_mode": {
+                    "type": "string"
+                },
                 "category_id": {
                     "type": "integer"
                 },
@@ -1448,6 +1920,9 @@
                 },
                 "description": {
                     "type": "string"
+                },
+                "installment_amount": {
+                    "type": "number"
                 },
                 "payment_method_id": {
                     "type": "integer"
@@ -1461,6 +1936,69 @@
                 }
             }
         },
+        "dto.CreateLedgerAccountRequest": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateLedgerPostingRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "memo": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "side": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateLedgerTransactionRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "postings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CreateLedgerPostingRequest"
+                    }
+                },
+                "reference": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.CreatePaymentMethodRequest": {
             "type": "object",
             "properties": {
@@ -1469,6 +2007,9 @@
                 },
                 "closing_day": {
                     "type": "integer"
+                },
+                "credit_limit": {
+                    "type": "number"
                 },
                 "due_day": {
                     "type": "integer"
@@ -1563,6 +2104,81 @@
                 },
                 "total": {
                     "type": "number"
+                },
+                "total_remaining": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.LedgerAccountResponse": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LedgerPostingResponse": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "memo": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "side": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LedgerTransactionResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "postings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LedgerPostingResponse"
+                    }
+                },
+                "reference": {
+                    "type": "string"
                 }
             }
         },
@@ -1588,6 +2204,9 @@
                 },
                 "closing_day": {
                     "type": "integer"
+                },
+                "credit_limit": {
+                    "type": "number"
                 },
                 "due_day": {
                     "type": "integer"
@@ -1620,29 +2239,6 @@
                 },
                 "notes": {
                     "type": "string"
-                }
-            }
-        },
-        "dto.PicuinhaEntryResponse": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "cash_flow_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "kind": {
-                    "type": "string"
-                },
-                "person_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -1700,6 +2296,17 @@
                 }
             }
         },
+        "dto.UpdateCaseInstallmentRequest": {
+            "type": "object",
+            "properties": {
+                "extra_amount": {
+                    "type": "number"
+                },
+                "is_paid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "dto.UpdateCategoryRequest": {
             "type": "object",
             "properties": {
@@ -1718,21 +2325,29 @@
                 }
             }
         },
-        "dto.UpdateEntryRequest": {
+        "dto.UpdatePaymentMethodRequest": {
             "type": "object",
             "properties": {
-                "amount": {
+                "bank_name": {
+                    "type": "string"
+                },
+                "closing_day": {
+                    "type": "integer"
+                },
+                "credit_limit": {
                     "type": "number"
                 },
-                "auto_create_flow": {
+                "due_day": {
+                    "type": "integer"
+                },
+                "is_active": {
                     "type": "boolean"
                 },
                 "kind": {
-                    "description": "PLUS or MINUS",
                     "type": "string"
                 },
-                "person_id": {
-                    "type": "integer"
+                "name": {
+                    "type": "string"
                 }
             }
         },

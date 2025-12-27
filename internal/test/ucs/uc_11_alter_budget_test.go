@@ -15,8 +15,8 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
@@ -27,11 +27,12 @@ func TestUC11_AlterBudget(t *testing.T) {
 
 	// Repos
 	catRepo := postgres.NewCategoryRepository(db.Pool)
-	cfRepo := postgres.NewCashFlowRepository(db.Pool)
 	budRepo := postgres.NewBudgetRepository(db.Pool)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
 
 	// Services
-	budService := budget.NewService(budRepo, catRepo, cfRepo)
+	ledgerService := ledger.NewService(ledgerRepo)
+	budService := budget.NewService(budRepo, catRepo, ledgerRepo)
 
 	// Handlers
 	budHandler := http.NewBudgetHandler(budService)
@@ -46,8 +47,24 @@ func TestUC11_AlterBudget(t *testing.T) {
 	otherCat, _ := catRepo.Create(ctx, &category.Category{Name: "Other", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
 	incomeCat, _ := catRepo.Create(ctx, &category.Category{Name: "Ganho", Direction: "IN", IsActive: true, IsBudgetRelevant: true})
 
-	cfService := cashflow.NewService(cfRepo, catRepo)
-	_, err := cfService.CreateCashFlow(ctx, time.Date(2024, 4, 10, 0, 0, 0, 0, time.UTC), incomeCat.ID, "IN", "Salario", 2000.0, false)
+	bankAccount, err := ledgerService.CreateAccount(ctx, "Banco", ledger.AccountTypeAsset, "BRL", true)
+	require.NoError(t, err)
+	incomeAccount, err := ledgerService.CreateAccount(ctx, "Salario", ledger.AccountTypeIncome, "BRL", true)
+	require.NoError(t, err)
+
+	_, err = ledgerService.CreateTransaction(ctx, time.Date(2024, 4, 10, 0, 0, 0, 0, time.UTC), "Salario", "", "", []*ledger.Posting{
+		{
+			AccountID: bankAccount.ID,
+			Side:      ledger.PostingSideDebit,
+			Amount:    2000.0,
+		},
+		{
+			AccountID:  incomeAccount.ID,
+			CategoryID: &incomeCat.ID,
+			Side:       ledger.PostingSideCredit,
+			Amount:     2000.0,
+		},
+	})
 	require.NoError(t, err)
 
 	monthParam := "2024-04-01"

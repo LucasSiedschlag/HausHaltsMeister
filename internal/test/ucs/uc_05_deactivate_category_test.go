@@ -44,13 +44,13 @@ func TestUC05_DeactivateCategory(t *testing.T) {
 	require.NoError(t, err)
 	catID := int(createdCat["id"].(float64))
 
-	// Step 2: Deactivate it
-	deactivatePath := fmt.Sprintf("/categories/%d/deactivate", catID)
+	// Step 2: Deactivate it for a specific month
+	deactivatePath := fmt.Sprintf("/categories/%d/deactivate?effective_month=2026-01-01", catID)
 	deactivateRec := client.Request(t, "PATCH", deactivatePath, nil)
 	require.Equal(t, std_http.StatusOK, deactivateRec.Code)
 
-	// Step 3: Verify it is NOT in active list
-	listActiveRec := client.Request(t, "GET", "/categories?active=true", nil)
+	// Step 3: Verify it is NOT in active list for the effective month
+	listActiveRec := client.Request(t, "GET", "/categories?active=true&month=2026-01-01", nil)
 	require.Equal(t, std_http.StatusOK, listActiveRec.Code)
 
 	var activeList []map[string]interface{}

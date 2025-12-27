@@ -6,7 +6,7 @@ DB_PORT ?= 5434
 
 DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: all build run migrate migrate-status sqlc test clean
+.PHONY: all build run migrate migrate-status sqlc sqlc-ledger test clean
 
 all: build
 
@@ -38,6 +38,9 @@ swagger:
 
 sqlc:
 	sqlc generate
+
+sqlc-ledger:
+	sqlc generate -f sqlc-ledger.yaml
 
 test:
 	go test ./...

@@ -16,6 +16,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/picuinha"
 )
@@ -58,14 +59,16 @@ func main() {
 	picRepo := postgres.NewPicuinhaRepository(pool)
 	payRepo := postgres.NewPaymentRepository(pool)
 	instRepo := postgres.NewInstallmentRepository(pool)
+	ledgerRepo := postgres.NewLedgerRepository(pool)
 
 	// 4. Setup services
 	catService := category.NewService(catRepo)
 	cfService := cashflow.NewService(cfRepo, catRepo)
-	bgService := budget.NewService(bgRepo, catRepo, cfRepo)
+	bgService := budget.NewService(bgRepo, catRepo, ledgerRepo)
 	picService := picuinha.NewService(picRepo)
 	payService := payment.NewService(payRepo)
 	instService := installment.NewService(instRepo, cfService, payRepo)
+	ledgerService := ledger.NewService(ledgerRepo)
 
 	// 5. Setup handlers
 	catHandler := httpAdapter.NewCategoryHandler(catService)
@@ -74,6 +77,7 @@ func main() {
 	picHandler := httpAdapter.NewPicuinhaHandler(picService)
 	payHandler := httpAdapter.NewPaymentHandler(payService)
 	instHandler := httpAdapter.NewInstallmentHandler(instService)
+	ledgerHandler := httpAdapter.NewLedgerHandler(ledgerService)
 
 	// 6. Setup Echo
 	e := echo.New()
@@ -87,6 +91,7 @@ func main() {
 	httpAdapter.RegisterPicuinhaRoutes(e, picHandler)
 	httpAdapter.RegisterPaymentRoutes(e, payHandler)
 	httpAdapter.RegisterInstallmentRoutes(e, instHandler)
+	httpAdapter.RegisterLedgerRoutes(e, ledgerHandler)
 	httpAdapter.RegisterSwaggerRoutes(e)
 
 	// 8. Start server

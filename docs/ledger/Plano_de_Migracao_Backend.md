@@ -41,13 +41,13 @@ Validacao:
 
 ---
 
-## 3) Categorias (ledger_categories)
+## 3) Categorias (categories)
 
 Escopo:
-- Substituir fluxo antigo por ledger_categories.
+- Substituir fluxo antigo por novo categories.
 
 Tarefas:
-1. Atualizar repos e services para ler/escrever em `ledger_categories`.
+1. Atualizar repos e services para ler/escrever em `categories`.
 2. Ajustar handlers e DTOs existentes (Categories).
 3. Atualizar queries sqlc em `db/queries/categories.sql`.
 

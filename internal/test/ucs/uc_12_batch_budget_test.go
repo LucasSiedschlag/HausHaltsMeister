@@ -24,11 +24,11 @@ func TestUC12_BatchBudget(t *testing.T) {
 
 	// Repos
 	catRepo := postgres.NewCategoryRepository(db.Pool)
-	cfRepo := postgres.NewCashFlowRepository(db.Pool)
 	budRepo := postgres.NewBudgetRepository(db.Pool)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
 
 	// Services
-	budService := budget.NewService(budRepo, catRepo, cfRepo)
+	budService := budget.NewService(budRepo, catRepo, ledgerRepo)
 
 	// Handlers
 	budHandler := http.NewBudgetHandler(budService)

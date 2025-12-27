@@ -15,8 +15,8 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
@@ -27,12 +27,12 @@ func TestUC10_BudgetManagement(t *testing.T) {
 
 	// Repos
 	catRepo := postgres.NewCategoryRepository(db.Pool)
-	cfRepo := postgres.NewCashFlowRepository(db.Pool)
 	budRepo := postgres.NewBudgetRepository(db.Pool)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
 
 	// Services
-	cfService := cashflow.NewService(cfRepo, catRepo)
-	budService := budget.NewService(budRepo, catRepo, cfRepo)
+	ledgerService := ledger.NewService(ledgerRepo)
+	budService := budget.NewService(budRepo, catRepo, ledgerRepo)
 
 	// Handlers
 	budHandler := http.NewBudgetHandler(budService) // Check signature? It expects budget.Service
@@ -47,11 +47,43 @@ func TestUC10_BudgetManagement(t *testing.T) {
 	foodCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
 	incomeCat, _ := catRepo.Create(ctx, &category.Category{Name: "Ganho", Direction: "IN", IsActive: true, IsBudgetRelevant: true})
 
-	// 1. Create CashFlow for Mar 2024 to verify "Used" amount logic
+	// 1. Create Ledger Transactions for Mar 2024 to verify "Used" amount logic
 	mar1 := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
-	_, err := cfService.CreateCashFlow(ctx, mar1, foodCat.ID, "OUT", "Groceries", 150.0, false)
+	bankAccount, err := ledgerService.CreateAccount(ctx, "Banco", ledger.AccountTypeAsset, "BRL", true)
 	require.NoError(t, err)
-	_, err = cfService.CreateCashFlow(ctx, mar1, incomeCat.ID, "IN", "Salario", 1000.0, false)
+	incomeAccount, err := ledgerService.CreateAccount(ctx, "Salario", ledger.AccountTypeIncome, "BRL", true)
+	require.NoError(t, err)
+	expenseAccount, err := ledgerService.CreateAccount(ctx, "Despesa", ledger.AccountTypeExpense, "BRL", true)
+	require.NoError(t, err)
+
+	_, err = ledgerService.CreateTransaction(ctx, mar1, "Groceries", "", "", []*ledger.Posting{
+		{
+			AccountID:  expenseAccount.ID,
+			CategoryID: &foodCat.ID,
+			Side:       ledger.PostingSideDebit,
+			Amount:     150.0,
+		},
+		{
+			AccountID: bankAccount.ID,
+			Side:      ledger.PostingSideCredit,
+			Amount:    150.0,
+		},
+	})
+	require.NoError(t, err)
+
+	_, err = ledgerService.CreateTransaction(ctx, mar1, "Salario", "", "", []*ledger.Posting{
+		{
+			AccountID: bankAccount.ID,
+			Side:      ledger.PostingSideDebit,
+			Amount:    1000.0,
+		},
+		{
+			AccountID:  incomeAccount.ID,
+			CategoryID: &incomeCat.ID,
+			Side:       ledger.PostingSideCredit,
+			Amount:     1000.0,
+		},
+	})
 	require.NoError(t, err)
 
 	monthParam := "2024-03-01"

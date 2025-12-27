@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	ledgerSqlc "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc-ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,12 +14,12 @@ import (
 )
 
 type BudgetRepository struct {
-	q *sqlc.Queries
+	q *ledgerSqlc.Queries
 }
 
 func NewBudgetRepository(db *pgxpool.Pool) *BudgetRepository {
 	return &BudgetRepository{
-		q: sqlc.New(db),
+		q: ledgerSqlc.New(db),
 	}
 }
 
@@ -69,7 +69,7 @@ func (r *BudgetRepository) CreatePeriod(ctx context.Context, period *budget.Budg
 	// Let's assume pgtype.Text for pgx/v5
 	mode := pgtype.Text{String: period.AnalysisMode, Valid: period.AnalysisMode != ""}
 
-	params := sqlc.CreateBudgetPeriodParams{
+	params := ledgerSqlc.CreateBudgetPeriodParams{
 		Month:        pgDate,
 		AnalysisMode: mode,
 		IsClosed:     period.IsClosed,
@@ -102,7 +102,7 @@ func (r *BudgetRepository) UpsertItem(ctx context.Context, item *budget.BudgetIt
 	// Notes handling (nullable text)
 	notes := pgtype.Text{String: item.Notes, Valid: item.Notes != ""}
 
-	params := sqlc.UpsertBudgetItemParams{
+	params := ledgerSqlc.UpsertBudgetItemParams{
 		BudgetPeriodID: item.BudgetPeriodID,
 		CategoryID:     item.CategoryID,
 		Mode:           item.Mode,
@@ -188,7 +188,7 @@ func (r *BudgetRepository) UpdateItem(ctx context.Context, item *budget.BudgetIt
 
 	notes := pgtype.Text{String: item.Notes, Valid: item.Notes != ""}
 
-	params := sqlc.UpdateBudgetItemParams{
+	params := ledgerSqlc.UpdateBudgetItemParams{
 		BudgetItemID:  item.ID,
 		Mode:          item.Mode,
 		PlannedAmount: planned,

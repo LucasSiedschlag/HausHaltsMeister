@@ -24,10 +24,10 @@ func TestUC19_UpdateBudgetItem(t *testing.T) {
 	defer db.Pool.Close()
 
 	catRepo := postgres.NewCategoryRepository(db.Pool)
-	cfRepo := postgres.NewCashFlowRepository(db.Pool)
 	budRepo := postgres.NewBudgetRepository(db.Pool)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
 
-	budService := budget.NewService(budRepo, catRepo, cfRepo)
+	budService := budget.NewService(budRepo, catRepo, ledgerRepo)
 	budHandler := http.NewBudgetHandler(budService)
 
 	e := echo.New()

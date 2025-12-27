@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 )
 
 type BudgetService struct {
-	repo    Repository
-	catRepo category.Repository
-	cfRepo  cashflow.Repository
+	repo       Repository
+	catRepo    category.Repository
+	ledgerRepo ledger.Repository
 }
 
-func NewService(repo Repository, catRepo category.Repository, cfRepo cashflow.Repository) *BudgetService {
+func NewService(repo Repository, catRepo category.Repository, ledgerRepo ledger.Repository) *BudgetService {
 	return &BudgetService{
-		repo:    repo,
-		catRepo: catRepo,
-		cfRepo:  cfRepo,
+		repo:       repo,
+		catRepo:    catRepo,
+		ledgerRepo: ledgerRepo,
 	}
 }
 
@@ -115,9 +115,8 @@ func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (
 		}
 	}
 
-	// 2. Get Actuals (CashFlows)
-	// Assuming month is the 1st of the month
-	flows, err := s.cfRepo.ListByMonth(ctx, month)
+	// 2. Get Actuals (Ledger Postings)
+	transactions, err := s.ledgerRepo.ListTransactionsByMonth(ctx, month)
 	if err != nil {
 		return nil, err
 	}
@@ -134,14 +133,30 @@ func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (
 	// 3. Aggregate Actuals by Category and total income for budget-relevant IN categories
 	actuals := make(map[int32]float64)
 	totalIncome := 0.0
-	for _, f := range flows {
-		if cat, ok := categoryMap[f.CategoryID]; ok {
-			if f.Direction == category.DirectionIn && cat.Direction == category.DirectionIn && cat.IsBudgetRelevant {
-				totalIncome += f.Amount
-			}
+
+	for _, tx := range transactions {
+		postings, err := s.ledgerRepo.ListPostingsByTransaction(ctx, tx.ID)
+		if err != nil {
+			return nil, err
 		}
-		if f.Direction == "OUT" {
-			actuals[f.CategoryID] += f.Amount
+
+		for _, posting := range postings {
+			if posting.CategoryID == nil {
+				continue
+			}
+			cat, ok := categoryMap[*posting.CategoryID]
+			if !ok {
+				continue
+			}
+
+			if cat.Direction == category.DirectionIn && cat.IsBudgetRelevant {
+				totalIncome += posting.Amount
+				continue
+			}
+
+			if cat.Direction == category.DirectionOut {
+				actuals[*posting.CategoryID] += posting.Amount
+			}
 		}
 	}
 

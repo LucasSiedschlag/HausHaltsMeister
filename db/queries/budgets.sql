@@ -39,9 +39,9 @@ SELECT
     bi.planned_amount, 
     bi.target_percent, 
     bi.notes,
-    fc.name as category_name
+    c.name as category_name
 FROM budget_items bi
-JOIN flow_categories fc ON fc.category_id = bi.category_id
+JOIN categories c ON c.category_id = bi.category_id
 WHERE bi.budget_period_id = $1;
 
 -- name: GetBudgetItemByID :one
@@ -53,9 +53,9 @@ SELECT
     bi.planned_amount, 
     bi.target_percent, 
     bi.notes,
-    fc.name as category_name
+    c.name as category_name
 FROM budget_items bi
-JOIN flow_categories fc ON fc.category_id = bi.category_id
+JOIN categories c ON c.category_id = bi.category_id
 WHERE bi.budget_item_id = $1;
 
 -- name: UpdateBudgetItem :one
@@ -66,4 +66,4 @@ SET mode = $2,
     notes = $5
 WHERE budget_item_id = $1
 RETURNING budget_item_id, budget_period_id, category_id, mode, planned_amount, target_percent, notes,
-  (SELECT name FROM flow_categories WHERE category_id = budget_items.category_id) AS category_name;
+  (SELECT name FROM categories WHERE category_id = budget_items.category_id) AS category_name;

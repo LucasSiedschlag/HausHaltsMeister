@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
+	ledgerSqlc "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc-ledger"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -13,12 +13,12 @@ import (
 )
 
 type CategoryRepository struct {
-	q *sqlc.Queries
+	q *ledgerSqlc.Queries
 }
 
 func NewCategoryRepository(db *pgxpool.Pool) *CategoryRepository {
 	return &CategoryRepository{
-		q: sqlc.New(db),
+		q: ledgerSqlc.New(db),
 	}
 }
 
@@ -29,12 +29,12 @@ func NewCategoryRepository(db *pgxpool.Pool) *CategoryRepository {
 // Let's stick to `*pgxpool.Pool` or similar if we can, but simpler is to use the generated interface if possible.
 // For now, let's assume we pass something compatible.
 
-func NewCategoryRepositoryWithQuerier(q *sqlc.Queries) *CategoryRepository {
+func NewCategoryRepositoryWithQuerier(q *ledgerSqlc.Queries) *CategoryRepository {
 	return &CategoryRepository{q: q}
 }
 
 func (r *CategoryRepository) Create(ctx context.Context, c *category.Category) (*category.Category, error) {
-	params := sqlc.CreateCategoryParams{
+	params := ledgerSqlc.CreateCategoryParams{
 		Name:             c.Name,
 		Direction:        c.Direction,
 		IsBudgetRelevant: c.IsBudgetRelevant,
@@ -47,11 +47,11 @@ func (r *CategoryRepository) Create(ctx context.Context, c *category.Category) (
 	}
 
 	return &category.Category{
-		ID:               row.CategoryID,
-		Name:             row.Name,
-		Direction:        row.Direction,
-		IsBudgetRelevant: row.IsBudgetRelevant,
-		IsActive:         row.IsActive,
+		ID:                row.CategoryID,
+		Name:              row.Name,
+		Direction:         row.Direction,
+		IsBudgetRelevant:  row.IsBudgetRelevant,
+		IsActive:          row.IsActive,
 		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
@@ -70,11 +70,11 @@ func (r *CategoryRepository) List(ctx context.Context, activeOnly bool) ([]*cate
 	cats := make([]*category.Category, len(rows))
 	for i, row := range rows {
 		cats[i] = &category.Category{
-			ID:               row.CategoryID,
-			Name:             row.Name,
-			Direction:        row.Direction,
-			IsBudgetRelevant: row.IsBudgetRelevant,
-			IsActive:         row.IsActive,
+			ID:                row.CategoryID,
+			Name:              row.Name,
+			Direction:         row.Direction,
+			IsBudgetRelevant:  row.IsBudgetRelevant,
+			IsActive:          row.IsActive,
 			InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 		}
 	}
@@ -83,7 +83,7 @@ func (r *CategoryRepository) List(ctx context.Context, activeOnly bool) ([]*cate
 
 func (r *CategoryRepository) ListByMonth(ctx context.Context, activeOnly bool, month time.Time) ([]*category.Category, error) {
 	pgDate := pgtype.Date{Time: month, Valid: true}
-	rows, err := r.q.ListCategoriesByMonth(ctx, sqlc.ListCategoriesByMonthParams{
+	rows, err := r.q.ListCategoriesByMonth(ctx, ledgerSqlc.ListCategoriesByMonthParams{
 		Column1: activeOnly,
 		Column2: pgDate,
 	})
@@ -94,11 +94,11 @@ func (r *CategoryRepository) ListByMonth(ctx context.Context, activeOnly bool, m
 	cats := make([]*category.Category, len(rows))
 	for i, row := range rows {
 		cats[i] = &category.Category{
-			ID:               row.CategoryID,
-			Name:             row.Name,
-			Direction:        row.Direction,
-			IsBudgetRelevant: row.IsBudgetRelevant,
-			IsActive:         row.IsActive,
+			ID:                row.CategoryID,
+			Name:              row.Name,
+			Direction:         row.Direction,
+			IsBudgetRelevant:  row.IsBudgetRelevant,
+			IsActive:          row.IsActive,
 			InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 		}
 	}
@@ -115,17 +115,17 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*category.C
 	}
 
 	return &category.Category{
-		ID:               row.CategoryID,
-		Name:             row.Name,
-		Direction:        row.Direction,
-		IsBudgetRelevant: row.IsBudgetRelevant,
-		IsActive:         row.IsActive,
+		ID:                row.CategoryID,
+		Name:              row.Name,
+		Direction:         row.Direction,
+		IsBudgetRelevant:  row.IsBudgetRelevant,
+		IsActive:          row.IsActive,
 		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
 
 func (r *CategoryRepository) Update(ctx context.Context, c *category.Category) (*category.Category, error) {
-	params := sqlc.UpdateCategoryParams{
+	params := ledgerSqlc.UpdateCategoryParams{
 		CategoryID:       c.ID,
 		Name:             c.Name,
 		Direction:        c.Direction,
@@ -142,18 +142,18 @@ func (r *CategoryRepository) Update(ctx context.Context, c *category.Category) (
 	}
 
 	return &category.Category{
-		ID:               row.CategoryID,
-		Name:             row.Name,
-		Direction:        row.Direction,
-		IsBudgetRelevant: row.IsBudgetRelevant,
-		IsActive:         row.IsActive,
+		ID:                row.CategoryID,
+		Name:              row.Name,
+		Direction:         row.Direction,
+		IsBudgetRelevant:  row.IsBudgetRelevant,
+		IsActive:          row.IsActive,
 		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
 
 func (r *CategoryRepository) Deactivate(ctx context.Context, id int32, inactiveFromMonth time.Time) (*category.Category, error) {
 	pgDate := pgtype.Date{Time: inactiveFromMonth, Valid: true}
-	row, err := r.q.DeactivateCategory(ctx, sqlc.DeactivateCategoryParams{
+	row, err := r.q.DeactivateCategory(ctx, ledgerSqlc.DeactivateCategoryParams{
 		CategoryID:        id,
 		InactiveFromMonth: pgDate,
 	})
@@ -165,11 +165,11 @@ func (r *CategoryRepository) Deactivate(ctx context.Context, id int32, inactiveF
 	}
 
 	return &category.Category{
-		ID:               row.CategoryID,
-		Name:             row.Name,
-		Direction:        row.Direction,
-		IsBudgetRelevant: row.IsBudgetRelevant,
-		IsActive:         row.IsActive,
+		ID:                row.CategoryID,
+		Name:              row.Name,
+		Direction:         row.Direction,
+		IsBudgetRelevant:  row.IsBudgetRelevant,
+		IsActive:          row.IsActive,
 		InactiveFromMonth: toTimePtr(row.InactiveFromMonth),
 	}, nil
 }
