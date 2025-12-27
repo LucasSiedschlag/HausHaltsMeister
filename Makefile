@@ -1,8 +1,8 @@
-DB_NAME ?= cashflow
+DB_NAME ?= ledger
 DB_USER ?= postgres
 DB_PASS ?= postgres
 DB_HOST ?= localhost
-DB_PORT ?= 5432
+DB_PORT ?= 5434
 
 DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
