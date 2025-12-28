@@ -15,6 +15,9 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
@@ -26,7 +29,13 @@ func TestUC18_Dashboard(t *testing.T) {
 	// Clean Stack
 	catRepo := postgres.NewCategoryRepository(db.Pool)
 	cfRepo := postgres.NewCashFlowRepository(db.Pool)
-	cfService := cashflow.NewService(cfRepo, catRepo)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
+	ledgerService := ledger.NewService(ledgerRepo)
+	payRepo := postgres.NewPaymentRepository(db.Pool)
+	payService := payment.NewService(payRepo)
+	instRepo := postgres.NewInstallmentRepository(db.Pool)
+	instService := installment.NewService(instRepo, catRepo, ledgerService, payRepo)
+	cfService := cashflow.NewService(cfRepo, catRepo, ledgerService, payRepo, instService)
 	cfHandler := http.NewCashFlowHandler(cfService)
 
 	e := echo.New()
@@ -35,16 +44,17 @@ func TestUC18_Dashboard(t *testing.T) {
 
 	// Seed
 	ctx := context.Background()
-	inCat, _ := catRepo.Create(ctx, &category.Category{Name: "Salary", Direction: "IN", IsActive: true})
-	outCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true})
+	inCat, _ := catRepo.Create(ctx, &category.Category{Name: "Salary", Direction: "IN", IsActive: true, IsBudgetRelevant: true})
+	outCat, _ := catRepo.Create(ctx, &category.Category{Name: "Food", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
+	paymentMethod, _ := payService.CreatePaymentMethod(ctx, "Carteira", payment.KindCash, "", nil, nil, nil)
 
 	// Create Data for Jan
 	jan1 := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-	_, err := cfService.CreateCashFlow(ctx, jan1, inCat.ID, "IN", "Jan Salary", 5000.0, false)
+	_, err := cfService.CreateCashFlow(ctx, jan1, inCat.ID, paymentMethod.ID, "IN", "Jan Salary", 5000.0, false)
 	require.NoError(t, err)
-	_, err = cfService.CreateCashFlow(ctx, jan1, outCat.ID, "OUT", "Jan Food", 1200.0, false)
+	_, err = cfService.CreateCashFlow(ctx, jan1, outCat.ID, paymentMethod.ID, "OUT", "Jan Food", 1200.0, false)
 	require.NoError(t, err)
-	_, err = cfService.CreateCashFlow(ctx, jan1, outCat.ID, "OUT", "Jan Snacks", 300.0, false)
+	_, err = cfService.CreateCashFlow(ctx, jan1, outCat.ID, paymentMethod.ID, "OUT", "Jan Snacks", 300.0, false)
 	require.NoError(t, err)
 
 	t.Run("UC-18: Monthly Summary", func(t *testing.T) {

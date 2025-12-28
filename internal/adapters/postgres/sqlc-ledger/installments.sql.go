@@ -135,3 +135,55 @@ func (q *Queries) CreateInstallmentPlanItem(ctx context.Context, arg CreateInsta
 	)
 	return i, err
 }
+
+const listInstallmentPlanItemsByPlan = `-- name: ListInstallmentPlanItemsByPlan :many
+SELECT
+  installment_plan_item_id,
+  installment_plan_id,
+  sequence,
+  due_date,
+  amount,
+  status,
+  transaction_id,
+  created_at,
+  updated_at,
+  extra_amount,
+  is_paid,
+  paid_at
+FROM installment_plan_items
+WHERE installment_plan_id = $1
+ORDER BY sequence ASC
+`
+
+func (q *Queries) ListInstallmentPlanItemsByPlan(ctx context.Context, installmentPlanID int32) ([]InstallmentPlanItem, error) {
+	rows, err := q.db.Query(ctx, listInstallmentPlanItemsByPlan, installmentPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InstallmentPlanItem
+	for rows.Next() {
+		var i InstallmentPlanItem
+		if err := rows.Scan(
+			&i.InstallmentPlanItemID,
+			&i.InstallmentPlanID,
+			&i.Sequence,
+			&i.DueDate,
+			&i.Amount,
+			&i.Status,
+			&i.TransactionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ExtraAmount,
+			&i.IsPaid,
+			&i.PaidAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

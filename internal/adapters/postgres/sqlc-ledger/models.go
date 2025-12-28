@@ -35,6 +35,23 @@ type BudgetPeriod struct {
 	IsClosed       bool
 }
 
+type CashflowEntry struct {
+	CashflowEntryID       int32
+	TransactionID         int32
+	CategoryID            int32
+	PaymentMethodID       int32
+	InstallmentPlanID     pgtype.Int4
+	InstallmentPlanItemID pgtype.Int4
+	Direction             string
+	Title                 string
+	Amount                pgtype.Numeric
+	IsFixed               bool
+	OccurredAt            pgtype.Date
+	ReversalOfEntryID     pgtype.Int4
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+}
+
 type Category struct {
 	CategoryID        int32
 	Name              string

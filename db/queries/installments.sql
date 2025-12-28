@@ -28,3 +28,21 @@ INSERT INTO installment_plan_items (
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING installment_plan_item_id, installment_plan_id, sequence, due_date, amount, status, transaction_id, created_at, updated_at, extra_amount, is_paid, paid_at;
+
+-- name: ListInstallmentPlanItemsByPlan :many
+SELECT
+  installment_plan_item_id,
+  installment_plan_id,
+  sequence,
+  due_date,
+  amount,
+  status,
+  transaction_id,
+  created_at,
+  updated_at,
+  extra_amount,
+  is_paid,
+  paid_at
+FROM installment_plan_items
+WHERE installment_plan_id = $1
+ORDER BY sequence ASC;

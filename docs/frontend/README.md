@@ -39,6 +39,7 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 - `layers/dashboard`: Exemplo de feature/domínio específico.
 - `layers/payment-methods`: Cadastro de meios de pagamento.
 - `layers/picuinhas`: Pessoas e lançamentos de picuinhas.
+- `layers/cashflows`: Lançamentos manuais (entradas, fixos, variáveis, picuinhas).
 
 ## Rotas de Picuinhas
 
@@ -51,6 +52,13 @@ Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é
 - `/meios-de-pagamento`: cadastro e listagem de cartões e outros meios.
 - `/parcelamentos/nova-compra`: cadastro de compras parceladas.
 - `/parcelamentos/fatura`: visão da fatura por cartão/mês.
+
+## Rotas de Lançamentos
+
+- `/lancamentos/entradas`: entradas manuais do mês.
+- `/lancamentos/fixos`: gastos fixos (replicados por mês).
+- `/lancamentos/variaveis`: gastos variáveis.
+- `/lancamentos/picuinhas`: lançamentos fora do orçamento.
 
 ## Adicionando um novo Módulo (Layer)
 

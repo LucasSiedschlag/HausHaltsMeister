@@ -149,13 +149,14 @@ func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (
 				continue
 			}
 
+			amount := signedPostingAmount(cat, posting)
 			if cat.Direction == category.DirectionIn && cat.IsBudgetRelevant {
-				totalIncome += posting.Amount
+				totalIncome += amount
 				continue
 			}
 
 			if cat.Direction == category.DirectionOut {
-				actuals[*posting.CategoryID] += posting.Amount
+				actuals[*posting.CategoryID] += amount
 			}
 		}
 	}
@@ -170,6 +171,26 @@ func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (
 	period.TotalIncome = totalIncome
 
 	return period, nil
+}
+
+func signedPostingAmount(cat *category.Category, posting *ledger.Posting) float64 {
+	switch cat.Direction {
+	case category.DirectionIn:
+		if posting.Side == ledger.PostingSideCredit {
+			return posting.Amount
+		}
+		if posting.Side == ledger.PostingSideDebit {
+			return -posting.Amount
+		}
+	case category.DirectionOut:
+		if posting.Side == ledger.PostingSideDebit {
+			return posting.Amount
+		}
+		if posting.Side == ledger.PostingSideCredit {
+			return -posting.Amount
+		}
+	}
+	return 0
 }
 
 func (s *BudgetService) SetBudgetBatch(ctx context.Context, startMonth, endMonth time.Time, categoryID int32, mode string, plannedAmount float64, targetPercent float64) error {

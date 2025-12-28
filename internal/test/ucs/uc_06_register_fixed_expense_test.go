@@ -15,6 +15,9 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
@@ -26,7 +29,13 @@ func TestUC06_RegisterFixedExpense(t *testing.T) {
 	// Setup Clean Architecture Stack
 	catRepo := postgres.NewCategoryRepository(db.Pool)
 	cfRepo := postgres.NewCashFlowRepository(db.Pool)
-	cfService := cashflow.NewService(cfRepo, catRepo)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
+	ledgerService := ledger.NewService(ledgerRepo)
+	payRepo := postgres.NewPaymentRepository(db.Pool)
+	payService := payment.NewService(payRepo)
+	instRepo := postgres.NewInstallmentRepository(db.Pool)
+	instService := installment.NewService(instRepo, catRepo, ledgerService, payRepo)
+	cfService := cashflow.NewService(cfRepo, catRepo, ledgerService, payRepo, instService)
 	cfHandler := http.NewCashFlowHandler(cfService)
 
 	// Setup Echo
@@ -36,13 +45,17 @@ func TestUC06_RegisterFixedExpense(t *testing.T) {
 
 	// Seed Category
 	ctx := context.Background()
-	fixedCat, err := catRepo.Create(ctx, &category.Category{Name: "Internet", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
+	fixedCat, err := catRepo.Create(ctx, &category.Category{Name: "Custos fixos", Direction: "OUT", IsActive: true, IsBudgetRelevant: true})
+	require.NoError(t, err)
+
+	paymentMethod, err := payService.CreatePaymentMethod(ctx, "Carteira", payment.KindCash, "", nil, nil, nil)
 	require.NoError(t, err)
 
 	t.Run("Create Fixed Expense", func(t *testing.T) {
 		payload := map[string]interface{}{
 			"date":        time.Now().Format("2006-01-02"),
 			"category_id": fixedCat.ID,
+			"payment_method_id": paymentMethod.ID,
 			"direction":   "OUT",
 			"title":       "Fibra Óptica",
 			"amount":      150.00,

@@ -22,6 +22,29 @@ export const mainNavigation: NavigationItem[] = [
     icon: "Wallet",
   },
   {
+    title: "Lançamentos",
+    href: "/lancamentos/entradas",
+    icon: "ArrowDownUp",
+    children: [
+      {
+        title: "Entradas",
+        href: "/lancamentos/entradas",
+      },
+      {
+        title: "Fixos",
+        href: "/lancamentos/fixos",
+      },
+      {
+        title: "Variáveis",
+        href: "/lancamentos/variaveis",
+      },
+      {
+        title: "Picuinhas",
+        href: "/lancamentos/picuinhas",
+      },
+    ],
+  },
+  {
     title: "Meios de Pagamento",
     href: "/meios-de-pagamento",
     icon: "CreditCard",
@@ -55,11 +78,6 @@ export const mainNavigation: NavigationItem[] = [
         href: "/picuinhas/lancamentos",
       },
     ],
-  },
-  {
-    title: "Transactions",
-    href: "/transactions",
-    icon: "DollarSign",
   },
   {
     title: "Reports",

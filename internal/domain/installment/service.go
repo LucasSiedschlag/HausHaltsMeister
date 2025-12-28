@@ -104,18 +104,22 @@ func (s *InstallmentService) CreateInstallmentPurchase(ctx context.Context, desc
 	return createdPlan, nil
 }
 
+func (s *InstallmentService) ListPlanItems(ctx context.Context, planID int32) ([]*InstallmentPlanItem, error) {
+	return s.repo.ListPlanItemsByPlan(ctx, planID)
+}
+
 func (s *InstallmentService) ensureExpenseAccount(ctx context.Context) (*ledger.Account, error) {
 	accounts, err := s.ledgerService.ListAccounts(ctx)
 	if err != nil {
 		return nil, err
 	}
 	for _, account := range accounts {
-		if account.Type == ledger.AccountTypeExpense && account.Name == "Despesa" {
+		if account.Type == ledger.AccountTypeExpense && account.Name == "Despesas" {
 			return account, nil
 		}
 	}
 
-	return s.ledgerService.CreateAccount(ctx, "Despesa", ledger.AccountTypeExpense, "BRL", true)
+	return s.ledgerService.CreateAccount(ctx, "Despesas", ledger.AccountTypeExpense, "BRL", true)
 }
 
 func calculateFirstDueDate(pm *payment.PaymentMethod, purchaseDate time.Time) time.Time {

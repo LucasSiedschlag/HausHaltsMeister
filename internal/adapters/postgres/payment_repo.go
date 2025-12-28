@@ -157,7 +157,7 @@ func (r *PaymentRepository) GetByID(ctx context.Context, id int32) (*payment.Pay
 func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethodID int32, month time.Time) ([]payment.InvoiceEntry, error) {
 	pgDate := pgtype.Date{Time: month, Valid: true}
 	rows, err := r.q.GetInvoiceEntries(ctx, ledgerSqlc.GetInvoiceEntriesParams{
-		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		PaymentMethodID: paymentMethodID,
 		Column2:         pgDate,
 	})
 	if err != nil {
@@ -166,17 +166,11 @@ func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethod
 
 	entries := make([]payment.InvoiceEntry, len(rows))
 	for i, row := range rows {
-		title := ""
-		switch value := row.Title.(type) {
-		case string:
-			title = value
-		case []byte:
-			title = string(value)
-		}
+		title := row.Title
 		amt := float64(row.Amount)
 		entries[i] = payment.InvoiceEntry{
-			CashFlowID:   row.InstallmentPlanItemID,
-			Date:         row.DueDate.Time,
+			CashFlowID:   row.TransactionID,
+			Date:         row.OccurredAt.Time,
 			Title:        title,
 			Amount:       amt,
 			CategoryName: row.CategoryName,
@@ -188,7 +182,7 @@ func (r *PaymentRepository) GetInvoiceEntries(ctx context.Context, paymentMethod
 func (r *PaymentRepository) GetOutstandingAmount(ctx context.Context, paymentMethodID int32, month time.Time) (float64, error) {
 	pgDate := pgtype.Date{Time: month, Valid: true}
 	return r.q.GetOutstandingAmount(ctx, ledgerSqlc.GetOutstandingAmountParams{
-		PaymentMethodID: pgtype.Int4{Int32: paymentMethodID, Valid: true},
+		PaymentMethodID: paymentMethodID,
 		Column2:         pgDate,
 	})
 }

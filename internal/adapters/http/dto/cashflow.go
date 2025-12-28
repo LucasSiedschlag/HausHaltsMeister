@@ -1,22 +1,27 @@
 package dto
 
 type CreateCashFlowRequest struct {
-	Date       string  `json:"date"` // YYYY-MM-DD
-	CategoryID int32   `json:"category_id"`
-	Direction  string  `json:"direction"`
-	Title      string  `json:"title"`
-	Amount     float64 `json:"amount"`
-	IsFixed    bool    `json:"is_fixed"`
+	Date            string  `json:"date"` // YYYY-MM-DD
+	CategoryID      int32   `json:"category_id"`
+	PaymentMethodID int32   `json:"payment_method_id"`
+	Direction       string  `json:"direction"`
+	Title           string  `json:"title"`
+	Amount          float64 `json:"amount"`
+	IsFixed         bool    `json:"is_fixed"`
 }
 
 type CashFlowResponse struct {
-	ID         int32   `json:"id"`
-	Date       string  `json:"date"`
-	CategoryID int32   `json:"category_id"`
-	Direction  string  `json:"direction"`
-	Title      string  `json:"title"`
-	Amount     float64 `json:"amount"`
-	IsFixed    bool    `json:"is_fixed"`
+	ID                 int32   `json:"id"`
+	Date               string  `json:"date"`
+	CategoryID         int32   `json:"category_id"`
+	CategoryName       string  `json:"category_name"`
+	PaymentMethodID    int32   `json:"payment_method_id"`
+	PaymentMethodName  string  `json:"payment_method_name"`
+	Direction          string  `json:"direction"`
+	Title              string  `json:"title"`
+	Amount             float64 `json:"amount"`
+	IsFixed            bool    `json:"is_fixed"`
+	ReversalOfEntryID  *int32  `json:"reversal_of_entry_id"`
 }
 
 type MonthlySummaryResponse struct {

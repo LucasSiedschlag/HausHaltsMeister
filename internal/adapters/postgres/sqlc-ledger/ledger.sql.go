@@ -118,6 +118,16 @@ func (q *Queries) CreateLedgerTransaction(ctx context.Context, arg CreateLedgerT
 	return i, err
 }
 
+const deleteLedgerTransaction = `-- name: DeleteLedgerTransaction :exec
+DELETE FROM transactions
+WHERE transaction_id = $1
+`
+
+func (q *Queries) DeleteLedgerTransaction(ctx context.Context, transactionID int32) error {
+	_, err := q.db.Exec(ctx, deleteLedgerTransaction, transactionID)
+	return err
+}
+
 const listLedgerAccounts = `-- name: ListLedgerAccounts :many
 SELECT account_id, name, type, currency, is_active, created_at, updated_at
 FROM accounts
@@ -256,6 +266,93 @@ func (q *Queries) UpdateLedgerAccount(ctx context.Context, arg UpdateLedgerAccou
 		&i.Type,
 		&i.Currency,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateLedgerPosting = `-- name: UpdateLedgerPosting :one
+UPDATE postings
+SET account_id = $2,
+    category_id = $3,
+    party_id = $4,
+    side = $5,
+    amount = $6,
+    memo = $7
+WHERE posting_id = $1
+RETURNING posting_id, transaction_id, account_id, category_id, party_id, side, amount, memo, created_at
+`
+
+type UpdateLedgerPostingParams struct {
+	PostingID  int32
+	AccountID  int32
+	CategoryID pgtype.Int4
+	PartyID    pgtype.Int4
+	Side       string
+	Amount     pgtype.Numeric
+	Memo       pgtype.Text
+}
+
+func (q *Queries) UpdateLedgerPosting(ctx context.Context, arg UpdateLedgerPostingParams) (Posting, error) {
+	row := q.db.QueryRow(ctx, updateLedgerPosting,
+		arg.PostingID,
+		arg.AccountID,
+		arg.CategoryID,
+		arg.PartyID,
+		arg.Side,
+		arg.Amount,
+		arg.Memo,
+	)
+	var i Posting
+	err := row.Scan(
+		&i.PostingID,
+		&i.TransactionID,
+		&i.AccountID,
+		&i.CategoryID,
+		&i.PartyID,
+		&i.Side,
+		&i.Amount,
+		&i.Memo,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateLedgerTransaction = `-- name: UpdateLedgerTransaction :one
+UPDATE transactions
+SET occurred_at = $2,
+    description = $3,
+    reference = $4,
+    notes = $5,
+    updated_at = now()
+WHERE transaction_id = $1
+RETURNING transaction_id, occurred_at, description, reference, notes, created_at, updated_at
+`
+
+type UpdateLedgerTransactionParams struct {
+	TransactionID int32
+	OccurredAt    pgtype.Date
+	Description   string
+	Reference     pgtype.Text
+	Notes         pgtype.Text
+}
+
+func (q *Queries) UpdateLedgerTransaction(ctx context.Context, arg UpdateLedgerTransactionParams) (Transaction, error) {
+	row := q.db.QueryRow(ctx, updateLedgerTransaction,
+		arg.TransactionID,
+		arg.OccurredAt,
+		arg.Description,
+		arg.Reference,
+		arg.Notes,
+	)
+	var i Transaction
+	err := row.Scan(
+		&i.TransactionID,
+		&i.OccurredAt,
+		&i.Description,
+		&i.Reference,
+		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

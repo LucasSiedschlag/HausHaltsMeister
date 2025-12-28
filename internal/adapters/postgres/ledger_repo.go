@@ -92,6 +92,36 @@ func (r *LedgerRepository) CreateTransaction(ctx context.Context, transaction *l
 	}, nil
 }
 
+func (r *LedgerRepository) UpdateTransaction(ctx context.Context, transaction *ledger.Transaction) (*ledger.Transaction, error) {
+	pgDate := pgtype.Date{Time: transaction.OccurredAt, Valid: true}
+	params := ledgerSqlc.UpdateLedgerTransactionParams{
+		TransactionID: transaction.ID,
+		OccurredAt:    pgDate,
+		Description:   transaction.Description,
+		Reference:     textFromString(transaction.Reference),
+		Notes:         textFromString(transaction.Notes),
+	}
+
+	row, err := r.q.UpdateLedgerTransaction(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ledger.Transaction{
+		ID:          row.TransactionID,
+		OccurredAt:  row.OccurredAt.Time,
+		Description: row.Description,
+		Reference:   textToString(row.Reference),
+		Notes:       textToString(row.Notes),
+		CreatedAt:   toTime(row.CreatedAt),
+		UpdatedAt:   toTime(row.UpdatedAt),
+	}, nil
+}
+
+func (r *LedgerRepository) DeleteTransaction(ctx context.Context, transactionID int32) error {
+	return r.q.DeleteLedgerTransaction(ctx, transactionID)
+}
+
 func (r *LedgerRepository) ListTransactionsByMonth(ctx context.Context, month time.Time) ([]*ledger.Transaction, error) {
 	pgDate := pgtype.Date{Time: month, Valid: true}
 	rows, err := r.q.ListLedgerTransactionsByMonth(ctx, pgDate)
@@ -138,6 +168,41 @@ func (r *LedgerRepository) CreatePosting(ctx context.Context, posting *ledger.Po
 
 	amountValue, _ := row.Amount.Float64Value()
 
+	return &ledger.Posting{
+		ID:            row.PostingID,
+		TransactionID: row.TransactionID,
+		AccountID:     row.AccountID,
+		CategoryID:    int4ToPtr(row.CategoryID),
+		PartyID:       int4ToPtr(row.PartyID),
+		Side:          row.Side,
+		Amount:        amountValue.Float64,
+		Memo:          textToString(row.Memo),
+		CreatedAt:     toTime(row.CreatedAt),
+	}, nil
+}
+
+func (r *LedgerRepository) UpdatePosting(ctx context.Context, posting *ledger.Posting) (*ledger.Posting, error) {
+	amount, err := numericFromFloat(posting.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("invalid amount: %w", err)
+	}
+
+	params := ledgerSqlc.UpdateLedgerPostingParams{
+		PostingID:   posting.ID,
+		AccountID:   posting.AccountID,
+		CategoryID:  int4FromPtr(posting.CategoryID),
+		PartyID:     int4FromPtr(posting.PartyID),
+		Side:        posting.Side,
+		Amount:      amount,
+		Memo:        textFromString(posting.Memo),
+	}
+
+	row, err := r.q.UpdateLedgerPosting(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	amountValue, _ := row.Amount.Float64Value()
 	return &ledger.Posting{
 		ID:            row.PostingID,
 		TransactionID: row.TransactionID,

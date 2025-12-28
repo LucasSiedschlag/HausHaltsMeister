@@ -34,6 +34,9 @@ func (h *CashFlowHandler) Create(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
 	}
+	if req.PaymentMethodID <= 0 {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "payment_method_id is required"})
+	}
 
 	parsedDate, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
@@ -44,14 +47,18 @@ func (h *CashFlowHandler) Create(c echo.Context) error {
 		c.Request().Context(),
 		parsedDate,
 		req.CategoryID,
+		req.PaymentMethodID,
 		req.Direction,
 		req.Title,
 		req.Amount,
 		req.IsFixed,
 	)
 	if err != nil {
-		if err == cashflow.ErrDirectionMismatch || err == cashflow.ErrCategoryNotFound {
+		if err == cashflow.ErrDirectionMismatch || err == cashflow.ErrCategoryNotFound || err == cashflow.ErrFixedCategoryOnly || err == cashflow.ErrFixedDirectionOnly {
 			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
+		if err == cashflow.ErrPaymentMethodMissing {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
 		}
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: fmt.Sprintf("failed to create cash flow: %v", err)})
 	}
@@ -81,7 +88,18 @@ func (h *CashFlowHandler) ListByMonth(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid month format, use YYYY-MM-DD"})
 	}
 
-	list, err := h.service.ListCashFlows(c.Request().Context(), parsedMonth)
+	var direction *string
+	if dir := c.QueryParam("direction"); dir != "" {
+		direction = &dir
+	}
+
+	var isFixed *bool
+	if fixed := c.QueryParam("is_fixed"); fixed != "" {
+		value := fixed == "true" || fixed == "1"
+		isFixed = &value
+	}
+
+	list, err := h.service.ListCashFlows(c.Request().Context(), parsedMonth, direction, isFixed)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list cash flows"})
 	}
@@ -92,6 +110,123 @@ func (h *CashFlowHandler) ListByMonth(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, resp)
+}
+
+// Update updates an existing cash flow entry.
+// @Summary Atualizar Lançamento
+// @Description Updates a cash flow entry (income or expense).
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param id path int true "CashFlow ID"
+// @Param payload body dto.CreateCashFlowRequest true "CashFlow Payload"
+// @Success 200 {object} dto.CashFlowResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /cashflows/{id} [put]
+func (h *CashFlowHandler) Update(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	var req dto.CreateCashFlowRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid payload"})
+	}
+	if req.PaymentMethodID <= 0 {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "payment_method_id is required"})
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid date format, use YYYY-MM-DD"})
+	}
+
+	updated, err := h.service.UpdateCashFlow(
+		c.Request().Context(),
+		id,
+		parsedDate,
+		req.CategoryID,
+		req.PaymentMethodID,
+		req.Direction,
+		req.Title,
+		req.Amount,
+		req.IsFixed,
+	)
+	if err != nil {
+		if err == cashflow.ErrCashFlowNotFound {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		if err == cashflow.ErrDirectionMismatch || err == cashflow.ErrCategoryNotFound || err == cashflow.ErrFixedCategoryOnly || err == cashflow.ErrFixedDirectionOnly {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
+		if err == cashflow.ErrPaymentMethodMissing {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to update cash flow"})
+	}
+
+	return c.JSON(http.StatusOK, toCashFlowResponse(updated))
+}
+
+// Delete removes a cash flow entry.
+// @Summary Excluir Lançamento
+// @Description Deletes a cash flow entry.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param id path int true "CashFlow ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /cashflows/{id} [delete]
+func (h *CashFlowHandler) Delete(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	if err := h.service.DeleteCashFlow(c.Request().Context(), id); err != nil {
+		if err == cashflow.ErrCashFlowNotFound {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to delete cash flow"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// Reverse creates a reversal entry for a cash flow entry.
+// @Summary Estornar Lançamento
+// @Description Creates a reversal transaction for a cash flow entry.
+// @Tags CashFlows
+// @Accept json
+// @Produce json
+// @Param id path int true "CashFlow ID"
+// @Success 201 {object} dto.CashFlowResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /cashflows/{id}/reverse [post]
+func (h *CashFlowHandler) Reverse(c echo.Context) error {
+	idStr := c.Param("id")
+	var id int32
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id format"})
+	}
+
+	reversed, err := h.service.ReverseCashFlow(c.Request().Context(), id)
+	if err != nil {
+		if err == cashflow.ErrCashFlowNotFound {
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		}
+		if err == cashflow.ErrReversalNotAllowed {
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to reverse cash flow"})
+	}
+
+	return c.JSON(http.StatusCreated, toCashFlowResponse(reversed))
 }
 
 // MonthlySummary returns the financial summary for a given month.
@@ -203,6 +338,9 @@ func RegisterCashFlowRoutes(e *echo.Echo, h *CashFlowHandler) {
 	g := e.Group("/cashflows")
 	g.POST("", h.Create)
 	g.GET("", h.ListByMonth)
+	g.PUT("/:id", h.Update)
+	g.DELETE("/:id", h.Delete)
+	g.POST("/:id/reverse", h.Reverse)
 	g.POST("/copy-fixed", h.CopyFixed)
 	g.GET("/summary", h.MonthlySummary)
 	g.GET("/category-summary", h.CategorySummary)
@@ -210,12 +348,16 @@ func RegisterCashFlowRoutes(e *echo.Echo, h *CashFlowHandler) {
 
 func toCashFlowResponse(cf *cashflow.CashFlow) dto.CashFlowResponse {
 	return dto.CashFlowResponse{
-		ID:         cf.ID,
-		Date:       cf.Date.Format("2006-01-02"),
-		CategoryID: cf.CategoryID,
-		Direction:  cf.Direction,
-		Title:      cf.Title,
-		Amount:     cf.Amount,
-		IsFixed:    cf.IsFixed,
+		ID:                cf.ID,
+		Date:              cf.Date.Format("2006-01-02"),
+		CategoryID:        cf.CategoryID,
+		CategoryName:      cf.CategoryName,
+		PaymentMethodID:   cf.PaymentMethodID,
+		PaymentMethodName: cf.PaymentMethodName,
+		Direction:         cf.Direction,
+		Title:             cf.Title,
+		Amount:            cf.Amount,
+		IsFixed:           cf.IsFixed,
+		ReversalOfEntryID: cf.ReversalOfEntryID,
 	}
 }

@@ -110,6 +110,8 @@ definitions:
         type: number
       category_id:
         type: integer
+      category_name:
+        type: string
       date:
         type: string
       direction:
@@ -118,6 +120,12 @@ definitions:
         type: integer
       is_fixed:
         type: boolean
+      payment_method_id:
+        type: integer
+      payment_method_name:
+        type: string
+      reversal_of_entry_id:
+        type: integer
       title:
         type: string
     type: object
@@ -194,6 +202,8 @@ definitions:
         type: string
       is_fixed:
         type: boolean
+      payment_method_id:
+        type: integer
       title:
         type: string
     type: object
@@ -755,6 +765,92 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Criar Lançamento
+      tags:
+      - CashFlows
+  /cashflows/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a cash flow entry.
+      parameters:
+      - description: CashFlow ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Excluir Lançamento
+      tags:
+      - CashFlows
+    put:
+      consumes:
+      - application/json
+      description: Updates a cash flow entry (income or expense).
+      parameters:
+      - description: CashFlow ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: CashFlow Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCashFlowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CashFlowResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Atualizar Lançamento
+      tags:
+      - CashFlows
+  /cashflows/{id}/reverse:
+    post:
+      consumes:
+      - application/json
+      description: Creates a reversal transaction for a cash flow entry.
+      parameters:
+      - description: CashFlow ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CashFlowResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Estornar Lançamento
       tags:
       - CashFlows
   /cashflows/category-summary:

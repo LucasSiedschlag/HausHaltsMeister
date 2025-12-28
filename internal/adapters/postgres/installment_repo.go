@@ -80,6 +80,26 @@ func (r *InstallmentRepository) CreatePlanItem(ctx context.Context, item *instal
 	}, nil
 }
 
+func (r *InstallmentRepository) ListPlanItemsByPlan(ctx context.Context, planID int32) ([]*installment.InstallmentPlanItem, error) {
+	rows, err := r.q.ListInstallmentPlanItemsByPlan(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*installment.InstallmentPlanItem, len(rows))
+	for i, row := range rows {
+		items[i] = &installment.InstallmentPlanItem{
+			ID:            row.InstallmentPlanItemID,
+			PlanID:        row.InstallmentPlanID,
+			Sequence:      row.Sequence,
+			DueDate:       row.DueDate.Time,
+			Amount:        numericToValue(row.Amount),
+			TransactionID: int4ToPtr(row.TransactionID),
+		}
+	}
+	return items, nil
+}
+
 func mapInstallmentPlanRow(row ledgerSqlc.InstallmentPlan) (*installment.InstallmentPlan, error) {
 	total, _ := row.TotalAmount.Float64Value()
 	instAmount, _ := row.InstallmentAmount.Float64Value()

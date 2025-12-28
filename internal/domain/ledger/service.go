@@ -51,6 +51,39 @@ func (s *LedgerService) CreateTransaction(ctx context.Context, occurredAt time.T
 	return createdTx, nil
 }
 
+func (s *LedgerService) UpdateTransaction(ctx context.Context, transactionID int32, occurredAt time.Time, description, reference, notes string, postings []*Posting) (*Transaction, error) {
+	updatedTx, err := NewTransaction(occurredAt, description, reference, notes, postings)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedTx.ID = transactionID
+	storedTx, err := s.repo.UpdateTransaction(ctx, updatedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedPostings := make([]*Posting, len(updatedTx.Postings))
+	for i, posting := range updatedTx.Postings {
+		if posting.ID <= 0 {
+			return nil, ErrInvalidPostingAccount
+		}
+		posting.TransactionID = transactionID
+		updatedPosting, err := s.repo.UpdatePosting(ctx, posting)
+		if err != nil {
+			return nil, err
+		}
+		updatedPostings[i] = updatedPosting
+	}
+
+	storedTx.Postings = updatedPostings
+	return storedTx, nil
+}
+
+func (s *LedgerService) DeleteTransaction(ctx context.Context, transactionID int32) error {
+	return s.repo.DeleteTransaction(ctx, transactionID)
+}
+
 func (s *LedgerService) ListTransactionsByMonth(ctx context.Context, month time.Time) ([]*Transaction, error) {
 	transactions, err := s.repo.ListTransactionsByMonth(ctx, month)
 	if err != nil {

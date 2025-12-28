@@ -9,17 +9,24 @@ var (
 	ErrInvalidAmount = errors.New("amount must be greater than zero")
 	ErrEmptyTitle    = errors.New("title cannot be empty")
 	ErrInvalidDate   = errors.New("date is required")
+	ErrPaymentMethod = errors.New("payment method is required")
 )
 
 type CashFlow struct {
-	ID           int32
-	Date         time.Time
-	CategoryID   int32
-	CategoryName string // Enriched field for display
-	Direction    string
-	Title        string
-	Amount       float64
-	IsFixed      bool
+	ID                    int32
+	TransactionID         int32
+	InstallmentPlanID     *int32
+	InstallmentPlanItemID *int32
+	Date                  time.Time
+	CategoryID            int32
+	CategoryName          string
+	PaymentMethodID       int32
+	PaymentMethodName     string
+	Direction             string
+	Title                 string
+	Amount                float64
+	IsFixed               bool
+	ReversalOfEntryID     *int32
 }
 
 type MonthlySummary struct {
@@ -34,7 +41,7 @@ type CategorySummary struct {
 	TotalAmount  float64 `json:"total_amount"`
 }
 
-func New(date time.Time, categoryID int32, direction, title string, amount float64, isFixed bool) (*CashFlow, error) {
+func New(date time.Time, categoryID int32, paymentMethodID int32, direction, title string, amount float64, isFixed bool) (*CashFlow, error) {
 	if amount <= 0 {
 		return nil, ErrInvalidAmount
 	}
@@ -44,12 +51,16 @@ func New(date time.Time, categoryID int32, direction, title string, amount float
 	if date.IsZero() {
 		return nil, ErrInvalidDate
 	}
+	if paymentMethodID <= 0 {
+		return nil, ErrPaymentMethod
+	}
 
 	// Note: Direction validation against Category happens in Service/Repo or Phase 3
 
 	return &CashFlow{
 		Date:       date,
 		CategoryID: categoryID,
+		PaymentMethodID: paymentMethodID,
 		Direction:  direction,
 		Title:      title,
 		Amount:     amount,

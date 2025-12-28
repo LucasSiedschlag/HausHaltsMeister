@@ -15,6 +15,9 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/installment"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/payment"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/test/harness"
 )
 
@@ -26,7 +29,13 @@ func TestUC07_CopyFixedExpenses(t *testing.T) {
 	// Clean Stack
 	catRepo := postgres.NewCategoryRepository(db.Pool)
 	cfRepo := postgres.NewCashFlowRepository(db.Pool)
-	cfService := cashflow.NewService(cfRepo, catRepo)
+	ledgerRepo := postgres.NewLedgerRepository(db.Pool)
+	ledgerService := ledger.NewService(ledgerRepo)
+	payRepo := postgres.NewPaymentRepository(db.Pool)
+	payService := payment.NewService(payRepo)
+	instRepo := postgres.NewInstallmentRepository(db.Pool)
+	instService := installment.NewService(instRepo, catRepo, ledgerService, payRepo)
+	cfService := cashflow.NewService(cfRepo, catRepo, ledgerService, payRepo, instService)
 	cfHandler := http.NewCashFlowHandler(cfService)
 
 	e := echo.New()
@@ -35,15 +44,16 @@ func TestUC07_CopyFixedExpenses(t *testing.T) {
 
 	// Seed
 	ctx := context.Background()
-	fixedCat, _ := catRepo.Create(ctx, &category.Category{Name: "Fixa", Direction: "OUT", IsActive: true})
+	fixedCat, _ := catRepo.Create(ctx, &category.Category{Name: "Custos fixos", Direction: "OUT", IsActive: true})
 	varCat, _ := catRepo.Create(ctx, &category.Category{Name: "Var", Direction: "OUT", IsActive: true})
+	paymentMethod, _ := payService.CreatePaymentMethod(ctx, "Carteira", payment.KindCash, "", nil, nil, nil)
 
 	// 1. Create Jan Expenses
 	// Fixed
-	_, err := cfService.CreateCashFlow(ctx, time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC), fixedCat.ID, "OUT", "Internet Jan", 100.0, true)
+	_, err := cfService.CreateCashFlow(ctx, time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC), fixedCat.ID, paymentMethod.ID, "OUT", "Internet Jan", 100.0, true)
 	require.NoError(t, err)
 	// Variable
-	_, err = cfService.CreateCashFlow(ctx, time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC), varCat.ID, "OUT", "Jantar Jan", 200.0, false)
+	_, err = cfService.CreateCashFlow(ctx, time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC), varCat.ID, paymentMethod.ID, "OUT", "Jantar Jan", 200.0, false)
 	require.NoError(t, err)
 
 	// 2. Copy to Feb
@@ -73,10 +83,10 @@ func TestUC07_CopyFixedExpenses(t *testing.T) {
 	assert.Equal(t, 100.0, entry["amount"])
 	assert.True(t, entry["is_fixed"].(bool))
 
-	// Verify Date (should be 15th Feb)
+	// Verify Date (normalized to first day of month)
 	// entry["Date"] comes as string RFC3339 if using standard JSON marshaling
 	dateStr := entry["date"].(string)
 	parsedDate, _ := time.Parse("2006-01-02", dateStr) // DTO uses Format("2006-01-02")
-	assert.Equal(t, 15, parsedDate.Day())
+	assert.Equal(t, 1, parsedDate.Day())
 	assert.Equal(t, time.Month(2), parsedDate.Month())
 }

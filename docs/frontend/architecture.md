@@ -87,6 +87,7 @@ frontend/
 
 - `layers/categories`: cadastro de categorias.
 - `layers/budget`: orçamento mensal.
+- `layers/cashflows`: lançamentos manuais (entradas, fixos, variáveis, picuinhas).
 - `layers/payment-methods`: meios de pagamento.
 - `layers/picuinhas`: pessoas e lançamentos de picuinhas.
 

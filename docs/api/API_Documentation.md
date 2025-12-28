@@ -164,40 +164,76 @@ Respostas comuns:
 
 ```json
 {
-  "date": "2024-03-15",
+  "date": "2024-03-01",
   "category_id": 10,
+  "payment_method_id": 3,
   "direction": "OUT",
   "title": "Jantar Especial",
   "amount": 250.0,
   "is_fixed": false
 }
 ```
+
+Notas:
+- Para entradas e saídas não-cartão, o backend normaliza a data para o 1º dia do mês.
+- Para cartão de crédito, a data é a da compra e o vencimento é calculado com base no fechamento/vencimento do cartão.
+- Gastos fixos exigem a categoria **Custos fixos** e `direction = OUT`.
 
 **Response (201 Created):**
 
 ```json
 {
   "id": 42,
-  "date": "2024-03-15",
+  "date": "2024-03-01",
   "category_id": 10,
+  "category_name": "Alimentação",
+  "payment_method_id": 3,
+  "payment_method_name": "Carteira",
   "direction": "OUT",
   "title": "Jantar Especial",
   "amount": 250.0,
-  "is_fixed": false
+  "is_fixed": false,
+  "reversal_of_entry_id": null
 }
 ```
 
-### 2.2 Listar Lançamentos (Extrato)
+### 2.2 Atualizar Lançamento
+
+**Endpoint:** `PUT /cashflows/{id}`
+
+**Payload (JSON):** mesmo formato do `POST /cashflows`.
+
+**Response (200 OK):** CashFlow atualizado.
+
+### 2.3 Excluir Lançamento
+
+**Endpoint:** `DELETE /cashflows/{id}`
+
+**Response (200 OK):**
+
+```json
+{ "status": "deleted" }
+```
+
+### 2.4 Estornar Lançamento
+
+**Endpoint:** `POST /cashflows/{id}/reverse`
+
+**Response (201 Created):** CashFlow de estorno (com `reversal_of_entry_id` apontando para o original).
+
+### 2.5 Listar Lançamentos (Extrato)
 
 **Endpoint:** `GET /cashflows`
 
 **Query Params:**
 
 - `month` (string): `YYYY-MM-DD` (ex: `2024-03-01`).
+- `direction` (string, opcional): `IN` ou `OUT`.
+- `is_fixed` (boolean, opcional): `true` ou `false`.
 
 **Response (200 OK):** List of CashFlow objects.
 
-### 2.3 Copiar Gastos Fixos
+### 2.6 Copiar Gastos Fixos
 
 **Endpoint:** `POST /cashflows/copy-fixed`
 
@@ -212,7 +248,7 @@ Respostas comuns:
 
 **Response (200 OK):** `{"copied_count": 5}`
 
-### 2.4 Resumo Mensal (Financial Summary)
+### 2.7 Resumo Mensal (Financial Summary)
 
 **Endpoint:** `GET /cashflows/summary`
 
@@ -230,7 +266,7 @@ Respostas comuns:
 }
 ```
 
-### 2.5 Resumo por Categoria
+### 2.8 Resumo por Categoria
 
 **Endpoint:** `GET /cashflows/category-summary`
 

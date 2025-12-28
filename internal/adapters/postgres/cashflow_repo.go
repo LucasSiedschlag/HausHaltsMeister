@@ -2,106 +2,110 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	ledgerSqlc "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc-ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/sqlc"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
 )
 
 type CashFlowRepository struct {
-	q *sqlc.Queries
+	q *ledgerSqlc.Queries
 }
 
 func NewCashFlowRepository(db *pgxpool.Pool) *CashFlowRepository {
 	return &CashFlowRepository{
-		q: sqlc.New(db),
+		q: ledgerSqlc.New(db),
 	}
 }
 
 func (r *CashFlowRepository) Create(ctx context.Context, cf *cashflow.CashFlow) (*cashflow.CashFlow, error) {
-	// Convert time.Time to pgtype.Date
-	// pgx/v5 automatically handles time.Time for Date fields usually, but sqlc generates pgtype.Date for 'date' columns.
-	// We need to convert.
-
-	pgDate := pgtype.Date{
-		Time:  cf.Date,
-		Valid: true,
+	pgDate := pgtype.Date{Time: cf.Date, Valid: true}
+	params := ledgerSqlc.CreateCashFlowEntryParams{
+		TransactionID:         cf.TransactionID,
+		CategoryID:            cf.CategoryID,
+		PaymentMethodID:       cf.PaymentMethodID,
+		InstallmentPlanID:     int4FromPtr(cf.InstallmentPlanID),
+		InstallmentPlanItemID: int4FromPtr(cf.InstallmentPlanItemID),
+		Direction:             cf.Direction,
+		Title:                 cf.Title,
+		Amount:                numericFromValue(cf.Amount),
+		IsFixed:               cf.IsFixed,
+		OccurredAt:            pgDate,
+		ReversalOfEntryID:     int4FromPtr(cf.ReversalOfEntryID),
 	}
 
-	// Convert float64 to pgtype.Numeric
-	// This is a bit verbose with pgx/v5 pgtype.Numeric.
-	// Let's assume for now we can pass a string or use a helper.
-	// Or even better, let's look at what sqlc generated.
-	// It likely generated 'amount' as pgtype.Numeric.
-	// To simplify, we'll try to use a float helper if one existed, but standard way is via big.Int or string.
-	// Actually, let's verify what `sqlc generate` produced in step 82 (`models.go` is 2387 bytes).
-	// Since I can't check it right now, I will implement a safe float to numeric conversion
-	// or assume the driver handles it if sqlc generated valid Go types.
-	// Wait, standard `sqlc` with `pgx/v5` uses `pgtype.Numeric`.
-
-	// Workaround: We'll scan back as float64. Inserting might require proper Numeric construction.
-	// For simplicity in this "agent" mode, I'll attempt a direct cast if sqlc generated float64,
-	// else I will need to handle Numeric.
-	// Let's rely on `fmt.Sprintf` for float -> numeric string scan.
-
-	var am pgtype.Numeric
-	am.Scan(fmt.Sprintf("%.2f", cf.Amount))
-
-	params := sqlc.CreateCashFlowParams{
-		Date:       pgDate,
-		CategoryID: int32(cf.CategoryID),
-		Direction:  cf.Direction,
-		Title:      cf.Title,
-		Amount:     am,
-		IsFixed:    cf.IsFixed,
-	}
-
-	row, err := r.q.CreateCashFlow(ctx, params)
+	row, err := r.q.CreateCashFlowEntry(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert back
-	val, _ := row.Amount.Float64Value()
-
-	return &cashflow.CashFlow{
-		ID:         row.CashFlowID,
-		Date:       row.Date.Time,
-		CategoryID: row.CategoryID,
-		Direction:  row.Direction,
-		Title:      row.Title,
-		Amount:     val.Float64,
-		IsFixed:    row.IsFixed,
-	}, nil
+	return mapCashFlowEntry(row), nil
 }
 
-func (r *CashFlowRepository) ListByMonth(ctx context.Context, month time.Time) ([]*cashflow.CashFlow, error) {
-	pgDate := pgtype.Date{
-		Time:  month,
-		Valid: true,
+func (r *CashFlowRepository) Update(ctx context.Context, cf *cashflow.CashFlow) (*cashflow.CashFlow, error) {
+	pgDate := pgtype.Date{Time: cf.Date, Valid: true}
+	params := ledgerSqlc.UpdateCashFlowEntryParams{
+		CashflowEntryID:       cf.ID,
+		TransactionID:         cf.TransactionID,
+		CategoryID:            cf.CategoryID,
+		PaymentMethodID:       cf.PaymentMethodID,
+		InstallmentPlanID:     int4FromPtr(cf.InstallmentPlanID),
+		InstallmentPlanItemID: int4FromPtr(cf.InstallmentPlanItemID),
+		Direction:             cf.Direction,
+		Title:                 cf.Title,
+		Amount:                numericFromValue(cf.Amount),
+		IsFixed:               cf.IsFixed,
+		OccurredAt:            pgDate,
+		ReversalOfEntryID:     int4FromPtr(cf.ReversalOfEntryID),
 	}
 
-	rows, err := r.q.ListCashFlowsByMonth(ctx, pgDate)
+	row, err := r.q.UpdateCashFlowEntry(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return mapCashFlowEntry(row), nil
+}
+
+func (r *CashFlowRepository) Delete(ctx context.Context, id int32) error {
+	return r.q.DeleteCashFlowEntry(ctx, id)
+}
+
+func (r *CashFlowRepository) GetByID(ctx context.Context, id int32) (*cashflow.CashFlow, error) {
+	row, err := r.q.GetCashFlowEntry(ctx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return mapCashFlowEntryWithNames(row), nil
+}
+
+func (r *CashFlowRepository) ListByMonth(ctx context.Context, month time.Time, direction *string, isFixed *bool) ([]*cashflow.CashFlow, error) {
+	pgDate := pgtype.Date{Time: month, Valid: true}
+	dir := pgtype.Text{Valid: false}
+	if direction != nil && *direction != "" {
+		dir = pgtype.Text{String: *direction, Valid: true}
+	}
+	fixed := pgtype.Bool{Valid: false}
+	if isFixed != nil {
+		fixed = pgtype.Bool{Bool: *isFixed, Valid: true}
+	}
+
+	rows, err := r.q.ListCashFlowEntriesByMonth(ctx, ledgerSqlc.ListCashFlowEntriesByMonthParams{
+		Column1:    pgDate,
+		Direction:  dir,
+		IsFixed:    fixed,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]*cashflow.CashFlow, len(rows))
 	for i, row := range rows {
-		val, _ := row.Amount.Float64Value()
-		result[i] = &cashflow.CashFlow{
-			ID:           row.CashFlowID,
-			Date:         row.Date.Time,
-			CategoryID:   row.CategoryID,
-			CategoryName: row.CategoryName,
-			Direction:    row.Direction,
-			Title:        row.Title,
-			Amount:       val.Float64,
-			IsFixed:      row.IsFixed,
-		}
+		result[i] = mapCashFlowEntryWithNamesList(row)
 	}
 	return result, nil
 }
@@ -151,4 +155,59 @@ func (r *CashFlowRepository) GetCategorySummary(ctx context.Context, month time.
 		})
 	}
 	return summaries, nil
+}
+
+func mapCashFlowEntry(row ledgerSqlc.CashflowEntry) *cashflow.CashFlow {
+	return &cashflow.CashFlow{
+		ID:                    row.CashflowEntryID,
+		TransactionID:         row.TransactionID,
+		InstallmentPlanID:     int4ToPtr(row.InstallmentPlanID),
+		InstallmentPlanItemID: int4ToPtr(row.InstallmentPlanItemID),
+		Date:                  row.OccurredAt.Time,
+		CategoryID:            row.CategoryID,
+		PaymentMethodID:       row.PaymentMethodID,
+		Direction:             row.Direction,
+		Title:                 row.Title,
+		Amount:                numericToValue(row.Amount),
+		IsFixed:               row.IsFixed,
+		ReversalOfEntryID:     int4ToPtr(row.ReversalOfEntryID),
+	}
+}
+
+func mapCashFlowEntryWithNames(row ledgerSqlc.GetCashFlowEntryRow) *cashflow.CashFlow {
+	return &cashflow.CashFlow{
+		ID:                    row.CashflowEntryID,
+		TransactionID:         row.TransactionID,
+		InstallmentPlanID:     int4ToPtr(row.InstallmentPlanID),
+		InstallmentPlanItemID: int4ToPtr(row.InstallmentPlanItemID),
+		Date:                  row.OccurredAt.Time,
+		CategoryID:            row.CategoryID,
+		CategoryName:          row.CategoryName,
+		PaymentMethodID:       row.PaymentMethodID,
+		PaymentMethodName:     row.PaymentMethodName,
+		Direction:             row.Direction,
+		Title:                 row.Title,
+		Amount:                numericToValue(row.Amount),
+		IsFixed:               row.IsFixed,
+		ReversalOfEntryID:     int4ToPtr(row.ReversalOfEntryID),
+	}
+}
+
+func mapCashFlowEntryWithNamesList(row ledgerSqlc.ListCashFlowEntriesByMonthRow) *cashflow.CashFlow {
+	return &cashflow.CashFlow{
+		ID:                    row.CashflowEntryID,
+		TransactionID:         row.TransactionID,
+		InstallmentPlanID:     int4ToPtr(row.InstallmentPlanID),
+		InstallmentPlanItemID: int4ToPtr(row.InstallmentPlanItemID),
+		Date:                  row.OccurredAt.Time,
+		CategoryID:            row.CategoryID,
+		CategoryName:          row.CategoryName,
+		PaymentMethodID:       row.PaymentMethodID,
+		PaymentMethodName:     row.PaymentMethodName,
+		Direction:             row.Direction,
+		Title:                 row.Title,
+		Amount:                numericToValue(row.Amount),
+		IsFixed:               row.IsFixed,
+		ReversalOfEntryID:     int4ToPtr(row.ReversalOfEntryID),
+	}
 }

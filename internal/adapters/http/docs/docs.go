@@ -520,6 +520,136 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashflows/{id}": {
+            "put": {
+                "description": "Updates a cash flow entry (income or expense).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashFlows"
+                ],
+                "summary": "Atualizar Lançamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "CashFlow ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "CashFlow Payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateCashFlowRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CashFlowResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a cash flow entry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashFlows"
+                ],
+                "summary": "Excluir Lançamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "CashFlow ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashflows/{id}/reverse": {
+            "post": {
+                "description": "Creates a reversal transaction for a cash flow entry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashFlows"
+                ],
+                "summary": "Estornar Lançamento",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "CashFlow ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CashFlowResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "description": "Returns a list of all categories, optionally filtered by active status.",
@@ -1761,6 +1891,9 @@ const docTemplate = `{
                 "category_id": {
                     "type": "integer"
                 },
+                "category_name": {
+                    "type": "string"
+                },
                 "date": {
                     "type": "string"
                 },
@@ -1772,6 +1905,15 @@ const docTemplate = `{
                 },
                 "is_fixed": {
                     "type": "boolean"
+                },
+                "payment_method_id": {
+                    "type": "integer"
+                },
+                "payment_method_name": {
+                    "type": "string"
+                },
+                "reversal_of_entry_id": {
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
@@ -1888,6 +2030,9 @@ const docTemplate = `{
                 },
                 "is_fixed": {
                     "type": "boolean"
+                },
+                "payment_method_id": {
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"

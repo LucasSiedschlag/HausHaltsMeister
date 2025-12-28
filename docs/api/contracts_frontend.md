@@ -101,15 +101,20 @@ interface CashFlow {
   id: number;
   date: string; // YYYY-MM-DD
   category_id: number;
+  category_name?: string;
+  payment_method_id: number;
+  payment_method_name?: string;
   direction: Direction;
   title: string;
   amount: number;
   is_fixed: boolean;
+  reversal_of_entry_id?: number | null;
 }
 
 interface CreateCashFlowRequest {
   date: string;
   category_id: number;
+  payment_method_id: number;
   direction: Direction;
   title: string;
   amount: number;
@@ -134,12 +139,31 @@ interface CategorySummary {
 **GET /cashflows**
 
 - Query: `?month=YYYY-MM-DD` (Obrigatório, dia 1)
+- Query opcional: `direction=IN|OUT`, `is_fixed=true|false`
 - Response: `CashFlow[]`
 
 **POST /cashflows**
 
 - Body: `CreateCashFlowRequest`
 - Response: `CashFlow`
+
+**PUT /cashflows/:id**
+
+- Body: `CreateCashFlowRequest`
+- Response: `CashFlow`
+
+**DELETE /cashflows/:id**
+
+- Response: `{ status: string }`
+
+**POST /cashflows/:id/reverse**
+
+- Response: `CashFlow`
+
+**POST /cashflows/copy-fixed**
+
+- Body: `{ from_month: string, to_month: string }`
+- Response: `{ copied_count: number }`
 
 **GET /cashflows/summary**
 

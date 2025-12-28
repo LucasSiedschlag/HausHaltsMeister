@@ -108,7 +108,26 @@ Validacao:
 
 ---
 
-## 7) Relatorios e dashboards
+## 7) Lancamentos manuais (cashflow)
+
+Escopo:
+- Substituir o antigo cashflow por lancamentos no ledger.
+- Separar entradas, variaveis, fixos e estornos.
+
+Tarefas:
+1. Criar tabela `cashflow_entries` para metadados (payment_method, fixed, reversals).
+2. Ajustar endpoints `POST/GET/PUT/DELETE /cashflows` e `POST /cashflows/:id/reverse`.
+3. Garantir regra de fixos (categoria Custos fixos) e data por mes (exceto cartao).
+4. Replicacao de fixos via `POST /cashflows/copy-fixed`.
+
+Validacao:
+- Criar entrada/saida manual (com payment_method).
+- Estorno cria transacao inversa.
+- Listagem por mes funciona com filtros direction/is_fixed.
+
+---
+
+## 8) Relatorios e dashboards
 
 Escopo:
 - Recalcular dashboards usando postings.
@@ -123,7 +142,7 @@ Validacao:
 
 ---
 
-## 8) Limpeza do legado
+## 9) Limpeza do legado
 
 Escopo:
 - Remover codigo, handlers e queries que referenciam o modelo antigo.
@@ -139,7 +158,7 @@ Validacao:
 
 ---
 
-## 9) Testes e qualidade
+## 10) Testes e qualidade
 
 Escopo:
 - Criar casos de teste minimos por dominio no novo modelo.
@@ -155,7 +174,7 @@ Validacao:
 
 ---
 
-## 10) Atualizacao de documentacao
+## 11) Atualizacao de documentacao
 
 Escopo:
 - Documentar o novo comportamento.
