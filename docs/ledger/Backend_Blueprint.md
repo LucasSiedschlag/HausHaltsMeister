@@ -1,22 +1,25 @@
-# Backend Blueprint — Ledger (HausHaltsMeister)
+# Backend Blueprint — HausHaltsMeister (modelo ledger leve)
 
-> Objetivo: backend baseado em ledger (partidas dobradas) com camada hibrida para cartoes/parcelamentos, mantendo o app simples, consistente e auditavel.
+> Objetivo: orientar a implementação do backend alinhada ao modelo final definido em `docs/ledger/`.
+> Fonte de verdade: `docs/ledger/Reestruturação_Completa.md` e documentos específicos de regras.
 
 ---
 
-## 1) Stack e decisoes
+## 1) Stack e decisões
 
 - Linguagem: Go
-- HTTP: Echo
-- DB: PostgreSQL
-- Driver/Pool: pgx + pgxpool
+- Banco: PostgreSQL
 - SQL: sqlc (queries em `.sql` -> codigo Go)
 - Migrations: tern
-- Arquitetura: domain + adapters (postgres/http), clean/hex leve
+- Arquitetura: monolito modular (dominio + adapters), com journal como core
+
+Referencias:
+- `docs/ledger/Documento_de_Arquitetura.md`
+- `docs/ledger/Regras_Core_Ledger.md`
 
 ---
 
-## 2) Estrutura de pastas (obrigatoria)
+## 2) Estrutura de pastas (sugerida)
 
 ```txt
 haushaltsmeister/
@@ -26,65 +29,36 @@ haushaltsmeister/
 
   internal/
     config/
-      config.go
-
     db/
-      db.go
 
     domain/
+      auth/
       ledger/
-        model.go
-        ports.go
-        service.go
-      category/
-        model.go
-        ports.go
-        service.go
+      accounts/
+      categories/
+      journal/
       budget/
-        model.go
-        ports.go
-        service.go
-      picuinha/
-        model.go
-        ports.go
-        service.go
-      cards/
-        model.go
-        ports.go
-        service.go
+      investments/
+      creditcard/
+      reporting/
 
     adapters/
       postgres/
-        ledger_repo.go
-        category_repo.go
-        budget_repo.go
-        picuinha_repo.go
-        cards_repo.go
-        // sqlc generated:
         sqlc/
-
       http/
         dto/
-          ledger.go
-          category.go
-          budget.go
-          picuinha.go
-          payment.go
         router.go
-        ledger_handlers.go
-        category_handlers.go
-        budget_handlers.go
-        picuinha_handlers.go
-        cards_handlers.go
-        middleware.go
+        handlers/
 
   db/
     queries/
       ledger.sql
       categories.sql
-      budgets.sql
-      picuinhas.sql
-      cards.sql
+      journal.sql
+      budget.sql
+      investments.sql
+      creditcard.sql
+      reporting.sql
 
   migrations/
     001_init.sql
@@ -92,252 +66,120 @@ haushaltsmeister/
 
   sqlc.yaml
   Makefile
-  README.md
 ```
 
----
-
-## 3) Convencoes e guidelines
-
-3.1 Padrões de codigo
-- Sempre usar context.Context em tudo (service + repo).
-- Erros de dominio devem ser "sentinels" (var ErrX = errors.New(...)) e tratados no handler.
-- Validacao no service, nao no handler (handler so faz parse/bind).
-- Nao usar ORM.
-- Nao acessar sqlc diretamente em handlers.
-
-3.2 DTO Pattern (HTTP)
-- Todo handler deve usar structs especificas para Request/Response (`internal/adapters/http/dto`).
-- JSON em snake_case.
-- Conversao DTO <-> Domain explicita no handler (ou helpers).
-
-3.3 Datas
-- JSON sempre YYYY-MM-DD.
-- "Mes de referencia": sempre o primeiro dia (YYYY-MM-01).
+Referencias:
+- `docs/ledger/Documento_de_Arquitetura.md`
+- `docs/ledger/Requisitos_Funcionais.md`
 
 ---
 
-## 4) Modelo de dados (ledger + hibrido)
+## 3) Convencoes e regras de dominio
 
-4.1 Core ledger (migrations/001_init.sql)
-- ledger_accounts
-  - type: ASSET | LIABILITY | EQUITY | INCOME | EXPENSE
-  - currency: "BRL" por padrao
-- ledger_transactions
-  - occurred_at, description, reference, notes
-- ledger_postings
-  - transaction_id, account_id, side (DEBIT/CREDIT), amount
-  - category_id (opcional)
-  - party_id (opcional)
-- ledger_categories
-  - direction (IN/OUT), is_budget_relevant, is_active
-- ledger_parties
-  - kind: PERSON | ORG | SYSTEM
-- ledger_tags + ledger_posting_tags (opcional)
+Referencias:
+- `docs/ledger/Regras_Core_Ledger.md`
+- `docs/ledger/Regras_Categorias_e_Orçamento.md`
+- `docs/ledger/Regras_Segurança.md`
 
-4.2 Camada hibrida (migrations/002 e 003)
-- payment_methods
-  - 1:1 com ledger_accounts (account_id)
-  - closing_day, due_day, credit_limit
-- installment_plans
-  - plan_type: INSTALLMENT | RECURRING
-  - total_amount ou installment_amount + installment_count
-  - start_date, payment_method_id ou account_id
-  - category_id e party_id (vinculo de orcamento e picuinhas)
-- installment_plan_items
-  - due_date, amount, status
-  - transaction_id (quando virar posting no ledger)
-
-4.3 Principios
-- Toda movimentacao contabilizavel passa por postings.
-- As tabelas hibridas so geram postings ou ajudam no UX (cartao, fatura, parcelamento).
-- O ledger e a fonte da verdade para saldo e analises.
+- `ledger_id` e obrigatorio em todas as rotas e queries.
+- `transactions` e `entries` devem ser criados em uma transacao SQL.
+- `entries.amount_cents` e sempre positivo; IN/OUT vem de `categories.direction`.
+- `entries.kind` define `normal`, `transfer`, `adjust`.
+- Transferencias exigem pelo menos uma IN e uma OUT e devem ser balanceadas.
+- Mes de referencia: sempre `YYYY-MM-01`.
 
 ---
 
-## 5) Regras de dominio (detalhadas)
+## 4) Modelo de dados (resumo)
 
-5.1 Partidas dobradas (obrigatorio)
-- Para cada transacao: soma dos DEBITs == soma dos CREDITs.
-- Valor sempre > 0, o "sinal" e dado pelo side.
+Referencias:
+- `docs/ledger/Reestruturação_Completa.md`
+- `docs/ledger/Documento_de_Arquitetura.md`
 
-5.2 Categorias e orcamento
-- category_id deve existir apenas em postings de INCOME/EXPENSE.
-- Orçamento usa ledger_categories com direction = OUT.
-- Percentual calcula sobre IN (direction = IN, is_budget_relevant = true).
+### 4.1 Core
+- `users`, `ledgers`, `ledger_members`
+- `accounts` (`cash`, `investment`, `credit_card`)
+- `categories` (direction + flags)
+- `transactions` + `entries`
 
-5.3 Contas (exemplos base)
-- Assets: Banco, Carteira
-- Liabilities: Cartao Nubank, Cartao Inter
-- Income: Ganhos, Investimentos
-- Expense: Moradia, Alimentacao, Transporte, Picuinhas
-- Equity: Ajustes (para correcoes sem caixa real)
+### 4.2 Orçamento (% flexivel)
+- `budget_plans`, `budget_plan_versions`, `budget_plan_lines`
+- `effective_from_month` sempre no 1o dia do mes
 
-5.4 Picuinhas
-- Pessoa: ledger_parties (kind = PERSON).
-- Conta padrao: Receivables:Picuinhas (ASSET).
-- Emprestimo:
-  - DEBIT Receivables:Picuinhas (party_id)
-  - CREDIT Banco (se houve saida real)
-- Recebimento:
-  - DEBIT Banco
-  - CREDIT Receivables:Picuinhas (party_id)
-- Compra no cartao para pessoa:
-  - DEBIT Receivables:Picuinhas (party_id)
-  - CREDIT Cartao (LIABILITY)
+### 4.3 Cartao
+- `credit_cards` (metadados)
+- `installment_plans`, `installments`
+- `credit_card_statements`
 
-5.5 Cartoes e parcelamentos
-- Cartao = account LIABILITY + payment_methods.
-- Parcela gera posting:
-  - DEBIT Expense (categoria)
-  - CREDIT Cartao (LIABILITY)
-- Fatura = soma dos itens do mes (com fechamento/vencimento).
+### 4.4 Investimentos
+- usa `accounts` + `categories` tecnicas e o journal
 
 ---
 
-## 6) Migrations (tern)
+## 5) Fluxos essenciais (alto nivel)
 
-6.1 Regras
-- Sempre criar/alterar schema via migrations/*.sql.
-- Nunca editar banco na mao em dev.
+Referencias:
+- `docs/ledger/Casos_de_uso.md`
+- `docs/ledger/Regras_Cartão_de_crédito.md`
+- `docs/ledger/Regras_Investimentos.md`
 
-6.2 Comandos esperados (Makefile)
-- make migrate -> aplica migrations com tern
-- make migrate-status -> status
-- make sqlc -> sqlc generate
+### 5.1 Criar lancamento
+1. Criar `transactions` (data, descricao, autor).
+2. Criar `entries` (conta, categoria, valor, kind).
+3. Validar ledger boundary e balanceamento (transfer).
 
----
+### 5.2 Orçamento mensal
+1. Selecionar versao vigente do plano no mes.
+2. Calcular renda base (IN com `is_budget_base=true`).
+3. Calcular limite por categoria (percentual).
+4. Calcular realizado (OUT com `is_budget_relevant=true`).
 
-## 7) sqlc
-
-7.1 sqlc.yaml
-- Engine: postgresql
-- sql_package: pgx/v5
-- Output: internal/adapters/postgres/sqlc
-
-7.2 Regras de queries
-- Cada dominio possui arquivo de query proprio em db/queries.
-- Queries pequenas e objetivas.
-- Sempre nomear com -- name: QueryName :one|:many|:exec.
+### 5.3 Cartao (parcelas)
+1. Compra cria `installment_plans` + `installments` (scheduled).
+2. Posting mensal gera `transactions` + `entries` no cartao.
+3. Pagamento da fatura e transferencia com categorias tecnicas (fora do orçamento).
 
 ---
 
-## 8) Dominios e responsabilidades
+## 6) Migrations e sqlc
 
-8.1 Ledger
-- Criar transacoes com postings balanceados.
-- Consultas por mes, conta, categoria e party.
-- Validacao de integridade (soma, tipos de conta).
+Referencias:
+- `docs/ledger/Plano_de_Migracao_Backend.md`
+- `docs/ledger/Requisitos_Nao_Funcionais.md`
 
-8.2 Category
-- CRUD de ledger_categories.
-- Bloquear alteracao de direction quando houver uso historico.
-
-8.3 Budget
-- Periodos e itens por mes.
-- Validacao de 100% quando em percentual.
-- Replicacao de meses futuros quando necessario.
-
-8.4 Picuinhas
-- Pessoas (ledger_parties) + casos.
-- Saldo em aberto via postings da conta Receivables.
-
-8.5 Cards
-- payment_methods e installment_plans.
-- Fatura por mes (somar items + considerar fechamento).
+- Sempre criar/alterar schema via `migrations/*.sql`.
+- `make migrate` aplica migrations; `make sqlc` gera codigo.
+- Queries devem sempre filtrar por `ledger_id`.
 
 ---
 
-## 9) API (diretrizes)
+## 7) API (diretriz de rotas)
 
-9.1 Regras gerais
-- DTOs em internal/adapters/http/dto
-- JSON snake_case
-- Datas em YYYY-MM-DD
-- Validacao no service, handler apenas parse
+Referencia: `docs/ledger/Documento_de_Arquitetura.md`.
 
-9.2 Rotas minimas (primeira entrega)
-
-Ledger
-- POST /ledger/transactions
-- GET /ledger/transactions?month=YYYY-MM-01
-- GET /ledger/accounts
-
-Categories
-- POST /categories
-- GET /categories?direction=IN|OUT&active=true
-
-9.3 Rotas incrementais
-
-Budget
-- POST /budgets/:month/items
-- GET /budgets/:month/summary
-- POST /budgets/batch
-
-Picuinhas
-- POST /picuinhas/persons
-- GET /picuinhas/persons
-- POST /picuinhas/cases
-- GET /picuinhas/cases?person_id=:id
-- GET /picuinhas/cases/:id/installments
-
-Cards
-- POST /cards/installments
-- GET /cards/invoices?month=YYYY-MM-01
-
-9.4 Payload exemplo (ledger)
-
-POST /ledger/transactions
-
-{
-  "occurred_at": "2026-01-10",
-  "description": "Salario",
-  "postings": [
-    {"account_id": 1, "side": "DEBIT", "amount": 5000.00},
-    {"account_id": 10, "side": "CREDIT", "amount": 5000.00, "category_id": 2}
-  ]
-}
+- `POST /ledgers`
+- `POST /ledgers/{ledgerId}/transactions`
+- `GET /ledgers/{ledgerId}/transactions?from=&to=&account=&category=`
+- `POST /ledgers/{ledgerId}/categories`
+- `POST /ledgers/{ledgerId}/accounts`
+- `GET /ledgers/{ledgerId}/budget/monthly?month=YYYY-MM`
+- `POST /ledgers/{ledgerId}/budget/versions`
+- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans`
+- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post?month=YYYY-MM`
+- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close?month=YYYY-MM`
+- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay?month=YYYY-MM`
 
 ---
 
-## 10) Bootstrap (cmd/api/main.go)
+## 8) Checklist de implementacao (ordem sugerida)
 
-Responsabilidades:
-- Load config
-- Criar pgxpool
-- Criar sqlc queries
-- Wire repositories -> services -> handlers
-- Start Echo server
-
----
-
-## 11) Seguranca e observabilidade (RNFs)
-
-11.1 Autenticacao e hardening
-- Header `X-App-Token` via middleware
-- Timeout global (ex: 30s)
-- Body limit (ex: 1MB)
-- CORS restritivo
-
-11.2 Auditoria
-- Tabela audit_logs (acao, entidade, diff, created_at)
-- Service layer dispara logs
-
-11.3 Backup e restore
-- `make backup` e `make restore`
-- Documentar no README
+1. Core: users, ledgers, accounts, categories, transactions, entries.
+2. Budget: plans, versions, lines + calculo mensal.
+3. Investimentos: aportes/resgates/rendimentos via journal.
+4. Cartao: credit_cards, installments, statements, posting e pagamento.
+5. Reporting: orcado vs realizado, saldos por conta, resumos por periodo.
+6. Hardening: validacoes, idempotencia e testes.
 
 ---
 
-## 12) Checklist de implementacao (ordem sugerida)
-
-1. [x] migrations/001_init.sql (ledger core)
-2. [x] make migrate
-3. [x] sqlc.yaml + queries base
-4. [x] make sqlc
-5. [ ] Implementar domain/ledger + repo + handlers
-6. [ ] Integrar categories
-7. [ ] Integrar budget
-8. [ ] Integrar picuinhas
-9. [ ] Integrar cards/parcelamentos
-10. [ ] Seguranca e operacao (auth, timeout, backup)
+Fim.

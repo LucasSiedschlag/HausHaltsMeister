@@ -1,188 +1,191 @@
-# Plano de migracao do backend para o modelo ledger
+# Plano de migracao do backend para o modelo ledger (atualizado)
 
-Objetivo: migrar o backend atual para o novo modelo ledger em etapas pequenas, com validacao ao final de cada fase.
+Objetivo: migrar o backend para o modelo ledger leve (transactions + entries), alinhado aos documentos atuais em `docs/ledger/`.
+
+Referencias principais:
+- `docs/ledger/Reestruturação_Completa.md`
+- `docs/ledger/Regras_Core_Ledger.md`
+- `docs/ledger/Regras_Categorias_e_Orçamento.md`
+- `docs/ledger/Regras_Investimentos.md`
+- `docs/ledger/Regras_Cartão_de_crédito.md`
+- `docs/ledger/Regras_Segurança.md`
+- `docs/ledger/Casos_de_uso.md`
+- `docs/ledger/Documento_de_Arquitetura.md`
+
+---
 
 ## 1) Base de dados e ferramentas
 
 Escopo:
-- Confirmar migrations do ledger como baseline unica.
-- Garantir make migrate, make sqlc e conexao com DB padrao.
+- Garantir migrations e sqlc alinhados ao schema final.
 
 Tarefas:
-1. Rodar `make migrate` no banco ledger.
-2. Garantir `sqlc.yaml` apontando para `migrations/` (ledger).
-3. Criar queries base em `db/queries/ledger.sql`.
+1. Confirmar `migrations/` como baseline do modelo final.
+2. Validar `make migrate`, `make migrate-status` e `make sqlc`.
+3. Revisar `sqlc.yaml` para apontar as migrations do ledger.
 
 Validacao:
-- `make migrate` conclui sem erro.
-- `make sqlc` gera codigo sem erro.
+- Migrations aplicam sem erro.
+- sqlc gera codigo sem erro.
 
 ---
 
-## 2) Dominio ledger (core)
+## 2) Core ledger (users, ledgers, ledger_members, accounts, categories, journal)
 
 Escopo:
-- Implementar o dominio principal (transacoes + postings).
-- Repositorio e handlers basicos.
+- Implementar o core com journal leve.
 
 Tarefas:
-1. Criar `internal/domain/ledger` (model, ports, service).
-2. Criar repositorio `internal/adapters/postgres/ledger_repo.go`.
-3. Criar handlers `internal/adapters/http/ledger_handlers.go`.
-4. Criar DTOs em `internal/adapters/http/dto/ledger.go`.
-5. Rotas:
-   - POST /ledger/transactions
-   - GET /ledger/transactions?month=YYYY-MM-01
-   - GET /ledger/accounts
+1. Criar dominio de `users`, `ledgers`, `ledger_members`, `accounts`, `categories` e `journal`.
+2. Implementar repositorios e services para:
+   - CRUD de accounts e categories.
+   - Criacao de transactions + entries (atomicidade).
+3. Implementar validacoes de integridade (ledger boundary, roles e transferencias).
+4. Ajustar handlers e DTOs para rotas com `ledger_id`.
 
 Validacao:
-- Teste manual via curl para criar transacao balanceada.
-- `go test ./...` sem falhas (quando possivel).
+- Criacao de lancamento simples e split funciona.
+- Transferencia interna balanceada (IN == OUT).
+- Acesso por ledger e roles validado (owner/editor/viewer).
 
 ---
 
-## 3) Categorias (categories)
+## 3) Orçamento (% flexivel)
 
 Escopo:
-- Substituir fluxo antigo por novo categories.
+- Planos, versoes e linhas de orçamento, calculo mensal.
 
 Tarefas:
-1. Atualizar repos e services para ler/escrever em `categories`.
-2. Ajustar handlers e DTOs existentes (Categories).
-3. Atualizar queries sqlc em `db/queries/categories.sql`.
+1. Implementar `budget_plans`, `budget_plan_versions`, `budget_plan_lines`.
+2. Criar queries para:
+   - versao vigente do mes
+   - renda base (IN com `is_budget_base=true`)
+   - realizado (OUT com `is_budget_relevant=true`)
+3. Implementar endpoint de painel mensal.
 
 Validacao:
-- CRUD de categorias funcionando.
-- Filtros direction/active respondendo corretamente.
+- Percentuais aplicados sobre renda base real.
+- Mudanca de versao nao altera meses anteriores.
 
 ---
 
-## 4) Budget (planejamento)
+## 4) Investimentos
 
 Escopo:
-- Manter budget como camada de planejamento.
-- Fazer os calculos usando postings do ledger.
+- Fluxos de aporte, resgate e rendimentos via journal.
 
 Tarefas:
-1. Atualizar queries de budget para usar `ledger_categories`.
-2. Implementar calculo de total IN a partir de postings.
-3. Garantir validacao 100% (quando percentual).
+1. Garantir account `investment` e categorias tecnicas.
+2. Implementar fluxos:
+   - Aporte: transferencia Pessoal -> Investimentos
+   - Resgate: transferencia Investimentos -> Pessoal
+   - Rendimento: entry IN com `kind=adjust`
 
 Validacao:
-- Criar orcamento em % e salvar com total 100%.
-- Summary bate com soma de postings do mes.
+- Entradas tecnicas nao entram na renda base.
+- Aporte pode ser orcado se `is_budget_relevant=true`.
 
 ---
 
-## 5) Picuinhas (parties + receivables)
+## 5) Cartao de credito (parcelas + fatura)
 
 Escopo:
-- Trocar saldo baseado em tabelas antigas por postings em conta Receivables.
+- Implementar ciclo completo do cartao no modelo final.
 
 Tarefas:
-1. Criar/garantir conta `Receivables:Picuinhas`.
-2. Mapear pessoas para `ledger_parties`.
-3. Criar casos com postings (emprestimo, recebimento, cartao).
-4. Atualizar endpoints Picuinhas para ler saldo via postings.
+1. CRUD de `credit_cards` (1:1 com account credit_card).
+2. Criar `installment_plans` + `installments` (scheduled).
+3. Implementar posting mensal:
+   - cria `transactions` + `entries` no cartao
+   - marca parcelas como `posted`
+4. Implementar `credit_card_statements`:
+   - fechamento e pagamento
+   - pagamento como transferencia com categorias tecnicas
 
 Validacao:
-- Saldo por pessoa reflete pagamentos/pendencias.
-- Casos parcelados geram postings futuros.
+- Parcela so entra no orcamento quando postada.
+- Pagamento de fatura nao duplica gasto.
+- Rotinas sao idempotentes (nao duplicam lancamentos/entries).
 
 ---
 
-## 6) Cartoes e parcelamentos (hibrido)
+## 6) Relatorios e dashboards
 
 Escopo:
-- Implementar payment_methods e installment_plans do novo schema.
+- Atualizar relatorios para usar journal + categorias.
 
 Tarefas:
-1. CRUD de payment_methods com account_id.
-2. Criacao de installment_plans + items.
-3. Geracao de postings para parcelas.
-4. Endpoint de fatura por mes (fechamento/vencimento).
+1. Resumo mensal (IN, OUT, saldo por conta).
+2. Orcado vs realizado por categoria.
+3. Relatorios de investimentos (aportes, resgates, rendimentos).
+4. Fatura do cartao por mes.
 
 Validacao:
-- Criar compra parcelada gera items.
-- Fatura soma itens do periodo correto.
+- Totais batem com o journal.
+- Meses com versoes diferentes de budget sao calculados corretamente.
 
 ---
 
-## 7) Lancamentos manuais (cashflow)
+## 7) Migracao de dados legados (se existir)
 
 Escopo:
-- Substituir o antigo cashflow por lancamentos no ledger.
-- Separar entradas, variaveis, fixos e estornos.
+- Mapear dados antigos para o journal leve.
 
 Tarefas:
-1. Criar tabela `cashflow_entries` para metadados (payment_method, fixed, reversals).
-2. Ajustar endpoints `POST/GET/PUT/DELETE /cashflows` e `POST /cashflows/:id/reverse`.
-3. Garantir regra de fixos (categoria Custos fixos) e data por mes (exceto cartao).
-4. Replicacao de fixos via `POST /cashflows/copy-fixed`.
+1. Mapear entradas/saidas antigas para `transactions` + `entries`.
+2. Normalizar categorias e flags (`direction`, `is_budget_base`, `is_budget_relevant`).
+3. Garantir consistencia de `ledger_id`.
 
 Validacao:
-- Criar entrada/saida manual (com payment_method).
-- Estorno cria transacao inversa.
-- Listagem por mes funciona com filtros direction/is_fixed.
+- Amostragem de dados migrados com comparacao de totais.
 
 ---
 
-## 8) Relatorios e dashboards
+## 8) Limpeza do legado
 
 Escopo:
-- Recalcular dashboards usando postings.
+- Remover caminhos e tabelas antigas apos migracao.
 
 Tarefas:
-1. Atualizar queries de dashboard para usar ledger_postings.
-2. Comparativos mensais baseados em categorias IN/OUT.
+1. Remover handlers/repos/queries antigas.
+2. Atualizar swagger/contratos.
+3. Remover tabelas antigas apenas apos validar migracao.
 
 Validacao:
-- Totais de IN/OUT batem com ledger.
-- Saldo mensal consistente.
+- `go test ./...` sem falhas.
+- Nenhuma rota aponta para tabelas antigas.
 
 ---
 
-## 9) Limpeza do legado
+## 9) Testes e qualidade
 
 Escopo:
-- Remover codigo, handlers e queries que referenciam o modelo antigo.
+- Cobrir regras criticas do dominio.
 
 Tarefas:
-1. Apagar services/repos obsolete.
-2. Remover DTOs antigos.
-3. Atualizar docs e swagger.
+1. Testes de transferencias balanceadas.
+2. Testes do calculo de budget mensal.
+3. Testes de posting idempotente de parcelas.
+4. Testes de seguranca (ledger boundary).
 
 Validacao:
-- `go test ./...` sem falhas (quando possivel).
-- Nenhum handler aponta para tabelas antigas.
+- Suites passam localmente.
 
 ---
 
-## 10) Testes e qualidade
+## 10) Atualizacao de documentacao
 
 Escopo:
-- Criar casos de teste minimos por dominio no novo modelo.
+- Manter docs sincronizados com o modelo implementado.
 
 Tarefas:
-1. Testes de transacao balanceada.
-2. Testes de budget com 100%.
-3. Testes de picuinha com parcelas e pagamento.
-4. Testes de fatura de cartao.
+1. Revisar `docs/ledger/Reestruturação_Completa.md` se houver mudancas.
+2. Atualizar `docs/api/*` com endpoints reais.
+3. Garantir consistencia com `docs/ledger/Casos_de_uso.md`.
 
 Validacao:
-- Testes de unidade/integracao passam.
+- Docs coerentes com o comportamento real.
 
 ---
 
-## 11) Atualizacao de documentacao
-
-Escopo:
-- Documentar o novo comportamento.
-
-Tarefas:
-1. Atualizar `docs/ledger/Backend_Blueprint.md` se necessario.
-2. Atualizar `docs/ledger/Casos_de_uso.md` com ajustes finais.
-3. Atualizar `docs/api/*` com novos endpoints.
-
-Validacao:
-- Docs consistentes com o comportamento real.
+Fim.
