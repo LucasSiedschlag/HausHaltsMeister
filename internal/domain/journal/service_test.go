@@ -12,6 +12,7 @@ type fakeRepo struct {
 	role       string
 	accounts   map[string]bool
 	categories map[string]string
+	referenced bool
 }
 
 func (f *fakeRepo) CreateTransaction(ctx context.Context, params CreateTransactionParams) (Transaction, error) {
@@ -35,7 +36,7 @@ func (f *fakeRepo) DeleteTransaction(ctx context.Context, ledgerID, transactionI
 }
 
 func (f *fakeRepo) HasTransactionReferences(ctx context.Context, ledgerID, transactionID string) (bool, error) {
-	return false, nil
+	return f.referenced, nil
 }
 
 func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error) {
@@ -72,6 +73,37 @@ func TestTransferMustBalance(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Equal(t, ErrTransferNotBalanced, err)
+}
+
+func TestUpdateTransactionBlockedWhenReferenced(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-out": "out"},
+		referenced: true,
+	}
+	service := NewService(repo)
+
+	desc := "Atualizado"
+	_, err := service.UpdateTransaction(context.Background(), "user-1", "ledger-1", "tx-1", UpdateTransactionParams{
+		Description: &desc,
+	})
+	require.Error(t, err)
+	require.Equal(t, ErrTransactionReferenced, err)
+}
+
+func TestDeleteTransactionBlockedWhenReferenced(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-out": "out"},
+		referenced: true,
+	}
+	service := NewService(repo)
+
+	err := service.DeleteTransaction(context.Background(), "user-1", "ledger-1", "tx-1")
+	require.Error(t, err)
+	require.Equal(t, ErrTransactionReferenced, err)
 }
 
 func ptr(value string) *string {

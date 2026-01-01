@@ -39,9 +39,10 @@ type transactionEntry struct {
 }
 
 type transactionPatchRequest struct {
-	OccurredAt  *string `json:"occurred_at"`
-	Description *string `json:"description"`
-	Notes       *string `json:"notes"`
+	OccurredAt  *string             `json:"occurred_at"`
+	Description *string             `json:"description"`
+	Notes       *string             `json:"notes"`
+	Entries     *[]transactionEntry `json:"entries"`
 }
 
 type transactionResponse struct {
@@ -240,10 +241,29 @@ func (h *JournalHandler) Update(c echo.Context) error {
 		occurredAt = &parsed
 	}
 
+	var entries *[]journal.EntryInput
+	if req.Entries != nil {
+		if len(*req.Entries) == 0 {
+			return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"entries": "required"})
+		}
+		parsedEntries := make([]journal.EntryInput, 0, len(*req.Entries))
+		for _, entry := range *req.Entries {
+			parsedEntries = append(parsedEntries, journal.EntryInput{
+				AccountID:   entry.AccountID,
+				CategoryID:  entry.CategoryID,
+				Kind:        entry.Kind,
+				AmountCents: entry.AmountCents,
+				Memo:        entry.Memo,
+			})
+		}
+		entries = &parsedEntries
+	}
+
 	updated, err := h.Service.UpdateTransaction(c.Request().Context(), user.ID, ledgerID, transactionID, journal.UpdateTransactionParams{
 		OccurredAt:  occurredAt,
 		Description: req.Description,
 		Notes:       req.Notes,
+		Entries:     entries,
 	})
 	if err != nil {
 		return WriteAppError(c, err)

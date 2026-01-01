@@ -237,52 +237,68 @@ func (s *Store) GetTransaction(ctx context.Context, ledgerID, transactionID stri
 }
 
 func (s *Store) UpdateTransaction(ctx context.Context, params journal.UpdateTransactionParams) (journal.Transaction, error) {
-	setParts := []string{}
-	args := []interface{}{params.LedgerID, params.TransactionID}
-	idx := 3
-
-	if params.OccurredAt != nil {
-		setParts = append(setParts, "occurred_at = $"+strconv.Itoa(idx))
-		args = append(args, *params.OccurredAt)
-		idx++
-	}
-	if params.Description != nil {
-		setParts = append(setParts, "description = $"+strconv.Itoa(idx))
-		args = append(args, *params.Description)
-		idx++
-	}
-	if params.Notes != nil {
-		setParts = append(setParts, "notes = $"+strconv.Itoa(idx))
-		args = append(args, *params.Notes)
-		idx++
-	}
-
-	setParts = append(setParts, "updated_at = $"+strconv.Itoa(idx))
-	args = append(args, params.UpdatedAt)
-	idx++
-
-	if len(setParts) == 0 {
-		return journal.Transaction{}, journal.ErrNotFound
-	}
-
-	query := `
-		UPDATE transactions
-		SET ` + strings.Join(setParts, ", ") + `
-		WHERE ledger_id = $1 AND id = $2
-		RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
-	`
-
 	var updated journal.Transaction
-	row := s.pool.QueryRow(ctx, query, args...)
-	if err := scanTransaction(row, &updated); err != nil {
-		return journal.Transaction{}, err
-	}
+	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		setParts := []string{}
+		args := []interface{}{params.LedgerID, params.TransactionID}
+		idx := 3
 
-	entries, err := s.getEntriesByTransaction(ctx, updated.ID)
+		if params.OccurredAt != nil {
+			setParts = append(setParts, "occurred_at = $"+strconv.Itoa(idx))
+			args = append(args, *params.OccurredAt)
+			idx++
+		}
+		if params.Description != nil {
+			setParts = append(setParts, "description = $"+strconv.Itoa(idx))
+			args = append(args, *params.Description)
+			idx++
+		}
+		if params.Notes != nil {
+			setParts = append(setParts, "notes = $"+strconv.Itoa(idx))
+			args = append(args, *params.Notes)
+			idx++
+		}
+
+		setParts = append(setParts, "updated_at = $"+strconv.Itoa(idx))
+		args = append(args, params.UpdatedAt)
+		idx++
+
+		query := `
+			UPDATE transactions
+			SET ` + strings.Join(setParts, ", ") + `
+			WHERE ledger_id = $1 AND id = $2
+			RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+		`
+
+		row := tx.QueryRow(ctx, query, args...)
+		if err := scanTransaction(row, &updated); err != nil {
+			return err
+		}
+
+		if params.Entries != nil {
+			if _, err := tx.Exec(ctx, `DELETE FROM entries WHERE ledger_id = $1 AND transaction_id = $2`, params.LedgerID, params.TransactionID); err != nil {
+				return err
+			}
+			for _, entry := range *params.Entries {
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO entries (transaction_id, ledger_id, account_id, category_id, kind, amount_cents, memo)
+					VALUES ($1, $2, $3, $4, $5, $6, $7)
+				`, params.TransactionID, params.LedgerID, entry.AccountID, entry.CategoryID, entry.Kind, entry.AmountCents, entry.Memo); err != nil {
+					return err
+				}
+			}
+		}
+
+		entries, err := getEntriesByTransactionTx(ctx, tx, updated.ID)
+		if err != nil {
+			return err
+		}
+		updated.Entries = entries
+		return nil
+	})
 	if err != nil {
 		return journal.Transaction{}, err
 	}
-	updated.Entries = entries
 	return updated, nil
 }
 
@@ -362,6 +378,40 @@ func (s *Store) GetCategoriesByIDs(ctx context.Context, ledgerID string, ids []s
 
 func (s *Store) getEntriesByTransaction(ctx context.Context, transactionID string) ([]journal.Entry, error) {
 	rows, err := s.pool.Query(ctx, `
+		SELECT id, ledger_id, transaction_id, account_id, category_id, kind, amount_cents, memo, created_at, updated_at
+		FROM entries
+		WHERE transaction_id = $1
+		ORDER BY created_at ASC
+	`, transactionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := []journal.Entry{}
+	for rows.Next() {
+		var entry journal.Entry
+		if err := rows.Scan(
+			&entry.ID,
+			&entry.LedgerID,
+			&entry.TransactionID,
+			&entry.AccountID,
+			&entry.CategoryID,
+			&entry.Kind,
+			&entry.AmountCents,
+			&entry.Memo,
+			&entry.CreatedAt,
+			&entry.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}
+
+func getEntriesByTransactionTx(ctx context.Context, tx pgx.Tx, transactionID string) ([]journal.Entry, error) {
+	rows, err := tx.Query(ctx, `
 		SELECT id, ledger_id, transaction_id, account_id, category_id, kind, amount_cents, memo, created_at, updated_at
 		FROM entries
 		WHERE transaction_id = $1

@@ -20,6 +20,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/investments"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/reports"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
 )
@@ -66,6 +67,7 @@ func main() {
 	budgetService := budget.NewService(store)
 	investmentsService := investments.NewService(store)
 	creditCardService := creditcard.NewService(store)
+	reportsService := reports.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
 
@@ -127,6 +129,12 @@ func main() {
 	creditCardHandler.RegisterNetworks(cardNetworksGroup)
 	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", httpapi.RequireAuth(authService))
 	creditCardHandler.Register(creditCardsGroup)
+
+	reportsHandler := &httpapi.ReportsHandler{
+		Service: reportsService,
+	}
+	reportsGroup := e.Group("/ledgers/:ledgerId/reports", httpapi.RequireAuth(authService))
+	reportsHandler.Register(reportsGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {

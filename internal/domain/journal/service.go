@@ -45,6 +45,7 @@ type UpdateTransactionParams struct {
 	OccurredAt    *time.Time
 	Description   *string
 	Notes         *string
+	Entries       *[]EntryInput
 	UpdatedAt     time.Time
 }
 
@@ -138,7 +139,7 @@ func (s *Service) UpdateTransaction(ctx context.Context, userID, ledgerID, trans
 	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
 		return Transaction{}, err
 	}
-	if params.OccurredAt == nil && params.Description == nil && params.Notes == nil {
+	if params.OccurredAt == nil && params.Description == nil && params.Notes == nil && params.Entries == nil {
 		return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"fields": "empty"})
 	}
 
@@ -148,6 +149,17 @@ func (s *Service) UpdateTransaction(ctx context.Context, userID, ledgerID, trans
 	}
 	if referenced {
 		return Transaction{}, ErrTransactionReferenced
+	}
+
+	if params.Entries != nil {
+		if len(*params.Entries) == 0 {
+			return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"entries": "required"})
+		}
+		validated, err := s.validateEntries(ctx, ledgerID, *params.Entries)
+		if err != nil {
+			return Transaction{}, err
+		}
+		params.Entries = &validated
 	}
 
 	params.LedgerID = ledgerID

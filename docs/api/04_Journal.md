@@ -63,3 +63,23 @@ Resposta deve incluir `next_cursor` com `occurred_at` e `id` do ultimo item.
   - `installments.posted_transaction_id`
   - `credit_card_statements.payment_transaction_id`
 - Em caso de conflito, exigir ajuste via `kind=adjust`.
+
+### PATCH /ledgers/{ledgerId}/transactions/{transactionId}
+
+Body (campos opcionais, substitui entries quando enviado):
+```json
+{
+  "occurred_at": "2026-01-10",
+  "description": "Mercado ajustado",
+  "notes": "Revisao",
+  "entries": [
+    {
+      "account_id": "uuid",
+      "category_id": "uuid",
+      "kind": "normal",
+      "amount_cents": 8000,
+      "memo": "Ajuste"
+    }
+  ]
+}
+```
