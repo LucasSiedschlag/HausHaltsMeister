@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -87,22 +87,22 @@ func (g *GoogleProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, classifyOAuthError(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return OAuthProfile{}, errors.New("oauth token exchange failed")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 	if tokenResp.AccessToken == "" {
-		return OAuthProfile{}, errors.New("missing access token")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	profileReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openidconnect.googleapis.com/v1/userinfo", nil)
@@ -113,12 +113,12 @@ func (g *GoogleProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 
 	profileResp, err := g.client.Do(profileReq)
 	if err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, classifyOAuthError(err)
 	}
 	defer profileResp.Body.Close()
 
 	if profileResp.StatusCode < 200 || profileResp.StatusCode >= 300 {
-		return OAuthProfile{}, errors.New("oauth userinfo failed")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	var userinfo struct {
@@ -129,7 +129,7 @@ func (g *GoogleProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 		Picture       string `json:"picture"`
 	}
 	if err := json.NewDecoder(profileResp.Body).Decode(&userinfo); err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	return OAuthProfile{
@@ -174,22 +174,22 @@ func (g *GitHubProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, classifyOAuthError(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return OAuthProfile{}, errors.New("oauth token exchange failed")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 	if tokenResp.AccessToken == "" {
-		return OAuthProfile{}, errors.New("missing access token")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user", nil)
@@ -201,12 +201,12 @@ func (g *GitHubProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 
 	userResp, err := g.client.Do(userReq)
 	if err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, classifyOAuthError(err)
 	}
 	defer userResp.Body.Close()
 
 	if userResp.StatusCode < 200 || userResp.StatusCode >= 300 {
-		return OAuthProfile{}, errors.New("oauth userinfo failed")
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	var ghUser struct {
@@ -216,7 +216,7 @@ func (g *GitHubProvider) Exchange(ctx context.Context, code, codeVerifier, redir
 		Email     string `json:"email"`
 	}
 	if err := json.NewDecoder(userResp.Body).Decode(&ghUser); err != nil {
-		return OAuthProfile{}, err
+		return OAuthProfile{}, ErrOAuthProvider
 	}
 
 	email := strings.TrimSpace(ghUser.Email)
@@ -247,13 +247,14 @@ func (g *GitHubProvider) fetchPrimaryEmail(ctx context.Context, accessToken stri
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return "", false, err
+		return "", false, classifyOAuthError(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
-		return "", false, fmt.Errorf("oauth email fetch failed: %s", string(body))
+		_ = body
+		return "", false, ErrOAuthProvider
 	}
 
 	var emails []struct {
@@ -280,6 +281,19 @@ func (g *GitHubProvider) fetchPrimaryEmail(ctx context.Context, accessToken stri
 
 func defaultOAuthClient() *http.Client {
 	return &http.Client{Timeout: 10 * time.Second}
+}
+
+func classifyOAuthError(err error) error {
+	if err == nil {
+		return ErrOAuthProvider
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return ErrGatewayTimeout
+	}
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		return ErrGatewayTimeout
+	}
+	return ErrServiceUnavailable
 }
 
 func GeneratePKCE() (string, string, error) {

@@ -254,6 +254,9 @@ func (s *Service) HandleOAuthCallback(ctx context.Context, provider, code, state
 
 	profile, err := p.Exchange(ctx, code, saved.CodeVerifier, saved.RedirectURI)
 	if err != nil {
+		if _, ok := err.(*Error); ok {
+			return AuthResult{}, "", err
+		}
 		return AuthResult{}, "", ErrOAuthProvider
 	}
 

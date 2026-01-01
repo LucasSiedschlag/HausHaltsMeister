@@ -38,6 +38,8 @@ var (
 	ErrOAuthStateInvalid  = NewError("AUTH_OAUTH_STATE_INVALID", "State OAuth invalido", nil)
 	ErrOAuthProvider      = NewError("AUTH_OAUTH_PROVIDER_ERROR", "Erro no provider OAuth", nil)
 	ErrOAuthEmailRequired = NewError("AUTH_OAUTH_EMAIL_REQUIRED", "Email necessario para OAuth", nil)
+	ErrServiceUnavailable = NewError("SERVICE_UNAVAILABLE", "Servico indisponivel", nil)
+	ErrGatewayTimeout     = NewError("GATEWAY_TIMEOUT", "Timeout na dependencia", nil)
 	ErrDuplicateEmail     = NewError("CONFLICT_DUPLICATE_EMAIL", "Email ja cadastrado", nil)
 	ErrValidation         = NewError("VALIDATION_ERROR", "Validacao falhou", nil)
 	ErrNotImplemented     = NewError("NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
