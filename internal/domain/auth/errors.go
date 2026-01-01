@@ -3,21 +3,33 @@ package auth
 import "errors"
 
 type Error struct {
-	Code    string
-	Message string
-	Details map[string]string
+	code    string
+	message string
+	details map[string]string
 }
 
 func (e *Error) Error() string {
-	return e.Code
+	return e.code
+}
+
+func (e *Error) Code() string {
+	return e.code
+}
+
+func (e *Error) Message() string {
+	return e.message
+}
+
+func (e *Error) Details() map[string]string {
+	return e.details
 }
 
 func NewError(code, message string, details map[string]string) *Error {
-	return &Error{Code: code, Message: message, Details: details}
+	return &Error{code: code, message: message, details: details}
 }
 
 var (
-	ErrNotFound          = errors.New("not_found")
+	ErrNotFound           = errors.New("not_found")
 	ErrInvalidCredentials = NewError("AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", map[string]string{"email": "invalid"})
 	ErrUserInactive       = NewError("AUTH_USER_INACTIVE", "Usuario inativo", nil)
 	ErrRefreshRevoked     = NewError("AUTH_REFRESH_REVOKED", "Refresh token revogado", nil)

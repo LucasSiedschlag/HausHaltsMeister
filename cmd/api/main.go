@@ -13,6 +13,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
 )
@@ -52,6 +53,7 @@ func main() {
 		RefreshTTL: cfg.RefreshTokenTTL,
 		Providers:  providers,
 	})
+	ledgerService := ledger.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
 	
@@ -69,6 +71,12 @@ func main() {
 	}
 	group := e.Group("/auth")
 	authHandler.Register(group)
+
+	ledgerHandler := &httpapi.LedgerHandler{
+		Service: ledgerService,
+	}
+	ledgerGroup := e.Group("/ledgers", httpapi.RequireAuth(authService))
+	ledgerHandler.Register(ledgerGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {

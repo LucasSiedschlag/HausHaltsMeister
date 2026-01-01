@@ -7,7 +7,6 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -401,9 +400,4 @@ func scanIdentity(row pgx.Row, identity *auth.AuthIdentity) error {
 		return err
 	}
 	return nil
-}
-
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

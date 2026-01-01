@@ -38,3 +38,38 @@
 - Keep card posting routines idempotent to avoid duplicate entries.
 - Normalize month fields to the first day (`YYYY-MM-01`) for budget and card cycles.
 - Keep category flag semantics consistent: IN => `is_budget_relevant=false`, OUT => `is_budget_base=false`.
+
+## Autonomia e fluxo de trabalho
+
+- Evite pedir confirmação do tipo "posso prosseguir?"
+- Assuma que deve prosseguir até entregar a tarefa completa.
+- Faça perguntas quando houver ambiguidade real que impeça a implementação (ex.: duas opções incompatíveis e nenhuma preferência indicada).
+- Quando houver escolhas razoáveis, escolha a opção mais segura e alinhada às convenções do projeto, e documente rapidamente no PR/commit message.
+
+## Regras de decisão (quando houver dúvida)
+
+- Preferir consistência com padrões existentes no código.
+- Preferir segurança e integridade (ledger boundary, idempotência, validações).
+
+## Quando perguntar
+
+Pergunte apenas se:
+- há decisão que muda o contrato público (API) e não está documentada
+- há risco de perda de dados (alteração destrutiva)
+- há conflito direto com um documento existente
+- falta um segredo/config (client id OAuth etc.) que impede rodar/testar
+
+## Definition of Done (DoD)
+
+Uma tarefa só está concluída quando:
+1) Código implementado conforme docs
+2) Testes criados/atualizados
+3) Documentação atualizada (docs/api, docs/ledger, etc.)
+
+## Relatório final
+
+Ao finalizar, responda sempre com:
+- Resumo do que foi feito
+- Arquivos alterados
+- Como rodar/testar
+- TODOs (se existirem)
