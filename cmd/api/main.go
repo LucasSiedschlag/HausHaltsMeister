@@ -16,6 +16,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/categories"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/creditcard"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/investments"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
@@ -64,9 +65,10 @@ func main() {
 	journalService := journal.NewService(store)
 	budgetService := budget.NewService(store)
 	investmentsService := investments.NewService(store)
+	creditCardService := creditcard.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
-	
+
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(echomw.Recover())
@@ -117,6 +119,14 @@ func main() {
 	}
 	investmentsGroup := e.Group("/ledgers/:ledgerId/investments", httpapi.RequireAuth(authService))
 	investmentsHandler.Register(investmentsGroup)
+
+	creditCardHandler := &httpapi.CreditCardHandler{
+		Service: creditCardService,
+	}
+	cardNetworksGroup := e.Group("/card-networks", httpapi.RequireAuth(authService))
+	creditCardHandler.RegisterNetworks(cardNetworksGroup)
+	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", httpapi.RequireAuth(authService))
+	creditCardHandler.Register(creditCardsGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {

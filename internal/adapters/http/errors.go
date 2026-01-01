@@ -69,6 +69,16 @@ func errorStatus(code string) int {
 		return nethttp.StatusNotFound
 	case "CATEGORY_NOT_FOUND":
 		return nethttp.StatusNotFound
+	case "CREDITCARD_CARD_NOT_FOUND":
+		return nethttp.StatusNotFound
+	case "CREDITCARD_STATEMENT_NOT_FOUND":
+		return nethttp.StatusNotFound
+	case "CREDITCARD_STATEMENT_ALREADY_PAID":
+		return nethttp.StatusConflict
+	case "CREDITCARD_INSTALLMENT_ALREADY_POSTED":
+		return nethttp.StatusConflict
+	case "CREDITCARD_PAYMENT_EXCEEDS_TOTAL":
+		return nethttp.StatusConflict
 	case "TRANSACTION_NOT_FOUND":
 		return nethttp.StatusNotFound
 	case "TRANSACTION_REFERENCED":
