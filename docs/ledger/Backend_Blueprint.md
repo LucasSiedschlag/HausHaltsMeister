@@ -87,6 +87,7 @@ Referencias:
 - `entries.kind` define `normal`, `transfer`, `adjust`.
 - Transferencias exigem pelo menos uma IN e uma OUT e devem ser balanceadas.
 - Mes de referencia: sempre `YYYY-MM-01`.
+- Valores enumerados devem ser implementados como `varchar` + `CHECK` (nao usar ENUM no banco).
 
 ---
 

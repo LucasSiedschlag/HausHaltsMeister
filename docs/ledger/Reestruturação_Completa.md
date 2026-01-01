@@ -134,6 +134,7 @@ Referência: `docs/ledger/Regras_Cartão_de_crédito.md`.
 
 > Este DBML é o modelo consolidado do domínio. Ajuste nomes de campos se as migrations evoluírem.
 > A referência de comportamento está nos documentos listados nas seções anteriores.
+> Observação: os enums abaixo são conceituais. Na implementação, foram trocados por `varchar` + `CHECK` para permitir evolução futura sem refatoração de tipos.
 
 ```dbml
 // =====================
@@ -160,15 +161,6 @@ Enum ledger_role {
   owner
   editor
   viewer
-}
-
-Enum card_network {
-  visa
-  mastercard
-  elo
-  amex
-  hipercard
-  other
 }
 
 Enum installment_plan_status {
@@ -217,6 +209,7 @@ Table ledger_members {
   user_id     uuid [not null, ref: > users.id]
   role        ledger_role [not null, default: viewer]
   created_at  timestamptz [not null]
+  updated_at  timestamptz
 
   Indexes {
     (ledger_id, user_id) [unique]
@@ -285,6 +278,7 @@ Table entries {
   amount_cents    bigint [not null]
   memo            text
   created_at      timestamptz [not null]
+  updated_at      timestamptz
 
   Indexes {
     (ledger_id, transaction_id)
@@ -301,6 +295,7 @@ Table budget_plans {
   ledger_id  uuid [not null, ref: > ledgers.id]
   name       varchar [not null, default: "Default"]
   created_at timestamptz [not null]
+  updated_at timestamptz
 
   Indexes {
     (ledger_id) [unique]
@@ -313,6 +308,7 @@ Table budget_plan_versions {
   effective_from_month date [not null] // always YYYY-MM-01
   created_by_user_id   uuid [not null, ref: > users.id]
   created_at           timestamptz [not null]
+  updated_at           timestamptz
 
   Indexes {
     (plan_id, effective_from_month) [unique]
@@ -326,6 +322,7 @@ Table budget_plan_lines {
   percent        numeric [not null] // e.g. 10.0
   include_children boolean [not null, default: false]
   created_at     timestamptz [not null]
+  updated_at     timestamptz
 
   Indexes {
     (version_id, category_id) [unique]
@@ -335,10 +332,17 @@ Table budget_plan_lines {
 // =====================
 // Credit Card metadata (1:1)
 // =====================
+Table card_networks {
+  code        varchar [pk]
+  display_name varchar [not null]
+  created_at  timestamptz [not null]
+  updated_at  timestamptz
+}
+
 Table credit_cards {
   account_id         uuid [pk, ref: > accounts.id]
   issuer_name        varchar
-  network            card_network [not null, default: other]
+  network            varchar [not null, default: "other", ref: > card_networks.code]
   nickname           varchar
   last4              char(4)
   credit_limit_cents bigint
@@ -442,6 +446,7 @@ Referência: `docs/ledger/Regras_Core_Ledger.md` e `docs/ledger/Regras_Cartão_d
 - `transactions`: cabeçalho do evento.
 - `entries`: linhas financeiras; kind `normal`, `transfer`, `adjust`.
 - `budget_*`: plano, versões e linhas por categoria.
+- `card_networks`: catálogo de bandeiras de cartão.
 - `credit_cards`: metadados 1:1 com conta de cartão.
 - `installment_plans` + `installments`: compras parceladas e parcelas.
 - `credit_card_statements`: fatura mensal e pagamento.
@@ -484,7 +489,7 @@ Referência: `docs/ledger/Regras_Investimentos.md` e `docs/ledger/Regras_Cartão
 - Entrada Pagamento Cartão (IN, `is_budget_base=false`)
 
 ### 10.2 Investimentos
-- Aportes Investimentos (OUT, `is_budget_relevant=true` se for orçar)
+- Aportes Investimentos (OUT, `is_budget_relevant=false` por padrão; habilitar se for orçar)
 - Entrada Investimentos (Aporte) (IN, `is_budget_base=false`)
 - Resgate Investimentos (OUT, `is_budget_relevant=false`)
 - Entrada Resgate (Investimentos) (IN, `is_budget_base=false`)

@@ -33,12 +33,17 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
 
 ## 1) Definições e convenções
 
-### 1.1. Datas e “mês”
+### 1.1. Dados de bandeira (catálogo)
+
+- `card_networks` mantém o catálogo de bandeiras.
+- `credit_cards.network` referencia `card_networks.code`.
+
+### 1.2. Datas e “mês”
 
 - `statement_month`, `due_month`, `first_due_month` são sempre `date` no 1º dia do mês.
   - Ex.: `2026-02-01` significa “competência fevereiro/2026”.
 
-### 1.2. Conceito de “posted”
+### 1.3. Conceito de “posted”
 
 - Uma parcela está `scheduled` até ser postada.
 - Ao postar:
@@ -47,7 +52,7 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
   - atualiza `installments.status = posted`
   - grava `installments.posted_transaction_id`
 
-### 1.3. Categorias: técnicas vs reais
+### 1.4. Categorias: técnicas vs reais
 
 #### Categorias reais (consumo)
 
