@@ -79,6 +79,10 @@ func TestPostMonthMarksInstallmentPosted(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, result.PostedCount)
 
+	result, err = service.PostMonth(ctx, "user-1", ledgerID, cardAccountID, firstDue)
+	require.NoError(t, err)
+	require.Equal(t, 0, result.PostedCount)
+
 	var postedCount int
 	err = conn.QueryRow(ctx, `SELECT COUNT(*) FROM installments WHERE plan_id = $1 AND status = 'posted' AND posted_transaction_id IS NOT NULL`, planID).Scan(&postedCount)
 	require.NoError(t, err)

@@ -70,13 +70,18 @@ func main() {
 	reportsService := reports.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
+	metrics := httpapi.NewMetrics()
 
 	e := echo.New()
 	e.HideBanner = true
+	e.Use(echomw.RequestID())
 	e.Use(echomw.Recover())
+	e.Use(httpapi.RequestLogger())
+	e.Use(metrics.Middleware())
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+	e.GET("/metrics", metrics.Handler)
 
 	authHandler := &httpapi.AuthHandler{
 		Service:     authService,

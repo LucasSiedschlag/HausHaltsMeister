@@ -11,6 +11,11 @@ import (
 type fakeRepo struct {
 	role         string
 	categoryInfo map[string]CategoryInfo
+	version      Version
+	lines        []Line
+	incomeBase   int64
+	spentActual  map[string]int64
+	outside      int64
 }
 
 func (f *fakeRepo) GetPlanByLedger(ctx context.Context, ledgerID string) (Plan, error) {
@@ -50,11 +55,14 @@ func (f *fakeRepo) AddLine(ctx context.Context, versionID string, line LineInput
 }
 
 func (f *fakeRepo) GetLinesByVersion(ctx context.Context, versionID string) ([]Line, error) {
-	return nil, nil
+	return f.lines, nil
 }
 
 func (f *fakeRepo) GetApplicableVersion(ctx context.Context, ledgerID string, month time.Time) (Version, error) {
-	return Version{}, ErrNotFound
+	if f.version.ID == "" {
+		return Version{}, ErrNotFound
+	}
+	return f.version, nil
 }
 
 func (f *fakeRepo) GetCategoryInfo(ctx context.Context, ledgerID string, categoryIDs []string) (map[string]CategoryInfo, error) {
@@ -66,15 +74,19 @@ func (f *fakeRepo) GetCategoryDescendants(ctx context.Context, ledgerID, categor
 }
 
 func (f *fakeRepo) IncomeBaseForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error) {
-	return 0, nil
+	return f.incomeBase, nil
 }
 
 func (f *fakeRepo) SpentActualForMonth(ctx context.Context, ledgerID string, categoryIDs []string, month time.Time) (int64, error) {
-	return 0, nil
+	var total int64
+	for _, id := range categoryIDs {
+		total += f.spentActual[id]
+	}
+	return total, nil
 }
 
 func (f *fakeRepo) OutsideBudgetForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error) {
-	return 0, nil
+	return f.outside, nil
 }
 
 func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error) {
@@ -102,4 +114,29 @@ func TestMonthlySummaryRequiresMonthStart(t *testing.T) {
 
 	_, err := service.MonthlySummary(context.Background(), "user-1", "ledger-1", time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC))
 	require.Error(t, err)
+}
+
+func TestMonthlySummaryCalculatesTotals(t *testing.T) {
+	month := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	repo := &fakeRepo{
+		role:       "viewer",
+		version:    Version{ID: "ver-1", PlanID: "plan-1", EffectiveFromMonth: month},
+		lines:      []Line{{CategoryID: "cat-1", Percent: 50, IncludeChildren: false}},
+		incomeBase: 10000,
+		spentActual: map[string]int64{
+			"cat-1": 6000,
+		},
+		outside: 200,
+	}
+	service := NewService(repo)
+
+	summary, err := service.MonthlySummary(context.Background(), "user-1", "ledger-1", month)
+	require.NoError(t, err)
+	require.Equal(t, int64(10000), summary.IncomeBaseCents)
+	require.Equal(t, int64(200), summary.OutsideBudgetCents)
+	require.Len(t, summary.Lines, 1)
+	require.Equal(t, int64(5000), summary.Lines[0].BudgetLimitCents)
+	require.Equal(t, int64(6000), summary.Lines[0].SpentActualCents)
+	require.Equal(t, int64(1000), summary.Lines[0].DeltaCents)
+	require.Equal(t, 1.2, summary.Lines[0].UsagePct)
 }
