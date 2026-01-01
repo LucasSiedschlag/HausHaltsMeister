@@ -1,4 +1,4 @@
-package httpapi
+package handlers
 
 import (
 	"context"
@@ -6,37 +6,23 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/middleware"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/labstack/echo/v4"
 )
 
 type AuthHandler struct {
-	Service      AuthService
-	Config       config.Config
-	RateLimiter  *RateLimiter
+	Service     AuthService
+	Config      config.Config
+	RateLimiter *middleware.RateLimiter
 }
 
-type authRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
-}
-
-type authResponse struct {
-	AccessToken string       `json:"access_token"`
-	TokenType   string       `json:"token_type"`
-	ExpiresIn   int64        `json:"expires_in"`
-	User        userResponse `json:"user"`
-}
-
-type userResponse struct {
-	ID              string     `json:"id"`
-	Email           string     `json:"email"`
-	DisplayName     string     `json:"display_name"`
-	AvatarURL       string     `json:"avatar_url,omitempty"`
-	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
-}
+type authRequest = dto.AuthRequest
+type authResponse = dto.AuthResponse
+type userResponse = dto.UserResponse
 
 type AuthService interface {
 	SignUp(ctx context.Context, email, password, displayName, userAgent, ip string) (auth.AuthResult, error)
@@ -54,7 +40,7 @@ func (h *AuthHandler) Register(g *echo.Group) {
 	g.POST("/login", h.Login)
 	g.POST("/refresh", h.Refresh)
 	g.POST("/logout", h.Logout)
-	g.GET("/me", h.Me, RequireAuth(h.Service))
+	g.GET("/me", h.Me, middleware.RequireAuth(h.Service))
 	g.GET("/oauth/:provider/start", h.OAuthStart)
 	g.GET("/oauth/:provider/callback", h.OAuthCallback)
 }
@@ -67,12 +53,12 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	var req authRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	result, err := h.Service.SignUp(c.Request().Context(), req.Email, req.Password, req.DisplayName, c.Request().UserAgent(), c.RealIP())
 	if err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken)
@@ -87,12 +73,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	var req authRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	result, err := h.Service.Login(c.Request().Context(), req.Email, req.Password, c.Request().UserAgent(), c.RealIP())
 	if err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken)
@@ -107,12 +93,12 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 
 	refreshToken := h.getRefreshToken(c)
 	if refreshToken == "" {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_REFRESH_REVOKED", "Refresh token revogado", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_REFRESH_REVOKED", "Refresh token revogado", nil)
 	}
 
 	result, err := h.Service.Refresh(c.Request().Context(), refreshToken, c.Request().UserAgent(), c.RealIP())
 	if err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken)
@@ -122,16 +108,16 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 func (h *AuthHandler) Logout(c echo.Context) error {
 	refreshToken := h.getRefreshToken(c)
 	if err := h.Service.Logout(c.Request().Context(), refreshToken); err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 	h.clearRefreshCookie(c)
 	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Me(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	return c.JSON(http.StatusOK, userResponseFrom(user))
 }
@@ -142,7 +128,7 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 
 	url, err := h.Service.StartOAuth(c.Request().Context(), provider, redirectURI)
 	if err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 	return c.Redirect(http.StatusFound, url)
 }
@@ -153,12 +139,12 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	state := c.QueryParam("state")
 
 	if code == "" || state == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", nil)
 	}
 
 	result, redirectURI, err := h.Service.HandleOAuthCallback(c.Request().Context(), provider, code, state, c.Request().UserAgent(), c.RealIP())
 	if err != nil {
-		return WriteAuthError(c, err)
+		return httpx.WriteAuthError(c, err)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken)
@@ -182,7 +168,7 @@ func rateLimitError(c echo.Context, retryAfter time.Duration) error {
 	if seconds < 1 {
 		seconds = 1
 	}
-	return WriteError(c, http.StatusTooManyRequests, "AUTH_RATE_LIMITED", "Muitas tentativas", map[string]string{"retry_after": strconv.Itoa(seconds)})
+	return httpx.WriteError(c, http.StatusTooManyRequests, "AUTH_RATE_LIMITED", "Muitas tentativas", map[string]string{"retry_after": strconv.Itoa(seconds)})
 }
 
 func buildAuthResponse(result auth.AuthResult) authResponse {

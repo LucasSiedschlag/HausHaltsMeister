@@ -19,6 +19,12 @@
 - `sqlc.yaml`, `sqlc-ledger.yaml`: sqlc generation configs.
 - `Makefile`, `docker-compose.yaml`: build and local infra helpers.
 
+## Layout Rules (mandatory)
+- HTTP handlers live in `internal/adapters/http/handlers`; middleware in `internal/adapters/http/middleware`.
+- HTTP DTOs live in `internal/adapters/http/dto`; shared HTTP helpers live in `internal/adapters/http/httpx`.
+- Domain packages expose interfaces; adapters implement them. Domain never imports adapters or sqlc.
+- sqlc generated code lives in `internal/adapters/postgres/sqlc`; SQL files are organized per module.
+
 ## Change Rules
 - Keep table and field names consistent with the DBML in `docs/ledger/Reestruturação_Completa.md`.
 - Avoid reintroducing legacy double-entry or posting-based models; the baseline is a ledger light model.

@@ -1,12 +1,13 @@
-package httpapi
+package handlers
 
 import (
 	"context"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/categories"
 	"github.com/labstack/echo/v4"
 )
@@ -23,27 +24,8 @@ type CategoriesService interface {
 	DeleteCategory(ctx context.Context, userID, ledgerID, categoryID string) error
 }
 
-type categoryRequest struct {
-	ParentID         *string `json:"parent_id"`
-	Name             string  `json:"name"`
-	Direction        string  `json:"direction"`
-	IsBudgetBase     *bool   `json:"is_budget_base"`
-	IsBudgetRelevant *bool   `json:"is_budget_relevant"`
-	IsActive         *bool   `json:"is_active"`
-}
-
-type categoryResponse struct {
-	ID               string     `json:"id"`
-	LedgerID         string     `json:"ledger_id"`
-	ParentID         *string    `json:"parent_id,omitempty"`
-	Name             string     `json:"name"`
-	Direction        string     `json:"direction"`
-	IsBudgetBase     bool       `json:"is_budget_base"`
-	IsBudgetRelevant bool       `json:"is_budget_relevant"`
-	IsActive         bool       `json:"is_active"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
-}
+type categoryRequest = dto.CategoryRequest
+type categoryResponse = dto.CategoryResponse
 
 func (h *CategoriesHandler) Register(g *echo.Group) {
 	g.GET("", h.List)
@@ -54,13 +36,13 @@ func (h *CategoriesHandler) Register(g *echo.Group) {
 }
 
 func (h *CategoriesHandler) List(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var direction *string
@@ -71,14 +53,14 @@ func (h *CategoriesHandler) List(c echo.Context) error {
 	if value := strings.TrimSpace(c.QueryParam("active")); value != "" {
 		parsed, err := strconv.ParseBool(value)
 		if err != nil {
-			return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"active": "invalid"})
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"active": "invalid"})
 		}
 		active = &parsed
 	}
 
 	items, err := h.Service.ListCategories(c.Request().Context(), user.ID, ledgerID, direction, active)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	response := make([]categoryResponse, 0, len(items))
@@ -89,36 +71,36 @@ func (h *CategoriesHandler) List(c echo.Context) error {
 }
 
 func (h *CategoriesHandler) Get(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	categoryID := c.Param("categoryId")
 	if ledgerID == "" || categoryID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
 	}
 
 	item, err := h.Service.GetCategory(c.Request().Context(), user.ID, ledgerID, categoryID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toCategoryResponse(item))
 }
 
 func (h *CategoriesHandler) Create(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var req categoryRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	isBudgetBase := false
@@ -144,25 +126,25 @@ func (h *CategoriesHandler) Create(c echo.Context) error {
 		IsActive:         isActive,
 	})
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusCreated, toCategoryResponse(created))
 }
 
 func (h *CategoriesHandler) Update(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	categoryID := c.Param("categoryId")
 	if ledgerID == "" || categoryID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
 	}
 
 	var req categoryRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	isBudgetBase := false
@@ -188,24 +170,24 @@ func (h *CategoriesHandler) Update(c echo.Context) error {
 		IsActive:         isActive,
 	})
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toCategoryResponse(updated))
 }
 
 func (h *CategoriesHandler) Delete(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	categoryID := c.Param("categoryId")
 	if ledgerID == "" || categoryID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
 	}
 
 	if err := h.Service.DeleteCategory(c.Request().Context(), user.ID, ledgerID, categoryID); err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }

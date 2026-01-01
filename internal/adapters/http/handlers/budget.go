@@ -1,4 +1,4 @@
-package httpapi
+package handlers
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/labstack/echo/v4"
 )
@@ -27,66 +29,14 @@ type BudgetService interface {
 	MonthlySummary(ctx context.Context, userID, ledgerID string, month time.Time) (budget.MonthlySummary, error)
 }
 
-type planRequest struct {
-	Name string `json:"name"`
-}
-
-type planResponse struct {
-	ID        string     `json:"id"`
-	LedgerID  string     `json:"ledger_id"`
-	Name      string     `json:"name"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
-}
-
-type versionRequest struct {
-	EffectiveFromMonth string               `json:"effective_from_month"`
-	Lines              []versionLineRequest `json:"lines"`
-}
-
-type versionLineRequest struct {
-	CategoryID      string  `json:"category_id"`
-	Percent         float64 `json:"percent"`
-	IncludeChildren bool    `json:"include_children"`
-}
-
-type versionResponse struct {
-	ID                 string         `json:"id"`
-	PlanID             string         `json:"plan_id"`
-	EffectiveFromMonth time.Time      `json:"effective_from_month"`
-	CreatedByUserID    string         `json:"created_by_user_id"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          *time.Time     `json:"updated_at,omitempty"`
-	Lines              []lineResponse `json:"lines,omitempty"`
-}
-
-type lineResponse struct {
-	ID              string     `json:"id"`
-	VersionID       string     `json:"version_id"`
-	CategoryID      string     `json:"category_id"`
-	Percent         float64    `json:"percent"`
-	IncludeChildren bool       `json:"include_children"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
-}
-
-type monthlyResponse struct {
-	Month              time.Time             `json:"month"`
-	IncomeBaseCents    int64                 `json:"income_base_cents"`
-	OutsideBudgetCents int64                 `json:"outside_budget_cents"`
-	Version            *versionResponse      `json:"version,omitempty"`
-	Lines              []monthlyLineResponse `json:"lines"`
-}
-
-type monthlyLineResponse struct {
-	CategoryID       string  `json:"category_id"`
-	Percent          float64 `json:"percent"`
-	IncludeChildren  bool    `json:"include_children"`
-	BudgetLimitCents int64   `json:"budget_limit_cents"`
-	SpentActualCents int64   `json:"spent_actual_cents"`
-	DeltaCents       int64   `json:"delta_cents"`
-	UsagePct         float64 `json:"usage_pct"`
-}
+type planRequest = dto.BudgetPlanRequest
+type planResponse = dto.BudgetPlanResponse
+type versionRequest = dto.BudgetVersionRequest
+type versionLineRequest = dto.BudgetVersionLineRequest
+type versionResponse = dto.BudgetVersionResponse
+type lineResponse = dto.BudgetLineResponse
+type monthlyResponse = dto.BudgetMonthlyResponse
+type monthlyLineResponse = dto.BudgetMonthlyLineResponse
 
 func (h *BudgetHandler) Register(base *echo.Group) {
 	plan := base.Group("/plan")
@@ -111,85 +61,85 @@ func (h *BudgetHandler) Register(base *echo.Group) {
 }
 
 func (h *BudgetHandler) GetPlan(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	plan, err := h.Service.GetPlan(c.Request().Context(), user.ID, ledgerID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toPlanResponse(plan))
 }
 
 func (h *BudgetHandler) CreatePlan(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 	var req planRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	plan, err := h.Service.CreatePlan(c.Request().Context(), user.ID, ledgerID, req.Name)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusCreated, toPlanResponse(plan))
 }
 
 func (h *BudgetHandler) UpdatePlan(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 	var req planRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	plan, err := h.Service.UpdatePlan(c.Request().Context(), user.ID, ledgerID, req.Name)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toPlanResponse(plan))
 }
 
 func (h *BudgetHandler) DeletePlan(c echo.Context) error {
-	return WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
+	return httpx.WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
 }
 
 func (h *BudgetHandler) CreateVersion(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var req versionRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
-	month, err := parseMonth(req.EffectiveFromMonth)
+	month, err := httpx.ParseMonth(req.EffectiveFromMonth)
 	if err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"effective_from_month": "invalid"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"effective_from_month": "invalid"})
 	}
 
 	lines := make([]budget.LineInput, 0, len(req.Lines))
@@ -203,41 +153,41 @@ func (h *BudgetHandler) CreateVersion(c echo.Context) error {
 
 	version, err := h.Service.CreateVersion(c.Request().Context(), user.ID, ledgerID, month, lines)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusCreated, toVersionResponse(version))
 }
 
 func (h *BudgetHandler) ListVersions(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var from *time.Time
 	if value := strings.TrimSpace(c.QueryParam("from")); value != "" {
-		parsed, err := parseMonth(value)
+		parsed, err := httpx.ParseMonth(value)
 		if err != nil {
-			return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"from": "invalid"})
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"from": "invalid"})
 		}
 		from = &parsed
 	}
 	var to *time.Time
 	if value := strings.TrimSpace(c.QueryParam("to")); value != "" {
-		parsed, err := parseMonth(value)
+		parsed, err := httpx.ParseMonth(value)
 		if err != nil {
-			return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"to": "invalid"})
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"to": "invalid"})
 		}
 		to = &parsed
 	}
 
 	versions, err := h.Service.ListVersions(c.Request().Context(), user.ID, ledgerID, from, to)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	response := make([]versionResponse, 0, len(versions))
@@ -248,45 +198,45 @@ func (h *BudgetHandler) ListVersions(c echo.Context) error {
 }
 
 func (h *BudgetHandler) GetVersion(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	versionID := c.Param("versionId")
 	if ledgerID == "" || versionID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
 	}
 
 	version, err := h.Service.GetVersion(c.Request().Context(), user.ID, ledgerID, versionID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toVersionResponse(version))
 }
 
 func (h *BudgetHandler) UpdateVersion(c echo.Context) error {
-	return WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
+	return httpx.WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
 }
 
 func (h *BudgetHandler) DeleteVersion(c echo.Context) error {
-	return WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
+	return httpx.WriteError(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Funcionalidade nao disponivel", nil)
 }
 
 func (h *BudgetHandler) AddLine(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	versionID := c.Param("versionId")
 	if ledgerID == "" || versionID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
 	}
 
 	var req versionLineRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	line, err := h.Service.AddLine(c.Request().Context(), user.ID, ledgerID, versionID, budget.LineInput{
@@ -295,73 +245,73 @@ func (h *BudgetHandler) AddLine(c echo.Context) error {
 		IncludeChildren: req.IncludeChildren,
 	})
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusCreated, toLineResponse(line))
 }
 
 func (h *BudgetHandler) UpdateLine(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	lineID := c.Param("lineId")
 	if ledgerID == "" || lineID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
 	}
 
 	var req versionLineRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	line, err := h.Service.UpdateLine(c.Request().Context(), user.ID, ledgerID, lineID, req.Percent, req.IncludeChildren)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusOK, toLineResponse(line))
 }
 
 func (h *BudgetHandler) DeleteLine(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	lineID := c.Param("lineId")
 	if ledgerID == "" || lineID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
 	}
 
 	if err := h.Service.DeleteLine(c.Request().Context(), user.ID, ledgerID, lineID); err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *BudgetHandler) Monthly(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	monthValue := strings.TrimSpace(c.QueryParam("month"))
 	if monthValue == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "required"})
 	}
-	month, err := parseMonth(monthValue)
+	month, err := httpx.ParseMonth(monthValue)
 	if err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "invalid"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "invalid"})
 	}
 
 	summary, err := h.Service.MonthlySummary(c.Request().Context(), user.ID, ledgerID, month)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	response := monthlyResponse{
@@ -389,14 +339,6 @@ func (h *BudgetHandler) Monthly(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
-}
-
-func parseMonth(value string) (time.Time, error) {
-	parsed, err := time.Parse("2006-01-02", value)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return parsed, nil
 }
 
 func toPlanResponse(plan budget.Plan) planResponse {

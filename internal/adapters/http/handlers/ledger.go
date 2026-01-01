@@ -1,11 +1,12 @@
-package httpapi
+package handlers
 
 import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
 )
@@ -26,37 +27,11 @@ type LedgerService interface {
 	RemoveMember(ctx context.Context, userID, ledgerID, memberUserID string) error
 }
 
-type ledgerCreateRequest struct {
-	Name         string `json:"name"`
-	CurrencyCode string `json:"currency_code"`
-}
-
-type ledgerUpdateRequest struct {
-	Name string `json:"name"`
-}
-
-type memberRequest struct {
-	UserID string `json:"user_id"`
-	Role   string `json:"role"`
-}
-
-type ledgerResponse struct {
-	ID           string     `json:"id"`
-	OwnerUserID  string     `json:"owner_user_id"`
-	Name         string     `json:"name"`
-	CurrencyCode string     `json:"currency_code"`
-	Role         string     `json:"role,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
-}
-
-type memberResponse struct {
-	LedgerID  string     `json:"ledger_id"`
-	UserID    string     `json:"user_id"`
-	Role      string     `json:"role"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
-}
+type ledgerCreateRequest = dto.LedgerCreateRequest
+type ledgerUpdateRequest = dto.LedgerUpdateRequest
+type memberRequest = dto.LedgerMemberRequest
+type ledgerResponse = dto.LedgerResponse
+type memberResponse = dto.LedgerMemberResponse
 
 func (h *LedgerHandler) Register(g *echo.Group) {
 	g.GET("", h.ListLedgers)
@@ -71,14 +46,14 @@ func (h *LedgerHandler) Register(g *echo.Group) {
 }
 
 func (h *LedgerHandler) ListLedgers(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	items, err := h.Service.ListLedgers(c.Request().Context(), user.ID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	response := make([]ledgerResponse, 0, len(items))
@@ -98,19 +73,19 @@ func (h *LedgerHandler) ListLedgers(c echo.Context) error {
 }
 
 func (h *LedgerHandler) CreateLedger(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	var req ledgerCreateRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	created, err := h.Service.CreateLedger(c.Request().Context(), user.ID, req.Name, req.CurrencyCode)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.JSON(http.StatusCreated, ledgerResponse{
@@ -124,19 +99,19 @@ func (h *LedgerHandler) CreateLedger(c echo.Context) error {
 }
 
 func (h *LedgerHandler) GetLedger(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	item, err := h.Service.GetLedger(c.Request().Context(), user.ID, ledgerID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.JSON(http.StatusOK, ledgerResponse{
@@ -151,24 +126,24 @@ func (h *LedgerHandler) GetLedger(c echo.Context) error {
 }
 
 func (h *LedgerHandler) UpdateLedger(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var req ledgerUpdateRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	updated, err := h.Service.UpdateLedger(c.Request().Context(), user.ID, ledgerID, req.Name)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.JSON(http.StatusOK, ledgerResponse{
@@ -182,36 +157,36 @@ func (h *LedgerHandler) UpdateLedger(c echo.Context) error {
 }
 
 func (h *LedgerHandler) DeleteLedger(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	if err := h.Service.DeleteLedger(c.Request().Context(), user.ID, ledgerID); err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *LedgerHandler) ListMembers(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	members, err := h.Service.ListMembers(c.Request().Context(), user.ID, ledgerID)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	response := make([]memberResponse, 0, len(members))
@@ -228,28 +203,28 @@ func (h *LedgerHandler) ListMembers(c echo.Context) error {
 }
 
 func (h *LedgerHandler) AddMember(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	if ledgerID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
 	}
 
 	var req memberRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	if strings.TrimSpace(req.UserID) == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
 	}
 
 	member, err := h.Service.AddMember(c.Request().Context(), user.ID, ledgerID, req.UserID, req.Role)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.JSON(http.StatusCreated, memberResponse{
@@ -262,25 +237,25 @@ func (h *LedgerHandler) AddMember(c echo.Context) error {
 }
 
 func (h *LedgerHandler) UpdateMember(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	memberUserID := c.Param("userId")
 	if ledgerID == "" || memberUserID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
 	}
 
 	var req memberRequest
 	if err := c.Bind(&req); err != nil {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
 	member, err := h.Service.UpdateMember(c.Request().Context(), user.ID, ledgerID, memberUserID, req.Role)
 	if err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.JSON(http.StatusOK, memberResponse{
@@ -293,19 +268,19 @@ func (h *LedgerHandler) UpdateMember(c echo.Context) error {
 }
 
 func (h *LedgerHandler) DeleteMember(c echo.Context) error {
-	user, ok := GetUser(c)
+	user, ok := httpx.GetUser(c)
 	if !ok {
-		return WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
 	ledgerID := c.Param("ledgerId")
 	memberUserID := c.Param("userId")
 	if ledgerID == "" || memberUserID == "" {
-		return WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
 	}
 
 	if err := h.Service.RemoveMember(c.Request().Context(), user.ID, ledgerID, memberUserID); err != nil {
-		return WriteAppError(c, err)
+		return httpx.WriteAppError(c, err)
 	}
 
 	return c.NoContent(http.StatusNoContent)

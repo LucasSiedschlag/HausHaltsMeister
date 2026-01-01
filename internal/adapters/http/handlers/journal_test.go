@@ -1,9 +1,10 @@
-package httpapi
+package handlers
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -84,10 +85,10 @@ func TestListTransactionsInvalidCursor(t *testing.T) {
 }
 
 func TestParseDateTime(t *testing.T) {
-	parsed, err := parseDateTime("2026-01-10")
+	parsed, err := httpx.ParseDateTime("2026-01-10")
 	require.NoError(t, err)
 	require.Equal(t, 2026, parsed.Year())
 
-	parsed, err = parseDateTime(time.Now().UTC().Format(time.RFC3339))
+	parsed, err = httpx.ParseDateTime(time.Now().UTC().Format(time.RFC3339))
 	require.NoError(t, err)
 }

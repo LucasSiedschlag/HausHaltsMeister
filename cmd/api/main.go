@@ -9,7 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	httpapi "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/handlers"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/middleware"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
@@ -69,21 +70,21 @@ func main() {
 	creditCardService := creditcard.NewService(store)
 	reportsService := reports.NewService(store)
 
-	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
-	metrics := httpapi.NewMetrics()
+	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
+	metrics := middleware.NewMetrics()
 
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(echomw.RequestID())
 	e.Use(echomw.Recover())
-	e.Use(httpapi.RequestLogger())
+	e.Use(middleware.RequestLogger())
 	e.Use(metrics.Middleware())
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 	e.GET("/metrics", metrics.Handler)
 
-	authHandler := &httpapi.AuthHandler{
+	authHandler := &handlers.AuthHandler{
 		Service:     authService,
 		Config:      cfg,
 		RateLimiter: ratelimiter,
@@ -91,54 +92,54 @@ func main() {
 	group := e.Group("/auth")
 	authHandler.Register(group)
 
-	ledgerHandler := &httpapi.LedgerHandler{
+	ledgerHandler := &handlers.LedgerHandler{
 		Service: ledgerService,
 	}
-	ledgerGroup := e.Group("/ledgers", httpapi.RequireAuth(authService))
+	ledgerGroup := e.Group("/ledgers", middleware.RequireAuth(authService))
 	ledgerHandler.Register(ledgerGroup)
 
-	accountsHandler := &httpapi.AccountsHandler{
+	accountsHandler := &handlers.AccountsHandler{
 		Service: accountsService,
 	}
-	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", httpapi.RequireAuth(authService))
+	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", middleware.RequireAuth(authService))
 	accountsHandler.Register(accountsGroup)
 
-	categoriesHandler := &httpapi.CategoriesHandler{
+	categoriesHandler := &handlers.CategoriesHandler{
 		Service: categoriesService,
 	}
-	categoriesGroup := e.Group("/ledgers/:ledgerId/categories", httpapi.RequireAuth(authService))
+	categoriesGroup := e.Group("/ledgers/:ledgerId/categories", middleware.RequireAuth(authService))
 	categoriesHandler.Register(categoriesGroup)
 
-	journalHandler := &httpapi.JournalHandler{
+	journalHandler := &handlers.JournalHandler{
 		Service: journalService,
 	}
-	journalGroup := e.Group("/ledgers/:ledgerId/transactions", httpapi.RequireAuth(authService))
+	journalGroup := e.Group("/ledgers/:ledgerId/transactions", middleware.RequireAuth(authService))
 	journalHandler.Register(journalGroup)
 
-	budgetHandler := &httpapi.BudgetHandler{
+	budgetHandler := &handlers.BudgetHandler{
 		Service: budgetService,
 	}
-	budgetGroup := e.Group("/ledgers/:ledgerId/budget", httpapi.RequireAuth(authService))
+	budgetGroup := e.Group("/ledgers/:ledgerId/budget", middleware.RequireAuth(authService))
 	budgetHandler.Register(budgetGroup)
 
-	investmentsHandler := &httpapi.InvestmentsHandler{
+	investmentsHandler := &handlers.InvestmentsHandler{
 		Service: investmentsService,
 	}
-	investmentsGroup := e.Group("/ledgers/:ledgerId/investments", httpapi.RequireAuth(authService))
+	investmentsGroup := e.Group("/ledgers/:ledgerId/investments", middleware.RequireAuth(authService))
 	investmentsHandler.Register(investmentsGroup)
 
-	creditCardHandler := &httpapi.CreditCardHandler{
+	creditCardHandler := &handlers.CreditCardHandler{
 		Service: creditCardService,
 	}
-	cardNetworksGroup := e.Group("/card-networks", httpapi.RequireAuth(authService))
+	cardNetworksGroup := e.Group("/card-networks", middleware.RequireAuth(authService))
 	creditCardHandler.RegisterNetworks(cardNetworksGroup)
-	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", httpapi.RequireAuth(authService))
+	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", middleware.RequireAuth(authService))
 	creditCardHandler.Register(creditCardsGroup)
 
-	reportsHandler := &httpapi.ReportsHandler{
+	reportsHandler := &handlers.ReportsHandler{
 		Service: reportsService,
 	}
-	reportsGroup := e.Group("/ledgers/:ledgerId/reports", httpapi.RequireAuth(authService))
+	reportsGroup := e.Group("/ledgers/:ledgerId/reports", middleware.RequireAuth(authService))
 	reportsHandler.Register(reportsGroup)
 
 	go func() {

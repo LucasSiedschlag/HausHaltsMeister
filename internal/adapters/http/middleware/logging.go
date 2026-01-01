@@ -1,9 +1,10 @@
-package httpapi
+package middleware
 
 import (
 	"log"
 	"time"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/labstack/echo/v4"
 )
 
@@ -27,7 +28,7 @@ func RequestLogger() echo.MiddlewareFunc {
 			}
 
 			userID := "-"
-			if user, ok := GetUser(c); ok {
+			if user, ok := httpx.GetUser(c); ok {
 				userID = user.ID
 			}
 

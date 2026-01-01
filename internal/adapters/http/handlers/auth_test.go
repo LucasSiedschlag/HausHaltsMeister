@@ -1,4 +1,4 @@
-package httpapi
+package handlers
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/labstack/echo/v4"
@@ -71,7 +72,7 @@ func TestLoginReturnsInvalidCredentials(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 
-	var resp ErrorResponse
+	var resp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
 	require.Equal(t, "AUTH_INVALID_CREDENTIALS", resp.Code)
 }
