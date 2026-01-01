@@ -67,6 +67,14 @@ func errorStatus(code string) int {
 		return nethttp.StatusConflict
 	case "ACCOUNT_NOT_FOUND":
 		return nethttp.StatusNotFound
+	case "CATEGORY_NOT_FOUND":
+		return nethttp.StatusNotFound
+	case "TRANSACTION_NOT_FOUND":
+		return nethttp.StatusNotFound
+	case "TRANSACTION_REFERENCED":
+		return nethttp.StatusConflict
+	case "TRANSFER_NOT_BALANCED":
+		return nethttp.StatusUnprocessableEntity
 	case "VALIDATION_ERROR":
 		return nethttp.StatusUnprocessableEntity
 	case "NOT_IMPLEMENTED":

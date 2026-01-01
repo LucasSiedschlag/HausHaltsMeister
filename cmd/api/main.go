@@ -14,6 +14,8 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/categories"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
@@ -56,6 +58,8 @@ func main() {
 	})
 	ledgerService := ledger.NewService(store)
 	accountsService := accounts.NewService(store)
+	categoriesService := categories.NewService(store)
+	journalService := journal.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
 	
@@ -85,6 +89,18 @@ func main() {
 	}
 	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", httpapi.RequireAuth(authService))
 	accountsHandler.Register(accountsGroup)
+
+	categoriesHandler := &httpapi.CategoriesHandler{
+		Service: categoriesService,
+	}
+	categoriesGroup := e.Group("/ledgers/:ledgerId/categories", httpapi.RequireAuth(authService))
+	categoriesHandler.Register(categoriesGroup)
+
+	journalHandler := &httpapi.JournalHandler{
+		Service: journalService,
+	}
+	journalGroup := e.Group("/ledgers/:ledgerId/transactions", httpapi.RequireAuth(authService))
+	journalHandler.Register(journalGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {

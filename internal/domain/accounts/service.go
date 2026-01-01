@@ -41,6 +41,9 @@ func (s *Service) GetAccount(ctx context.Context, userID, ledgerID, accountID st
 	}
 	account, err := s.repo.GetAccount(ctx, ledgerID, accountID)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Account{}, ErrAccountNotFound
+		}
 		return Account{}, s.mapAccessError(ctx, ledgerID, err)
 	}
 	return account, nil
