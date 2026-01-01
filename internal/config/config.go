@@ -1,9 +1,13 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -27,9 +31,21 @@ type Config struct {
 }
 
 func Load() Config {
+	_ = godotenv.Load()
+
+	databaseURL := getEnv("DATABASE_URL", "")
+	if databaseURL == "" {
+		databaseURL = buildDatabaseURL()
+	}
+
+	httpAddr := getEnv("HTTP_ADDR", "")
+	if httpAddr == "" {
+		httpAddr = ":" + getEnv("PORT", "8080")
+	}
+
 	return Config{
-		DatabaseURL:           getEnv("DATABASE_URL", ""),
-		HTTPAddr:              getEnv("HTTP_ADDR", ":8080"),
+		DatabaseURL:           databaseURL,
+		HTTPAddr:              httpAddr,
 		JWTSecret:             getEnv("JWT_SECRET", "change-me"),
 		AccessTokenTTL:        time.Duration(getEnvInt("ACCESS_TOKEN_TTL_SECONDS", 900)) * time.Second,
 		RefreshTokenTTL:       time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 30)) * 24 * time.Hour,
@@ -46,6 +62,30 @@ func Load() Config {
 		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		GitHubRedirectURL:  getEnv("GITHUB_REDIRECT_URL", ""),
 	}
+}
+
+func buildDatabaseURL() string {
+	host := getEnv("POSTGRES_HOST", "")
+	user := getEnv("POSTGRES_USER", "")
+	pass := getEnv("POSTGRES_PASSWORD", "")
+	name := getEnv("POSTGRES_DB", "")
+	port := getEnv("POSTGRES_PORT", "")
+	if port == "" {
+		port = getEnv("POSTGRES_HOST_PORT", "")
+	}
+	if port == "" {
+		port = "5432"
+	}
+	if host == "" || user == "" || name == "" {
+		return ""
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		url.QueryEscape(user),
+		url.QueryEscape(pass),
+		host,
+		port,
+		name,
+	)
 }
 
 func getEnv(key, def string) string {

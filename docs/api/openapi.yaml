@@ -1,0 +1,2143 @@
+openapi: 3.0.3
+info:
+  title: HausHaltsMeister API
+  version: 0.1.0
+  description: Ledger-based finance API with budgeting, investments, and credit card flows.
+servers:
+  - url: /
+tags:
+  - name: Auth
+    description: Authentication and sessions
+  - name: Ledgers
+    description: Ledger access and membership
+  - name: Accounts
+    description: Cash/investment accounts
+  - name: Categories
+    description: Income/expense classification
+  - name: Journal
+    description: Transactions and entries
+  - name: Budget
+    description: Planning, versions, and summaries
+  - name: Investments
+    description: Contributions, redemptions, and earnings
+  - name: Cartao
+    description: Credit card lifecycle and statements
+  - name: Relatorios
+    description: Aggregated reporting endpoints
+security:
+  - BearerAuth: []
+paths:
+  /auth/signup:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Sign up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthSignUpRequest'
+      responses:
+        '200':
+          description: Auth result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Auth result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Auth result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      responses:
+        '204':
+          description: Logged out
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /auth/oauth/{provider}/start:
+    get:
+      tags: [Auth]
+      security: []
+      summary: Start OAuth
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [google, github]
+      responses:
+        '302':
+          description: Redirect
+  /auth/oauth/{provider}/callback:
+    get:
+      tags: [Auth]
+      security: []
+      summary: OAuth callback
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [google, github]
+        - in: query
+          name: code
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect
+  /ledgers:
+    get:
+      tags: [Ledgers]
+      summary: List ledgers
+      responses:
+        '200':
+          description: Ledgers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerWithRole'
+    post:
+      tags: [Ledgers]
+      summary: Create ledger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerCreateRequest'
+      responses:
+        '201':
+          description: Ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ledger'
+  /ledgers/{ledgerId}:
+    get:
+      tags: [Ledgers]
+      summary: Get ledger
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '200':
+          description: Ledger with role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerWithRole'
+    patch:
+      tags: [Ledgers]
+      summary: Update ledger
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerUpdateRequest'
+      responses:
+        '200':
+          description: Ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ledger'
+    delete:
+      tags: [Ledgers]
+      summary: Delete ledger (soft)
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '501':
+          description: Not implemented
+  /ledgers/{ledgerId}/members:
+    get:
+      tags: [Ledgers]
+      summary: List members
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '200':
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerMember'
+    post:
+      tags: [Ledgers]
+      summary: Add member
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerMemberCreateRequest'
+      responses:
+        '201':
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerMember'
+  /ledgers/{ledgerId}/members/{userId}:
+    patch:
+      tags: [Ledgers]
+      summary: Update member role
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerMemberUpdateRequest'
+      responses:
+        '200':
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerMember'
+    delete:
+      tags: [Ledgers]
+      summary: Remove member
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: Removed
+  /ledgers/{ledgerId}/accounts:
+    get:
+      tags: [Accounts]
+      summary: List accounts
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '200':
+          description: Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+    post:
+      tags: [Accounts]
+      summary: Create account
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreateRequest'
+      responses:
+        '201':
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+  /ledgers/{ledgerId}/accounts/{accountId}:
+    get:
+      tags: [Accounts]
+      summary: Get account
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+    patch:
+      tags: [Accounts]
+      summary: Update account
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountUpdateRequest'
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+    delete:
+      tags: [Accounts]
+      summary: Deactivate account
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '204':
+          description: Deactivated
+  /ledgers/{ledgerId}/categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum: [in, out]
+        - in: query
+          name: active
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+    post:
+      tags: [Categories]
+      summary: Create category
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateRequest'
+      responses:
+        '201':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+  /ledgers/{ledgerId}/categories/{categoryId}:
+    get:
+      tags: [Categories]
+      summary: Get category
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '200':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+    patch:
+      tags: [Categories]
+      summary: Update category
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateRequest'
+      responses:
+        '200':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+    delete:
+      tags: [Categories]
+      summary: Deactivate category
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '204':
+          description: Deactivated
+  /ledgers/{ledgerId}/transactions:
+    post:
+      tags: [Journal]
+      summary: Create transaction
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionCreateRequest'
+      responses:
+        '201':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    get:
+      tags: [Journal]
+      summary: List transactions
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: account_id
+          schema:
+            type: string
+        - in: query
+          name: category_id
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: cursor_occurred_at
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: cursor_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionList'
+  /ledgers/{ledgerId}/transactions/{transactionId}:
+    get:
+      tags: [Journal]
+      summary: Get transaction
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/TransactionId'
+      responses:
+        '200':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    patch:
+      tags: [Journal]
+      summary: Update transaction
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/TransactionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionUpdateRequest'
+      responses:
+        '200':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    delete:
+      tags: [Journal]
+      summary: Delete transaction
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/TransactionId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/transactions:bulk:
+    post:
+      tags: [Journal]
+      summary: Bulk create transactions
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '202':
+          description: Bulk accepted
+  /ledgers/{ledgerId}/budget/plan:
+    get:
+      tags: [Budget]
+      summary: Get budget plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '200':
+          description: Budget plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetPlan'
+    post:
+      tags: [Budget]
+      summary: Create budget plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetPlanRequest'
+      responses:
+        '201':
+          description: Budget plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetPlan'
+    patch:
+      tags: [Budget]
+      summary: Update budget plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetPlanRequest'
+      responses:
+        '200':
+          description: Budget plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetPlan'
+    delete:
+      tags: [Budget]
+      summary: Delete budget plan (admin/reset)
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/budget/versions:
+    post:
+      tags: [Budget]
+      summary: Create budget version
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetVersionRequest'
+      responses:
+        '201':
+          description: Budget version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetVersionResponse'
+    get:
+      tags: [Budget]
+      summary: List budget versions
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Budget versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BudgetVersionResponse'
+  /ledgers/{ledgerId}/budget/versions/{versionId}:
+    get:
+      tags: [Budget]
+      summary: Get budget version
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+      responses:
+        '200':
+          description: Budget version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetVersionResponse'
+    patch:
+      tags: [Budget]
+      summary: Update budget version (restricted)
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+      responses:
+        '501':
+          description: Not implemented
+    delete:
+      tags: [Budget]
+      summary: Delete budget version
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/budget/versions/{versionId}/lines:
+    post:
+      tags: [Budget]
+      summary: Add budget line
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetLineRequest'
+      responses:
+        '201':
+          description: Budget line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetLineResponse'
+  /ledgers/{ledgerId}/budget/versions/{versionId}/lines/{lineId}:
+    patch:
+      tags: [Budget]
+      summary: Update budget line
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+        - $ref: '#/components/parameters/LineId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetLineUpdateRequest'
+      responses:
+        '200':
+          description: Budget line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetLineResponse'
+    delete:
+      tags: [Budget]
+      summary: Delete budget line
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/VersionId'
+        - $ref: '#/components/parameters/LineId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/budget/monthly:
+    get:
+      tags: [Budget]
+      summary: Monthly budget summary
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetMonthlyResponse'
+  /ledgers/{ledgerId}/budget/period:
+    get:
+      tags: [Budget]
+      summary: Period budget summary
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Period summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetPeriodResponse'
+  /ledgers/{ledgerId}/investments/contributions:
+    post:
+      tags: [Investments]
+      summary: Create contribution
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestmentInput'
+      responses:
+        '201':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+  /ledgers/{ledgerId}/investments/redemptions:
+    post:
+      tags: [Investments]
+      summary: Create redemption
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestmentInput'
+      responses:
+        '201':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+  /ledgers/{ledgerId}/investments/earnings:
+    post:
+      tags: [Investments]
+      summary: Create earnings
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestmentInput'
+      responses:
+        '201':
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+  /ledgers/{ledgerId}/investments/summary:
+    get:
+      tags: [Investments]
+      summary: Investments summary
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvestmentsSummary'
+  /card-networks:
+    get:
+      tags: [Cartao]
+      summary: List card networks
+      responses:
+        '200':
+          description: Networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CardNetwork'
+    post:
+      tags: [Cartao]
+      summary: Create card network
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardNetworkRequest'
+      responses:
+        '201':
+          description: Network
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardNetwork'
+  /card-networks/{code}:
+    patch:
+      tags: [Cartao]
+      summary: Update card network
+      parameters:
+        - $ref: '#/components/parameters/CardNetworkCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardNetworkUpdateRequest'
+      responses:
+        '200':
+          description: Network
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardNetwork'
+    delete:
+      tags: [Cartao]
+      summary: Delete card network
+      parameters:
+        - $ref: '#/components/parameters/CardNetworkCode'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/credit-cards:
+    get:
+      tags: [Cartao]
+      summary: List credit cards
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      responses:
+        '200':
+          description: Cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditCard'
+    post:
+      tags: [Cartao]
+      summary: Create credit card
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditCardRequest'
+      responses:
+        '201':
+          description: Credit card
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditCard'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}:
+    get:
+      tags: [Cartao]
+      summary: Get credit card
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+      responses:
+        '200':
+          description: Credit card
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditCard'
+    patch:
+      tags: [Cartao]
+      summary: Update credit card
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditCardRequest'
+      responses:
+        '200':
+          description: Credit card
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditCard'
+    delete:
+      tags: [Cartao]
+      summary: Delete credit card
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans:
+    post:
+      tags: [Cartao]
+      summary: Create installment plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallmentPlanRequest'
+      responses:
+        '201':
+          description: Installment plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallmentPlan'
+    get:
+      tags: [Cartao]
+      summary: List installment plans
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstallmentPlan'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId}:
+    get:
+      tags: [Cartao]
+      summary: Get installment plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallmentPlan'
+    patch:
+      tags: [Cartao]
+      summary: Update installment plan status
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Cartao]
+      summary: Cancel installment plan
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '204':
+          description: Deleted
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments:
+    get:
+      tags: [Cartao]
+      summary: List installments
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - in: query
+          name: month
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Installments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Installment'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments/{installmentId}:
+    patch:
+      tags: [Cartao]
+      summary: Update installment status
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/InstallmentId'
+      responses:
+        '200':
+          description: Installment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Installment'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post:
+    post:
+      tags: [Cartao]
+      summary: Post installments for month
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Posting result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostingResult'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements:
+    get:
+      tags: [Cartao]
+      summary: List statements
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - in: query
+          name: month
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Statement'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId}:
+    get:
+      tags: [Cartao]
+      summary: Get statement
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/StatementId'
+      responses:
+        '200':
+          description: Statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statement'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close:
+    post:
+      tags: [Cartao]
+      summary: Close statement
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statement'
+  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay:
+    post:
+      tags: [Cartao]
+      summary: Pay statement
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/CardAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatementPaymentRequest'
+      responses:
+        '200':
+          description: Statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statement'
+  /ledgers/{ledgerId}/reports/balances:
+    get:
+      tags: [Relatorios]
+      summary: Account balances
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Balances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceReport'
+  /ledgers/{ledgerId}/reports/categories:
+    get:
+      tags: [Relatorios]
+      summary: Category summary
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Category report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryReport'
+  /ledgers/{ledgerId}/reports/cashflow:
+    get:
+      tags: [Relatorios]
+      summary: Cashflow
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Cashflow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashflowReport'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    LedgerId:
+      in: path
+      name: ledgerId
+      required: true
+      schema:
+        type: string
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+    AccountId:
+      in: path
+      name: accountId
+      required: true
+      schema:
+        type: string
+    CategoryId:
+      in: path
+      name: categoryId
+      required: true
+      schema:
+        type: string
+    TransactionId:
+      in: path
+      name: transactionId
+      required: true
+      schema:
+        type: string
+    VersionId:
+      in: path
+      name: versionId
+      required: true
+      schema:
+        type: string
+    LineId:
+      in: path
+      name: lineId
+      required: true
+      schema:
+        type: string
+    CardAccountId:
+      in: path
+      name: cardAccountId
+      required: true
+      schema:
+        type: string
+    PlanId:
+      in: path
+      name: planId
+      required: true
+      schema:
+        type: string
+    InstallmentId:
+      in: path
+      name: installmentId
+      required: true
+      schema:
+        type: string
+    StatementId:
+      in: path
+      name: statementId
+      required: true
+      schema:
+        type: string
+    CardNetworkCode:
+      in: path
+      name: code
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties:
+            type: string
+    AuthSignUpRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        display_name:
+          type: string
+    AuthLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthResult:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        display_name:
+          type: string
+    Ledger:
+      type: object
+      properties:
+        id:
+          type: string
+        owner_user_id:
+          type: string
+        name:
+          type: string
+        currency_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    LedgerWithRole:
+      type: object
+      properties:
+        ledger:
+          $ref: '#/components/schemas/Ledger'
+        role:
+          type: string
+    LedgerMember:
+      type: object
+      properties:
+        ledger_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    LedgerCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        currency_code:
+          type: string
+    LedgerUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+    LedgerMemberCreateRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+        role:
+          type: string
+    LedgerMemberUpdateRequest:
+      type: object
+      properties:
+        role:
+          type: string
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    AccountCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        is_active:
+          type: boolean
+    AccountUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        is_active:
+          type: boolean
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        parent_id:
+          type: string
+          nullable: true
+        name:
+          type: string
+        direction:
+          type: string
+        is_budget_base:
+          type: boolean
+        is_budget_relevant:
+          type: boolean
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CategoryCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        direction:
+          type: string
+        is_budget_base:
+          type: boolean
+        is_budget_relevant:
+          type: boolean
+        parent_id:
+          type: string
+          nullable: true
+    CategoryUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        is_budget_base:
+          type: boolean
+        is_budget_relevant:
+          type: boolean
+        is_active:
+          type: boolean
+        parent_id:
+          type: string
+          nullable: true
+    Entry:
+      type: object
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
+        category_id:
+          type: string
+          nullable: true
+        kind:
+          type: string
+        amount_cents:
+          type: integer
+        memo:
+          type: string
+          nullable: true
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        created_by_user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+    TransactionCreateRequest:
+      type: object
+      properties:
+        occurred_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+    TransactionUpdateRequest:
+      type: object
+      properties:
+        occurred_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        notes:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+    TransactionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        next_cursor:
+          type: object
+          properties:
+            cursor_occurred_at:
+              type: string
+              format: date-time
+            cursor_id:
+              type: string
+    BudgetMonthlyResponse:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        income_base_cents:
+          type: integer
+        outside_budget_cents:
+          type: integer
+        version:
+          $ref: '#/components/schemas/BudgetVersionResponse'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetMonthlyLineResponse'
+    BudgetMonthlyLineResponse:
+      type: object
+      properties:
+        category_id:
+          type: string
+        percent:
+          type: number
+        include_children:
+          type: boolean
+        budget_limit_cents:
+          type: integer
+        spent_actual_cents:
+          type: integer
+        delta_cents:
+          type: integer
+        usage_pct:
+          type: number
+    BudgetPeriodResponse:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        outside_budget_cents:
+          type: integer
+        total_budgeted_cents:
+          type: integer
+        total_spent_cents:
+          type: integer
+        total_delta_cents:
+          type: integer
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetMonthlyResponse'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetPeriodLineResponse'
+    BudgetPeriodLineResponse:
+      type: object
+      properties:
+        category_id:
+          type: string
+        budget_limit_cents:
+          type: integer
+        spent_actual_cents:
+          type: integer
+        delta_cents:
+          type: integer
+        usage_pct:
+          type: number
+    BudgetVersionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        plan_id:
+          type: string
+        effective_from_month:
+          type: string
+          format: date
+        created_by_user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetLineResponse'
+    BudgetLineResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        version_id:
+          type: string
+        category_id:
+          type: string
+        percent:
+          type: number
+        include_children:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    BudgetPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    BudgetPlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+    BudgetVersionRequest:
+      type: object
+      properties:
+        effective_from_month:
+          type: string
+          format: date
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetLineRequest'
+    BudgetLineRequest:
+      type: object
+      properties:
+        category_id:
+          type: string
+        percent:
+          type: number
+        include_children:
+          type: boolean
+    BudgetLineUpdateRequest:
+      type: object
+      properties:
+        percent:
+          type: number
+        include_children:
+          type: boolean
+    InvestmentInput:
+      type: object
+      properties:
+        amount_cents:
+          type: integer
+        occurred_at:
+          type: string
+          format: date-time
+        memo:
+          type: string
+          nullable: true
+    InvestmentsSummary:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        total_contributions:
+          type: integer
+        total_redemptions:
+          type: integer
+        total_earnings:
+          type: integer
+        total_losses:
+          type: integer
+        net_variation:
+          type: integer
+    CardNetwork:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CardNetworkRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+    CardNetworkUpdateRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+    CreditCard:
+      type: object
+      properties:
+        account_id:
+          type: string
+        ledger_id:
+          type: string
+        issuer_name:
+          type: string
+          nullable: true
+        network:
+          type: string
+        nickname:
+          type: string
+          nullable: true
+        last4:
+          type: string
+          nullable: true
+        credit_limit_cents:
+          type: integer
+          nullable: true
+        closing_day:
+          type: integer
+        due_day:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreditCardRequest:
+      type: object
+      properties:
+        account_id:
+          type: string
+        issuer_name:
+          type: string
+        network:
+          type: string
+        nickname:
+          type: string
+        last4:
+          type: string
+        credit_limit_cents:
+          type: integer
+        closing_day:
+          type: integer
+        due_day:
+          type: integer
+    InstallmentPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        card_account_id:
+          type: string
+        purchase_occurred_at:
+          type: string
+          format: date-time
+        merchant:
+          type: string
+          nullable: true
+        description:
+          type: string
+        category_id:
+          type: string
+        total_amount_cents:
+          type: integer
+        installments_count:
+          type: integer
+        installment_amount_cents:
+          type: integer
+        first_due_month:
+          type: string
+          format: date
+        status:
+          type: string
+        created_by_user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    InstallmentPlanRequest:
+      type: object
+      properties:
+        purchase_occurred_at:
+          type: string
+          format: date-time
+        merchant:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: string
+        total_amount_cents:
+          type: integer
+        installments_count:
+          type: integer
+        installment_amount_cents:
+          type: integer
+        first_due_month:
+          type: string
+          format: date
+    Installment:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        plan_id:
+          type: string
+        installment_no:
+          type: integer
+        due_month:
+          type: string
+          format: date
+        amount_cents:
+          type: integer
+        status:
+          type: string
+        posted_transaction_id:
+          type: string
+          nullable: true
+        paid_statement_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    Statement:
+      type: object
+      properties:
+        id:
+          type: string
+        ledger_id:
+          type: string
+        card_account_id:
+          type: string
+        statement_month:
+          type: string
+          format: date
+        closing_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        total_charges_cents:
+          type: integer
+        total_payments_cents:
+          type: integer
+        status:
+          type: string
+        payment_transaction_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    StatementPaymentRequest:
+      type: object
+      properties:
+        statement_id:
+          type: string
+        payment_date:
+          type: string
+          format: date-time
+        pay_amount_cents:
+          type: integer
+        cash_account_id:
+          type: string
+    PostingResult:
+      type: object
+      properties:
+        posted_count:
+          type: integer
+        transactions:
+          type: array
+          items:
+            type: string
+    BalanceReport:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountBalance'
+    AccountBalance:
+      type: object
+      properties:
+        account_id:
+          type: string
+        account_name:
+          type: string
+        account_type:
+          type: string
+        balance_cents:
+          type: integer
+    CategoryReport:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySummary'
+    CategorySummary:
+      type: object
+      properties:
+        category_id:
+          type: string
+        name:
+          type: string
+        direction:
+          type: string
+        total_cents:
+          type: integer
+    CashflowReport:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashflowEntry'
+    CashflowEntry:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        total_in_cents:
+          type: integer
+        total_out_cents:
+          type: integer
+        net_cents:
+          type: integer

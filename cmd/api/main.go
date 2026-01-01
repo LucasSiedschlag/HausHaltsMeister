@@ -33,20 +33,11 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/reports"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func main() {
 	cfg := config.Load()
-	if cfg.DatabaseURL == "" {
-		log.Fatal("DATABASE_URL required")
-	}
-
-	ctx := context.Background()
-	store, err := postgres.NewStore(ctx, cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("db connect: %v", err)
-	}
-	defer store.Close()
 
 	providers := map[string]auth.OAuthProvider{}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRedirectURL != "" {
@@ -63,6 +54,45 @@ func main() {
 			RedirectURL:  cfg.GitHubRedirectURL,
 		})
 	}
+
+	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
+	metrics := middleware.NewMetrics()
+
+	e := echo.New()
+	e.HideBanner = true
+	e.Use(echomw.RequestID())
+	e.Use(echomw.Recover())
+	e.Use(middleware.RequestLogger())
+	e.Use(metrics.Middleware())
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+	e.GET("/metrics", metrics.Handler)
+	e.GET("/docs/openapi.yaml", func(c echo.Context) error {
+		c.Response().Header().Set("Cache-Control", "no-store")
+		c.Response().Header().Set(echo.HeaderContentType, "application/yaml")
+		return c.File("docs/api/openapi.yaml")
+	})
+	e.GET("/docs", func(c echo.Context) error {
+		return c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
+	})
+	e.GET("/docs/", func(c echo.Context) error {
+		return c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
+	})
+	e.GET("/docs/*", echoSwagger.EchoWrapHandler(func(cfg *echoSwagger.Config) {
+		cfg.URLs = []string{"/docs/openapi.yaml"}
+	}))
+
+	if cfg.DatabaseURL == "" {
+		log.Fatal("DATABASE_URL required")
+	}
+
+	ctx := context.Background()
+	store, err := postgres.NewStore(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("db connect: %v", err)
+	}
+	defer store.Close()
 
 	authRepo := pgauth.NewRepository(store)
 	ledgerRepo := pgledger.NewRepository(store)
@@ -88,20 +118,6 @@ func main() {
 	investmentsService := investments.NewService(investmentsRepo)
 	creditCardService := creditcard.NewService(creditCardRepo)
 	reportsService := reports.NewService(reportsRepo)
-
-	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
-	metrics := middleware.NewMetrics()
-
-	e := echo.New()
-	e.HideBanner = true
-	e.Use(echomw.RequestID())
-	e.Use(echomw.Recover())
-	e.Use(middleware.RequestLogger())
-	e.Use(metrics.Middleware())
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
-	e.GET("/metrics", metrics.Handler)
 
 	authHandler := &handlers.AuthHandler{
 		Service:     authService,
@@ -161,8 +177,12 @@ func main() {
 	reportsGroup := e.Group("/ledgers/:ledgerId/reports", middleware.RequireAuth(authService))
 	reportsHandler.Register(reportsGroup)
 
+	startServer(e, cfg.HTTPAddr)
+}
+
+func startServer(e *echo.Echo, addr string) {
 	go func() {
-		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
 	}()

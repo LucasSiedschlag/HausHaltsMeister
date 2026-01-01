@@ -16,6 +16,10 @@ type fakeRepo struct {
 	incomeBase   int64
 	spentActual  map[string]int64
 	outside      int64
+	createdLines []LineInput
+	incomeByMonth map[string]int64
+	spentByMonth  map[string]map[string]int64
+	outsideByMonth map[string]int64
 }
 
 func (f *fakeRepo) GetPlanByLedger(ctx context.Context, ledgerID string) (Plan, error) {
@@ -39,7 +43,8 @@ func (f *fakeRepo) GetVersion(ctx context.Context, ledgerID, versionID string) (
 }
 
 func (f *fakeRepo) CreateVersionWithLines(ctx context.Context, ledgerID, planID, userID string, effectiveFrom time.Time, lines []LineInput) (Version, error) {
-	return Version{}, nil
+	f.createdLines = lines
+	return Version{ID: "ver-1", PlanID: planID, EffectiveFromMonth: effectiveFrom}, nil
 }
 
 func (f *fakeRepo) UpdateLine(ctx context.Context, lineID string, percent float64, includeChildren bool, updatedAt time.Time) (Line, error) {
@@ -74,11 +79,24 @@ func (f *fakeRepo) GetCategoryDescendants(ctx context.Context, ledgerID, categor
 }
 
 func (f *fakeRepo) IncomeBaseForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error) {
+	if f.incomeByMonth != nil {
+		if value, ok := f.incomeByMonth[month.Format("2006-01-02")]; ok {
+			return value, nil
+		}
+	}
 	return f.incomeBase, nil
 }
 
 func (f *fakeRepo) SpentActualForMonth(ctx context.Context, ledgerID string, categoryIDs []string, month time.Time) (int64, error) {
 	var total int64
+	if f.spentByMonth != nil {
+		if values, ok := f.spentByMonth[month.Format("2006-01-02")]; ok {
+			for _, id := range categoryIDs {
+				total += values[id]
+			}
+			return total, nil
+		}
+	}
 	for _, id := range categoryIDs {
 		total += f.spentActual[id]
 	}
@@ -86,6 +104,11 @@ func (f *fakeRepo) SpentActualForMonth(ctx context.Context, ledgerID string, cat
 }
 
 func (f *fakeRepo) OutsideBudgetForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error) {
+	if f.outsideByMonth != nil {
+		if value, ok := f.outsideByMonth[month.Format("2006-01-02")]; ok {
+			return value, nil
+		}
+	}
 	return f.outside, nil
 }
 
@@ -139,4 +162,59 @@ func TestMonthlySummaryCalculatesTotals(t *testing.T) {
 	require.Equal(t, int64(6000), summary.Lines[0].SpentActualCents)
 	require.Equal(t, int64(1000), summary.Lines[0].DeltaCents)
 	require.Equal(t, 1.2, summary.Lines[0].UsagePct)
+}
+
+func TestCreateVersionSuccess(t *testing.T) {
+	repo := &fakeRepo{
+		role:         "editor",
+		categoryInfo: map[string]CategoryInfo{"cat-1": {Direction: "out", IsBudgetRelevant: true}},
+	}
+	service := NewService(repo)
+
+	month := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	_, err := service.CreateVersion(context.Background(), "user-1", "ledger-1", month, []LineInput{{CategoryID: "cat-1", Percent: 10}})
+	require.NoError(t, err)
+	require.Len(t, repo.createdLines, 1)
+}
+
+func TestMonthlySummaryNoVersionReturnsEmpty(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	month := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	summary, err := service.MonthlySummary(context.Background(), "user-1", "ledger-1", month)
+	require.NoError(t, err)
+	require.Empty(t, summary.Lines)
+}
+
+func TestPeriodSummaryAggregatesMonths(t *testing.T) {
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	repo := &fakeRepo{
+		role:    "viewer",
+		version: Version{ID: "ver-1", PlanID: "plan-1", EffectiveFromMonth: from},
+		lines:   []Line{{CategoryID: "cat-1", Percent: 10, IncludeChildren: false}},
+		incomeByMonth: map[string]int64{
+			"2026-01-01": 10000,
+			"2026-02-01": 20000,
+		},
+		spentByMonth: map[string]map[string]int64{
+			"2026-01-01": {"cat-1": 800},
+			"2026-02-01": {"cat-1": 1500},
+		},
+		outsideByMonth: map[string]int64{
+			"2026-01-01": 100,
+			"2026-02-01": 200,
+		},
+	}
+	service := NewService(repo)
+
+	period, err := service.PeriodSummary(context.Background(), "user-1", "ledger-1", from, to)
+	require.NoError(t, err)
+	require.Len(t, period.Months, 2)
+	require.Equal(t, int64(300), period.OutsideBudgetCents)
+	require.Len(t, period.Categories, 1)
+	require.Equal(t, int64(3000), period.TotalBudgetedCents)
+	require.Equal(t, int64(2300), period.TotalSpentCents)
+	require.Equal(t, int64(-700), period.TotalDeltaCents)
 }

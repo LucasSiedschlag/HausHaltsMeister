@@ -1,50 +1,112 @@
-# API — Convencoes Gerais
+# API — Convencoes
 
-Este documento centraliza as regras comuns a todos os endpoints.
+Este documento consolida os padroes globais e o template obrigatorio de contratos para todos os modulos de API.
 
-## Escopo e autenticacao
+## 1) Padroes globais
 
-- Toda request autenticada deve fornecer `user_id` valido (token/sessao).
-- Endpoints sensiveis exigem role `owner` ou `editor`.
-- Endpoints de leitura podem ser acessados por `viewer`.
+### 1.1 JSON e nomes
+- JSON em `snake_case`.
+- Campos de ID: `*_id` (UUID).
 
-## Ledger first
+### 1.2 Datas, horarios e timezone
+- Datas e timestamps: ISO-8601 em UTC.
+- Meses: `YYYY-MM-01`.
+- DB usa `timestamptz` e armazena UTC.
 
-- Quase todos os recursos sao escopados por `ledger_id`.
-- Nunca buscar recursos somente por `id` sem validar o ledger.
+### 1.3 Dinheiro
+- Usar `*_cents` (int64).
+- Valores sempre inteiros e positivos; direcao e sinal sao definidos pelo contexto do entry.
 
-## Datas e meses
+### 1.4 Auth e sessoes
+- Access token via `Authorization: Bearer <token>`.
+- Refresh token via cookie HttpOnly.
+- JWT curto (ex.: 15 min).
+- Refresh longo (ex.: 30-90 dias).
 
-- Datas: `YYYY-MM-DD`.
-- Mes de referencia: `YYYY-MM-01` (primeiro dia do mes).
+### 1.5 RBAC por ledger
+- Roles: `owner`, `editor`, `viewer`.
+- Toda rota de dominio exige `ledgerId`.
+- Sempre filtrar por `ledger_id` para evitar vazamentos.
 
-## Valores
+### 1.6 Paginacao
+- Cursor para journal (transactions).
+- Ordenacao fixa: `occurred_at DESC, id DESC`.
+- Cursor shape:
+```json
+{ "cursor_occurred_at": "2026-01-10T00:00:00Z", "cursor_id": "uuid" }
+```
 
-- Valores monetarios em centavos: `amount_cents` (inteiro).
-- `entries.amount_cents` sempre positivo; IN/OUT vem de `categories.direction`.
+### 1.7 Erros
+- Payload padrao:
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Human readable message",
+    "details": { "field": "reason" }
+  }
+}
+```
 
-## Valores enumerados
+### 1.8 Enum values oficiais
+- `category_direction`: `in`, `out`
+- `entry_kind`: `normal`, `transfer`, `adjust`
+- `installment_plan_status`: `active`, `cancelled`, `finished`
+- `installment_status`: `scheduled`, `posted`, `paid`, `skipped`
+- `statement_status`: `open`, `closed`, `paid`
 
-- Todos os valores enumerados sao `varchar` com validacao via `CHECK` no banco.
-- Valores validos devem ser tratados no service layer e rejeitados com `422`.
+### 1.9 Erros 5xx (globais)
+- `INTERNAL_SERVER_ERROR` (500) — erro inesperado.
+- `SERVICE_UNAVAILABLE` (503) — dependencia/servico indisponivel.
+- `GATEWAY_TIMEOUT` (504) — timeout em dependencia.
 
-## Metodos e atualizacoes
+---
 
-- `POST` cria.
-- `GET` lista ou detalha.
-- `PATCH` atualiza parcialmente.
-- `DELETE` remove (preferir soft delete quando aplicavel).
+## 2) Template obrigatorio por endpoint
 
-## Codigos de resposta (padrao)
+Todo endpoint deve seguir este template:
 
-- `400` entrada invalida
-- `401` nao autenticado
-- `403` sem permissao
-- `404` nao encontrado (ou recurso de outro ledger)
-- `409` conflito/duplicidade
-- `422` validacao de dominio
+1. Summary / Purpose
+2. Auth & Authorization
+   - requer token?
+   - roles minimos
+   - ledger boundary (sempre)
+3. Request
+   - Path params (tipos + validacao)
+   - Query params (tipos + defaults + limites)
+   - Headers (Authorization, Idempotency-Key se usar)
+   - Body schema + exemplos
+4. Response
+   - Success status code
+   - Body schema + exemplos
+5. Errors
+   - status codes
+   - error codes do docs/agent/ERRORS.md
+   - exemplos de erro
+6. Semantics / Notes
+   - invariantes importantes
+   - side effects
+7. Pagination (quando aplicavel)
+   - cursor shape
+8. Idempotency (quando aplicavel)
 
-## Atualizacao de timestamps
+---
 
-- `created_at` sempre definido no banco.
-- `updated_at` deve ser setado pela aplicacao em toda atualizacao.
+## 3) Padrões de exemplo
+
+### Exemplo de request com Idempotency-Key
+```
+POST /ledgers/{ledgerId}/transactions
+Idempotency-Key: 6e1a1f1c-7a3d-4cf6-8cbe-6d6f0f81b6c2
+```
+
+### Exemplo de erro
+```json
+{
+  "error": {
+    "code": "LEDGER_ACCESS_DENIED",
+    "message": "Sem acesso ao ledger",
+    "details": { "ledger_id": "uuid" }
+  }
+}
+```

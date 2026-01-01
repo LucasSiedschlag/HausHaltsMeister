@@ -15,6 +15,7 @@ import (
 
 type fakeBudgetService struct {
 	monthlyErr error
+	periodErr  error
 }
 
 func (f fakeBudgetService) GetPlan(ctx context.Context, userID, ledgerID string) (budget.Plan, error) {
@@ -57,6 +58,10 @@ func (f fakeBudgetService) MonthlySummary(ctx context.Context, userID, ledgerID 
 	return budget.MonthlySummary{}, f.monthlyErr
 }
 
+func (f fakeBudgetService) PeriodSummary(ctx context.Context, userID, ledgerID string, from, to time.Time) (budget.PeriodSummary, error) {
+	return budget.PeriodSummary{From: from, To: to}, f.periodErr
+}
+
 func TestMonthlyRequiresMonth(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/ledgers/ledger-1/budget/monthly", nil)
@@ -69,6 +74,22 @@ func TestMonthlyRequiresMonth(t *testing.T) {
 	handler := BudgetHandler{Service: fakeBudgetService{}}
 
 	err := handler.Monthly(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+}
+
+func TestPeriodRequiresRange(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/ledgers/ledger-1/budget/period", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("ledgerId")
+	c.SetParamValues("ledger-1")
+	c.Set("user", auth.User{ID: "user-1"})
+
+	handler := BudgetHandler{Service: fakeBudgetService{}}
+
+	err := handler.PeriodSummary(c)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 }

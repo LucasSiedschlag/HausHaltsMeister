@@ -62,3 +62,22 @@ type BudgetMonthlyLineResponse struct {
 	DeltaCents       int64   `json:"delta_cents"`
 	UsagePct         float64 `json:"usage_pct"`
 }
+
+type BudgetPeriodResponse struct {
+	From               time.Time                    `json:"from"`
+	To                 time.Time                    `json:"to"`
+	OutsideBudgetCents int64                        `json:"outside_budget_cents"`
+	TotalBudgetedCents int64                        `json:"total_budgeted_cents"`
+	TotalSpentCents    int64                        `json:"total_spent_cents"`
+	TotalDeltaCents    int64                        `json:"total_delta_cents"`
+	Months             []BudgetMonthlyResponse      `json:"months"`
+	Categories         []BudgetPeriodLineResponse   `json:"categories"`
+}
+
+type BudgetPeriodLineResponse struct {
+	CategoryID       string  `json:"category_id"`
+	BudgetLimitCents int64   `json:"budget_limit_cents"`
+	SpentActualCents int64   `json:"spent_actual_cents"`
+	DeltaCents       int64   `json:"delta_cents"`
+	UsagePct         float64 `json:"usage_pct"`
+}

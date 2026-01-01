@@ -10,6 +10,7 @@ import (
 
 type fakeRepo struct {
 	role string
+	last Account
 }
 
 func (f *fakeRepo) ListAccounts(ctx context.Context, ledgerID string) ([]Account, error) {
@@ -21,7 +22,8 @@ func (f *fakeRepo) GetAccount(ctx context.Context, ledgerID, accountID string) (
 }
 
 func (f *fakeRepo) CreateAccount(ctx context.Context, ledgerID, name, accountType string, isActive bool) (Account, error) {
-	return Account{}, nil
+	f.last = Account{ID: "acc-1", LedgerID: ledgerID, Name: name, Type: accountType, IsActive: isActive}
+	return f.last, nil
 }
 
 func (f *fakeRepo) UpdateAccount(ctx context.Context, ledgerID, accountID, name string, isActive bool, updatedAt time.Time) (Account, error) {
@@ -56,4 +58,22 @@ func TestCreateAccountValidatesType(t *testing.T) {
 	_, err := service.CreateAccount(context.Background(), "user-1", "ledger-1", "Conta", "invalid", true)
 	require.Error(t, err)
 	require.Equal(t, "VALIDATION_ERROR", err.(*Error).Code())
+}
+
+func TestCreateAccountSuccess(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	account, err := service.CreateAccount(context.Background(), "user-1", "ledger-1", "Conta", "cash", true)
+	require.NoError(t, err)
+	require.Equal(t, "Conta", account.Name)
+	require.Equal(t, "cash", account.Type)
+}
+
+func TestDeleteAccountSuccess(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	err := service.DeleteAccount(context.Background(), "user-1", "ledger-1", "acc-1")
+	require.NoError(t, err)
 }

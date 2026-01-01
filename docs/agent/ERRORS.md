@@ -44,3 +44,6 @@ Payload shape:
 | CREDITCARD_STATEMENT_ALREADY_PAID | 409 | Fatura ja paga | `{ "statement_id": "uuid" }` |
 | CREDITCARD_PAYMENT_EXCEEDS_TOTAL | 422 | Pagamento maior que total | `{ "pay_amount_cents": 0, "total_cents": 0 }` |
 | NOT_IMPLEMENTED | 501 | Endpoint ou fluxo nao disponivel | `{ "feature": "..." }` |
+| INTERNAL_SERVER_ERROR | 500 | Erro inesperado no servidor | `{ "request_id": "..." }` |
+| SERVICE_UNAVAILABLE | 503 | Servico indisponivel (manutencao/dependencia) | `{ "retry_after": "seconds" }` |
+| GATEWAY_TIMEOUT | 504 | Timeout em dependencia externa | `{ "request_id": "..." }` |

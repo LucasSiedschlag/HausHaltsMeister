@@ -13,6 +13,7 @@ type fakeRepo struct {
 	created   CreateCategoryParams
 	createErr error
 	category  Category
+	used      bool
 }
 
 func (f *fakeRepo) ListCategories(ctx context.Context, ledgerID string, direction *string, active *bool) ([]Category, error) {
@@ -45,7 +46,7 @@ func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (
 }
 
 func (f *fakeRepo) IsCategoryUsed(ctx context.Context, ledgerID, categoryID string) (bool, error) {
-	return false, nil
+	return f.used, nil
 }
 
 func TestCreateCategoryForcesFlags(t *testing.T) {
@@ -62,4 +63,29 @@ func TestCreateCategoryForcesFlags(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, repo.created.IsBudgetBase)
 	require.False(t, repo.created.IsBudgetRelevant)
+}
+
+func TestCreateCategorySuccess(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	_, err := service.CreateCategory(context.Background(), "user-1", "ledger-1", CreateCategoryParams{
+		Name:             "Mercado",
+		Direction:        "out",
+		IsBudgetBase:     false,
+		IsBudgetRelevant: true,
+		IsActive:         true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "Mercado", repo.created.Name)
+	require.Equal(t, "out", repo.created.Direction)
+}
+
+func TestDeleteCategoryBlockedWhenInUse(t *testing.T) {
+	repo := &fakeRepo{role: "editor", used: true}
+	service := NewService(repo)
+
+	err := service.DeleteCategory(context.Background(), "user-1", "ledger-1", "cat-1")
+	require.Error(t, err)
+	require.Equal(t, "VALIDATION_ERROR", err.(*Error).Code())
 }

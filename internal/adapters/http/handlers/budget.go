@@ -27,6 +27,7 @@ type BudgetService interface {
 	UpdateLine(ctx context.Context, userID, ledgerID, lineID string, percent float64, includeChildren bool) (budget.Line, error)
 	DeleteLine(ctx context.Context, userID, ledgerID, lineID string) error
 	MonthlySummary(ctx context.Context, userID, ledgerID string, month time.Time) (budget.MonthlySummary, error)
+	PeriodSummary(ctx context.Context, userID, ledgerID string, from, to time.Time) (budget.PeriodSummary, error)
 }
 
 type planRequest = dto.BudgetPlanRequest
@@ -37,6 +38,8 @@ type versionResponse = dto.BudgetVersionResponse
 type lineResponse = dto.BudgetLineResponse
 type monthlyResponse = dto.BudgetMonthlyResponse
 type monthlyLineResponse = dto.BudgetMonthlyLineResponse
+type periodResponse = dto.BudgetPeriodResponse
+type periodLineResponse = dto.BudgetPeriodLineResponse
 
 func (h *BudgetHandler) Register(base *echo.Group) {
 	plan := base.Group("/plan")
@@ -58,6 +61,7 @@ func (h *BudgetHandler) Register(base *echo.Group) {
 	lines.DELETE("/:lineId", h.DeleteLine)
 
 	base.GET("/monthly", h.Monthly)
+	base.GET("/period", h.PeriodSummary)
 }
 
 func (h *BudgetHandler) GetPlan(c echo.Context) error {
@@ -314,23 +318,55 @@ func (h *BudgetHandler) Monthly(c echo.Context) error {
 		return httpx.WriteAppError(c, err)
 	}
 
-	response := monthlyResponse{
-		Month:              summary.Month,
-		IncomeBaseCents:    summary.IncomeBaseCents,
+	return c.JSON(http.StatusOK, toMonthlyResponse(summary))
+}
+
+func (h *BudgetHandler) PeriodSummary(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+	ledgerID := c.Param("ledgerId")
+	if ledgerID == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	}
+
+	fromValue := strings.TrimSpace(c.QueryParam("from"))
+	toValue := strings.TrimSpace(c.QueryParam("to"))
+	if fromValue == "" || toValue == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"range": "required"})
+	}
+	from, err := httpx.ParseMonth(fromValue)
+	if err != nil {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"from": "invalid"})
+	}
+	to, err := httpx.ParseMonth(toValue)
+	if err != nil {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"to": "invalid"})
+	}
+
+	summary, err := h.Service.PeriodSummary(c.Request().Context(), user.ID, ledgerID, from, to)
+	if err != nil {
+		return httpx.WriteAppError(c, err)
+	}
+
+	response := periodResponse{
+		From:               summary.From,
+		To:                 summary.To,
 		OutsideBudgetCents: summary.OutsideBudgetCents,
-		Lines:              []monthlyLineResponse{},
+		TotalBudgetedCents: summary.TotalBudgetedCents,
+		TotalSpentCents:    summary.TotalSpentCents,
+		TotalDeltaCents:    summary.TotalDeltaCents,
+		Months:             []monthlyResponse{},
+		Categories:         []periodLineResponse{},
 	}
 
-	if summary.Version != nil {
-		version := toVersionResponse(*summary.Version)
-		response.Version = &version
+	for _, month := range summary.Months {
+		response.Months = append(response.Months, toMonthlyResponse(month))
 	}
-
-	for _, line := range summary.Lines {
-		response.Lines = append(response.Lines, monthlyLineResponse{
+	for _, line := range summary.Categories {
+		response.Categories = append(response.Categories, periodLineResponse{
 			CategoryID:       line.CategoryID,
-			Percent:          line.Percent,
-			IncludeChildren:  line.IncludeChildren,
 			BudgetLimitCents: line.BudgetLimitCents,
 			SpentActualCents: line.SpentActualCents,
 			DeltaCents:       line.DeltaCents,
@@ -381,4 +417,32 @@ func toLineResponse(line budget.Line) lineResponse {
 		CreatedAt:       line.CreatedAt,
 		UpdatedAt:       line.UpdatedAt,
 	}
+}
+
+func toMonthlyResponse(summary budget.MonthlySummary) monthlyResponse {
+	response := monthlyResponse{
+		Month:              summary.Month,
+		IncomeBaseCents:    summary.IncomeBaseCents,
+		OutsideBudgetCents: summary.OutsideBudgetCents,
+		Lines:              []monthlyLineResponse{},
+	}
+
+	if summary.Version != nil {
+		version := toVersionResponse(*summary.Version)
+		response.Version = &version
+	}
+
+	for _, line := range summary.Lines {
+		response.Lines = append(response.Lines, monthlyLineResponse{
+			CategoryID:       line.CategoryID,
+			Percent:          line.Percent,
+			IncludeChildren:  line.IncludeChildren,
+			BudgetLimitCents: line.BudgetLimitCents,
+			SpentActualCents: line.SpentActualCents,
+			DeltaCents:       line.DeltaCents,
+			UsagePct:         line.UsagePct,
+		})
+	}
+
+	return response
 }

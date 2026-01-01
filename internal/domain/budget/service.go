@@ -255,6 +255,67 @@ func (s *Service) MonthlySummary(ctx context.Context, userID, ledgerID string, m
 	}, nil
 }
 
+func (s *Service) PeriodSummary(ctx context.Context, userID, ledgerID string, from, to time.Time) (PeriodSummary, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return PeriodSummary{}, err
+	}
+	if from.IsZero() || to.IsZero() || to.Before(from) {
+		return PeriodSummary{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"range": "invalid"})
+	}
+	if !isMonthStart(from) || !isMonthStart(to) {
+		return PeriodSummary{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"range": "month_start"})
+	}
+
+	months := []MonthlySummary{}
+	categoryTotals := map[string]*PeriodCategorySummary{}
+	var outsideTotal int64
+
+	for cursor := from; !cursor.After(to); cursor = cursor.AddDate(0, 1, 0) {
+		monthly, err := s.MonthlySummary(ctx, userID, ledgerID, cursor)
+		if err != nil {
+			return PeriodSummary{}, err
+		}
+		months = append(months, monthly)
+		outsideTotal += monthly.OutsideBudgetCents
+
+		for _, line := range monthly.Lines {
+			item, ok := categoryTotals[line.CategoryID]
+			if !ok {
+				item = &PeriodCategorySummary{CategoryID: line.CategoryID}
+				categoryTotals[line.CategoryID] = item
+			}
+			item.BudgetLimitCents += line.BudgetLimitCents
+			item.SpentActualCents += line.SpentActualCents
+			item.DeltaCents += line.DeltaCents
+		}
+	}
+
+	results := make([]PeriodCategorySummary, 0, len(categoryTotals))
+	var totalBudgeted int64
+	var totalSpent int64
+	var totalDelta int64
+	for _, item := range categoryTotals {
+		if item.BudgetLimitCents > 0 {
+			item.UsagePct = float64(item.SpentActualCents) / float64(item.BudgetLimitCents)
+		}
+		totalBudgeted += item.BudgetLimitCents
+		totalSpent += item.SpentActualCents
+		totalDelta += item.DeltaCents
+		results = append(results, *item)
+	}
+
+	return PeriodSummary{
+		From:               from,
+		To:                 to,
+		Months:             months,
+		Categories:         results,
+		OutsideBudgetCents: outsideTotal,
+		TotalBudgetedCents: totalBudgeted,
+		TotalSpentCents:    totalSpent,
+		TotalDeltaCents:    totalDelta,
+	}, nil
+}
+
 func (s *Service) validateLines(ctx context.Context, ledgerID string, lines []LineInput) ([]LineInput, error) {
 	categoryIDs := make([]string, 0, len(lines))
 	for _, line := range lines {

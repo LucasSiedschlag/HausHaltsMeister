@@ -36,7 +36,7 @@ func WriteAppError(c echo.Context, err error) error {
 		status := errorStatus(appErr.Code())
 		return WriteError(c, status, appErr.Code(), appErr.Message(), appErr.Details())
 	}
-	return WriteError(c, nethttp.StatusInternalServerError, "INTERNAL_ERROR", "Erro interno", nil)
+	return WriteError(c, nethttp.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Erro interno", nil)
 }
 
 func errorStatus(code string) int {
@@ -89,6 +89,12 @@ func errorStatus(code string) int {
 		return nethttp.StatusUnprocessableEntity
 	case "NOT_IMPLEMENTED":
 		return nethttp.StatusNotImplemented
+	case "INTERNAL_SERVER_ERROR":
+		return nethttp.StatusInternalServerError
+	case "SERVICE_UNAVAILABLE":
+		return nethttp.StatusServiceUnavailable
+	case "GATEWAY_TIMEOUT":
+		return nethttp.StatusGatewayTimeout
 	default:
 		return nethttp.StatusInternalServerError
 	}

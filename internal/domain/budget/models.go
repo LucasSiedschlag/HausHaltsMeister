@@ -47,3 +47,22 @@ type MonthlySummary struct {
 	Lines              []MonthlyLine
 	OutsideBudgetCents int64
 }
+
+type PeriodCategorySummary struct {
+	CategoryID       string
+	BudgetLimitCents int64
+	SpentActualCents int64
+	DeltaCents       int64
+	UsagePct         float64
+}
+
+type PeriodSummary struct {
+	From               time.Time
+	To                 time.Time
+	Months             []MonthlySummary
+	Categories         []PeriodCategorySummary
+	OutsideBudgetCents int64
+	TotalBudgetedCents int64
+	TotalSpentCents    int64
+	TotalDeltaCents    int64
+}

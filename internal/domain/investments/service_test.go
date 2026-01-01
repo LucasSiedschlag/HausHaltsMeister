@@ -11,6 +11,9 @@ import (
 
 type fakeRepo struct {
 	role string
+	last journal.CreateTransactionParams
+	categories map[string]string
+	sums       map[string]int64
 }
 
 func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error) {
@@ -29,6 +32,9 @@ func (f *fakeRepo) FindAccountByType(ctx context.Context, ledgerID, accountType 
 }
 
 func (f *fakeRepo) FindCategoryByName(ctx context.Context, ledgerID, name string) (string, error) {
+	if id, ok := f.categories[name]; ok {
+		return id, nil
+	}
 	return "cat-1", nil
 }
 
@@ -37,11 +43,12 @@ func (f *fakeRepo) GetCategoryDirection(ctx context.Context, ledgerID, categoryI
 }
 
 func (f *fakeRepo) CreateTransaction(ctx context.Context, params journal.CreateTransactionParams) (journal.Transaction, error) {
-	return journal.Transaction{}, nil
+	f.last = params
+	return journal.Transaction{ID: "tx-1"}, nil
 }
 
 func (f *fakeRepo) SumByCategory(ctx context.Context, ledgerID, categoryID string, from, to time.Time) (int64, error) {
-	return 0, nil
+	return f.sums[categoryID], nil
 }
 
 func TestContributionRequiresEditor(t *testing.T) {
@@ -51,4 +58,59 @@ func TestContributionRequiresEditor(t *testing.T) {
 	_, err := service.Contribution(context.Background(), "user-1", "ledger-1", 1000, time.Now().UTC(), nil)
 	require.Error(t, err)
 	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestEarningsCreatesAdjustEntry(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	occurredAt := time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)
+	_, err := service.Earnings(context.Background(), "user-1", "ledger-1", 500, occurredAt, nil)
+	require.NoError(t, err)
+	require.Equal(t, "Rendimento investimentos", repo.last.Description)
+	require.Equal(t, 1, len(repo.last.Entries))
+	require.Equal(t, "adjust", repo.last.Entries[0].Kind)
+}
+
+func TestRedemptionCreatesTransferEntries(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	occurredAt := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	_, err := service.Redemption(context.Background(), "user-1", "ledger-1", 1000, occurredAt, nil)
+	require.NoError(t, err)
+	require.Equal(t, "Resgate investimentos", repo.last.Description)
+	require.Len(t, repo.last.Entries, 2)
+	require.Equal(t, "transfer", repo.last.Entries[0].Kind)
+	require.Equal(t, "transfer", repo.last.Entries[1].Kind)
+}
+
+func TestSummaryReturnsTotals(t *testing.T) {
+	repo := &fakeRepo{
+		role: "viewer",
+		categories: map[string]string{
+			"Aportes Investimentos":           "cat-contrib",
+			"Resgate Investimentos":           "cat-redempt",
+			"Rendimentos":                     "cat-earn",
+			"Perdas":                          "cat-loss",
+			"Entrada Investimentos (Aporte)":  "cat-in",
+			"Entrada Resgate (Investimentos)": "cat-in-resc",
+		},
+		sums: map[string]int64{
+			"cat-contrib": 1000,
+			"cat-redempt": 2000,
+			"cat-earn":    300,
+			"cat-loss":    50,
+		},
+	}
+	service := NewService(repo)
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	summary, err := service.Summary(context.Background(), "user-1", "ledger-1", from, to)
+	require.NoError(t, err)
+	require.Equal(t, int64(1000), summary.TotalContributions)
+	require.Equal(t, int64(2000), summary.TotalRedemptions)
+	require.Equal(t, int64(300), summary.TotalEarnings)
+	require.Equal(t, int64(50), summary.TotalLosses)
 }

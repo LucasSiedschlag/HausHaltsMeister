@@ -13,13 +13,17 @@ type fakeRepo struct {
 	accounts   map[string]bool
 	categories map[string]string
 	referenced bool
+	lastCreate CreateTransactionParams
+	lastList   ListTransactionsParams
 }
 
 func (f *fakeRepo) CreateTransaction(ctx context.Context, params CreateTransactionParams) (Transaction, error) {
-	return Transaction{}, nil
+	f.lastCreate = params
+	return Transaction{ID: "tx-1", Entries: []Entry{}}, nil
 }
 
 func (f *fakeRepo) ListTransactions(ctx context.Context, params ListTransactionsParams) (ListResult, error) {
+	f.lastList = params
 	return ListResult{}, nil
 }
 
@@ -104,6 +108,73 @@ func TestDeleteTransactionBlockedWhenReferenced(t *testing.T) {
 	err := service.DeleteTransaction(context.Background(), "user-1", "ledger-1", "tx-1")
 	require.Error(t, err)
 	require.Equal(t, ErrTransactionReferenced, err)
+}
+
+func TestCreateTransactionSimple(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-out": "out"},
+	}
+	service := NewService(repo)
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:  time.Now().UTC(),
+		Description: "Compra",
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-out"), Kind: "normal", AmountCents: 1000},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "ledger-1", repo.lastCreate.LedgerID)
+	require.Equal(t, "user-1", repo.lastCreate.CreatedByUserID)
+}
+
+func TestCreateTransactionSplit(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-a": "out", "cat-b": "out"},
+	}
+	service := NewService(repo)
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:  time.Now().UTC(),
+		Description: "Split",
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-a"), Kind: "normal", AmountCents: 500},
+			{AccountID: "acc-1", CategoryID: ptr("cat-b"), Kind: "normal", AmountCents: 700},
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, repo.lastCreate.Entries, 2)
+}
+
+func TestCreateTransactionAdjust(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-in": "in"},
+	}
+	service := NewService(repo)
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:  time.Now().UTC(),
+		Description: "Ajuste",
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-in"), Kind: "adjust", AmountCents: 200},
+		},
+	})
+	require.NoError(t, err)
+}
+
+func TestListTransactionsDefaultLimit(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.ListTransactions(context.Background(), "user-1", "ledger-1", ListTransactionsParams{})
+	require.NoError(t, err)
+	require.Equal(t, 50, repo.lastList.Limit)
 }
 
 func ptr(value string) *string {

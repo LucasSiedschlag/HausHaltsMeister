@@ -11,6 +11,8 @@ import (
 type fakeRepo struct {
 	role   string
 	exists bool
+	added  Member
+	ledger Ledger
 }
 
 func (f *fakeRepo) ListLedgersForUser(ctx context.Context, userID string) ([]LedgerWithRole, error) {
@@ -18,7 +20,7 @@ func (f *fakeRepo) ListLedgersForUser(ctx context.Context, userID string) ([]Led
 }
 
 func (f *fakeRepo) CreateLedger(ctx context.Context, params CreateLedgerParams) (Ledger, error) {
-	return Ledger{}, nil
+	return Ledger{ID: "ledger-1", OwnerUserID: params.OwnerUserID, Name: params.Name, CurrencyCode: params.CurrencyCode}, nil
 }
 
 func (f *fakeRepo) GetLedgerForUser(ctx context.Context, ledgerID, userID string) (LedgerWithRole, error) {
@@ -26,7 +28,10 @@ func (f *fakeRepo) GetLedgerForUser(ctx context.Context, ledgerID, userID string
 }
 
 func (f *fakeRepo) GetLedgerByID(ctx context.Context, ledgerID string) (Ledger, error) {
-	return Ledger{}, ErrNotFound
+	if f.ledger.ID == "" {
+		return Ledger{}, ErrNotFound
+	}
+	return f.ledger, nil
 }
 
 func (f *fakeRepo) UpdateLedger(ctx context.Context, ledgerID, name string, updatedAt time.Time) (Ledger, error) {
@@ -46,11 +51,12 @@ func (f *fakeRepo) ListMembers(ctx context.Context, ledgerID string) ([]Member, 
 }
 
 func (f *fakeRepo) AddMember(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (Member, error) {
-	return Member{}, nil
+	f.added = Member{LedgerID: ledgerID, UserID: userID, Role: role}
+	return f.added, nil
 }
 
 func (f *fakeRepo) UpdateMemberRole(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (Member, error) {
-	return Member{}, nil
+	return Member{LedgerID: ledgerID, UserID: userID, Role: role}, nil
 }
 
 func (f *fakeRepo) RemoveMember(ctx context.Context, ledgerID, userID string) error {
@@ -73,4 +79,41 @@ func TestGetLedgerReturnsAccessDeniedWhenExists(t *testing.T) {
 	_, err := service.GetLedger(context.Background(), "user-1", "ledger-1")
 	require.Error(t, err)
 	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestCreateLedgerSuccess(t *testing.T) {
+	repo := &fakeRepo{role: "owner"}
+	service := NewService(repo)
+
+	ledger, err := service.CreateLedger(context.Background(), "user-1", "Pessoal", "BRL")
+	require.NoError(t, err)
+	require.Equal(t, "Pessoal", ledger.Name)
+	require.Equal(t, "BRL", ledger.CurrencyCode)
+}
+
+func TestAddMemberSuccess(t *testing.T) {
+	repo := &fakeRepo{role: "owner"}
+	service := NewService(repo)
+
+	member, err := service.AddMember(context.Background(), "user-1", "ledger-1", "user-2", "viewer")
+	require.NoError(t, err)
+	require.Equal(t, "user-2", member.UserID)
+	require.Equal(t, "viewer", member.Role)
+}
+
+func TestUpdateMemberRole(t *testing.T) {
+	repo := &fakeRepo{role: "owner", ledger: Ledger{ID: "ledger-1", OwnerUserID: "user-1"}}
+	service := NewService(repo)
+
+	member, err := service.UpdateMember(context.Background(), "user-1", "ledger-1", "user-2", "editor")
+	require.NoError(t, err)
+	require.Equal(t, "editor", member.Role)
+}
+
+func TestRemoveMember(t *testing.T) {
+	repo := &fakeRepo{role: "owner", ledger: Ledger{ID: "ledger-1", OwnerUserID: "user-1"}}
+	service := NewService(repo)
+
+	err := service.RemoveMember(context.Background(), "user-1", "ledger-1", "user-2")
+	require.NoError(t, err)
 }
