@@ -12,6 +12,7 @@ import (
 	httpapi "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
@@ -54,6 +55,7 @@ func main() {
 		Providers:  providers,
 	})
 	ledgerService := ledger.NewService(store)
+	accountsService := accounts.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
 	
@@ -77,6 +79,12 @@ func main() {
 	}
 	ledgerGroup := e.Group("/ledgers", httpapi.RequireAuth(authService))
 	ledgerHandler.Register(ledgerGroup)
+
+	accountsHandler := &httpapi.AccountsHandler{
+		Service: accountsService,
+	}
+	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", httpapi.RequireAuth(authService))
+	accountsHandler.Register(accountsGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {

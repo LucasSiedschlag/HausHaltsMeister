@@ -65,6 +65,8 @@ func errorStatus(code string) int {
 		return nethttp.StatusNotFound
 	case "MEMBER_ALREADY_EXISTS":
 		return nethttp.StatusConflict
+	case "ACCOUNT_NOT_FOUND":
+		return nethttp.StatusNotFound
 	case "VALIDATION_ERROR":
 		return nethttp.StatusUnprocessableEntity
 	case "NOT_IMPLEMENTED":
