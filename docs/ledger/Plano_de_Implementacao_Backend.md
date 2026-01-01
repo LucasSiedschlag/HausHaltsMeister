@@ -1,208 +1,182 @@
-# Plano de Implementação do Backend — HausHaltsMeister
+# Plano de Implementacao do Backend — HausHaltsMeister
 
-Este plano descreve passo a passo a implementação do backend alinhada ao modelo final do ledger leve. Cada etapa referencia o documento de regras correspondente e explicita decisões, validações e entregáveis.
+Este plano descreve passo a passo a implementacao do backend alinhada ao modelo final do ledger leve. Cada etapa referencia o documento de regras correspondente e explicita decisoes, validacoes e entregaveis. O objetivo e reduzir ambiguidade e evitar refatoracoes futuras.
 
-Referências principais:
-- `docs/ledger/Reestruturação_Completa.md`
+Referencias principais:
+- `docs/ledger/Reestruturacao_Completa.md`
 - `docs/ledger/Documento_de_Arquitetura.md`
 - `docs/ledger/Regras_Core_Ledger.md`
-- `docs/ledger/Regras_Categorias_e_Orçamento.md`
+- `docs/ledger/Regras_Categorias_e_Orcamento.md`
 - `docs/ledger/Regras_Investimentos.md`
-- `docs/ledger/Regras_Cartão_de_crédito.md`
-- `docs/ledger/Regras_Segurança.md`
+- `docs/ledger/Regras_Cartao_de_credito.md`
+- `docs/ledger/Regras_Seguranca.md`
 - `docs/ledger/Casos_de_uso.md`
 - `docs/ledger/Requisitos_Funcionais.md`
+- `docs/agent/DECISIONS.md`
+- `docs/agent/CONVENTIONS.md`
+- `docs/agent/ERRORS.md`
+- `docs/agent/TEST_STRATEGY.md`
+- `docs/agent/IMPLEMENTATION_PLAYBOOK.md`
 
 ---
 
-## Etapa 0 — Fundamentos e alinhamento técnico
+## Etapa 0 — Fundamentos e alinhamento tecnico
 
 **Documento base:** `docs/ledger/Documento_de_Arquitetura.md`.
 
-1. Confirmar a estrutura de pastas do backend (domínios + adapters).
-2. Validar a configuração de migrations e sqlc.
-3. Padronizar a forma de autenticação e sessão (ainda que simples, precisa existir para `created_by_user_id`).
-4. Definir o padrão de datas e meses no backend:
-   - Mês = `YYYY-MM-01` para orçamento e cartões.
-5. Fixar regras de banco:
+1. Confirmar a estrutura de pastas do backend (dominios + adapters) e naming.
+2. Validar migrations e sqlc:
+   - migrations rodando via `make migrate`.
+   - sqlc apontando para as queries corretas.
+3. Fixar convencoes gerais:
+   - datas e meses (YYYY-MM-01).
+   - erros padronizados (`docs/agent/ERRORS.md`).
+   - `snake_case` em JSON e DB.
+4. Fixar regras de banco:
    - `varchar` + `CHECK` para valores enumerados.
-   - `created_at` com default; `updated_at` sem default (setado pelo app).
+   - `created_at` default; `updated_at` setado pela app.
+5. Confirmar seeds tecnicas:
+   - categorias tecnicas (cartao e investimentos).
+   - catalogo de bandeiras (card_networks).
 
-**Entregáveis:**
-- Estrutura mínima do backend criada.
-- Migrations aplicáveis via `make migrate`.
-- Convenções documentadas no código (README interno ou guia de arquitetura).
+**Entregaveis:**
+- Estrutura minima do backend criada.
+- Migrations aplicaveis via `make migrate`.
+- Documentos base validos.
 
 ---
 
-## Etapa 1 — Autenticação e sessões (MVP+)
+## Etapa 1 — Autenticacao e sessoes (MVP+)
 
-**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Seguranca.md`.
 
-1. Implementar modelo de usuário (`users`).
-2. Fluxo de criação de usuário:
-   - normalizar email (lowercase + trim).
-   - validar email único.
-   - validar força mínima de senha.
-   - persistir `password_hash`.
-   - criar ledger padrão após signup.
-3. Separar identidade de credencial:
+1. Separar identidade de credencial:
    - `users` para identidade.
    - `auth_secrets` para senha (login local).
-   - `auth_identities` para providers (password/google/github).
-4. Implementar **access token curto + refresh token**:
-   - access token JWT (ex.: 15 min).
-   - refresh token opaco (ex.: 30–90 dias), rotacionável.
-5. Implementar tabela `auth_sessions` (refresh tokens):
-   - `refresh_token_hash`, `expires_at`, `revoked_at`.
-   - `user_agent`, `ip`, `device_name` (opcional).
-6. Endpoints de sessão:
-   - `/auth/login` (gera access + refresh).
-   - `/auth/refresh` (rotaciona refresh e emite novo access).
-   - `/auth/logout` (revoga sessão atual).
-   - `/auth/me` (retorna dados do usuário).
-7. Armazenamento seguro (web):
-   - refresh em cookie HttpOnly + Secure + SameSite.
-   - não usar localStorage para refresh token.
-8. Segurança de entrada:
-   - respostas de login genéricas.
-   - rate limit em login, signup e refresh.
-9. Preparação para OAuth (Modelo A):
-   - criar `auth_identities` e `oauth_states`.
-   - endpoints:
-     - `GET /auth/oauth/:provider/start` (gera state + PKCE, redireciona).
-     - `GET /auth/oauth/:provider/callback` (valida state, troca code, cria sessão).
-   - criar/vincular usuário conforme política de linking.
-   - registrar `last_login_at` na identidade.
+   - `auth_identities` para providers (`password`, `google`, `github`).
+2. Fluxo de signup:
+   - normalizar email.
+   - validar senha.
+   - criar `users`, `auth_secrets`, `auth_identities` provider=password.
+   - criar ledger padrao.
+3. Tokens:
+   - access token curto (JWT).
+   - refresh token opaco, rotacionavel.
+4. Sessoes:
+   - `auth_sessions` com revogacao e expiracao.
+   - refresh token armazenado em cookie HttpOnly.
+5. Endpoints base:
+   - `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me`.
+6. Rate limit e respostas genericas para login.
+7. OAuth (Modelo A) preparado:
+   - `oauth_states` com PKCE.
+   - `/auth/oauth/:provider/start` e `/auth/oauth/:provider/callback`.
+   - politica de linking:
+     - identity existe -> usar user.
+     - email verificado -> linkar.
+     - email ausente (GitHub) -> exigir completar cadastro.
 
-**Fluxo detalhado (Modelo A)**  
-**Start (`/auth/oauth/:provider/start`)**  
-1. Gerar `state` e `code_verifier` (PKCE).  
-2. Persistir em `oauth_states` com `expires_at` curto e `used_at=null`.  
-3. Montar URL do provider com `state` e `code_challenge`.  
-4. Redirecionar o usuário para o provider.
-
-**Callback (`/auth/oauth/:provider/callback`)**  
-1. Validar `state` (existe, não expirado, `used_at` null).  
-2. Trocar `code` por tokens no provider usando `code_verifier`.  
-3. Buscar profile + email (e flag de verificação quando existir).  
-4. Aplicar política de linking:  
-   - se identidade existe, usar o user dela;  
-   - senão, se email verificado e existe user, linkar;  
-   - senão, criar user + identity;  
-   - se email ausente (GitHub), exigir completar cadastro.  
-5. Criar `auth_session`, emitir access token e setar cookie de refresh.  
-6. Marcar `oauth_states.used_at` e registrar `last_login_at`.
-
-**Validações obrigatórias:**
-- `users.is_active=false` bloqueia acesso.
-
-**Entregáveis:**
-- CRUD básico de usuário e fluxo de signup/login.
-- Tabela de sessões com revogação.
-- Middleware que injeta `user_id` no contexto.
-- Rate limiting básico nos endpoints de auth.
-- Infra pronta para OAuth (tabela + endpoints + linking).
+**Entregaveis:**
+- Sessao completa com refresh + rotacao.
+- Tabela de sessoes operante.
+- OAuth pronto sem refatoracao.
 
 ---
 
 ## Etapa 2 — Ledger e membership
 
-**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Seguranca.md`.
 
 1. CRUD de `ledgers`.
-2. Fluxo `CreateDefaultLedgerForUser`:
-   - cria ledger com moeda BRL.
-   - cria `ledger_members` com role `owner`.
-3. Serviço de acesso:
-   - `RequireLedgerRole(user_id, ledger_id, min_role)`.
+2. `CreateDefaultLedgerForUser`:
+   - cria ledger com BRL.
+   - cria ledger_members owner.
+3. Guard rails:
+   - `RequireLedgerRole`.
+   - `RequireActiveUser`.
 
-**Validações obrigatórias:**
-- Toda leitura e escrita filtra por `ledger_id`.
-- Qualquer recurso é buscado por `(ledger_id, id)`.
-
-**Entregáveis:**
-- Serviços de ledger e membership.
-- Testes de isolamento por ledger.
+**Entregaveis:**
+- Endpoints de ledger e members.
+- Validacao de RBAC em todas as rotas.
 
 ---
 
-## Etapa 3 — Accounts (contas internas)
+## Etapa 3 — Accounts
 
-**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Core_Ledger.md`.
 
 1. CRUD de `accounts`.
-2. Respeitar `accounts.type` com CHECK (cash/investment/credit_card).
-3. Regras de criação:
-   - nome único por ledger.
-   - `is_active=false` bloqueia uso em lançamentos.
+2. Regras:
+   - nome unico por ledger.
+   - `type` validado via CHECK.
+   - `is_active=false` bloqueia uso.
+3. Preparar `credit_cards` para accounts type=credit_card.
 
-**Entregáveis:**
-- Endpoints de criação/listagem/edição de contas.
-- Validação de tipo na criação de cartão.
+**Entregaveis:**
+- Endpoints de contas.
+- Validacao de tipo.
 
 ---
 
-## Etapa 4 — Categories + flags de orçamento
+## Etapa 4 — Categories + flags de orcamento
 
-**Documento base:** `docs/ledger/Regras_Categorias_e_Orçamento.md`.
+**Documento base:** `docs/ledger/Regras_Categorias_e_Orcamento.md`.
 
-1. CRUD de `categories` com validações:
-   - `direction` obrigatório (`in`/`out`).
-   - `is_budget_base` permitido apenas para IN.
-   - `is_budget_relevant` permitido apenas para OUT.
-2. Política de alteração:
-   - bloquear mudança de direction se a categoria já foi usada.
-3. Hierarquia:
-   - permitir `parent_id` e manter consultas com/sem filhos.
+1. CRUD de `categories`.
+2. Validacoes:
+   - direction obrigatorio.
+   - IN => is_budget_relevant=false.
+   - OUT => is_budget_base=false.
+3. Bloquear troca de direction se ja usada.
+4. Hierarquia via parent_id.
 
-**Entregáveis:**
-- Endpoints de categoria com validações completas.
-- Testes de flags e direction.
+**Entregaveis:**
+- Endpoints de categorias com validacao.
+- Testes de flags.
 
 ---
 
 ## Etapa 5 — Journal (transactions + entries)
 
-**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/DECISIONS.md`.
 
-1. Endpoint de criação de transação:
-   - cria `transactions` e N `entries` na mesma transação SQL.
-2. Validações por entry:
-   - amount_cents > 0.
-   - account e category pertencem ao mesmo ledger.
-3. Validações por kind:
-   - `normal`: livre.
-   - `transfer`: exige IN e OUT e soma balanceada.
-   - `adjust`: recomenda memo/notes.
-4. Consultas:
-   - listagem com filtros por período, conta e categoria.
-   - detalhe de transação.
+1. CreateTransaction:
+   - criar transaction e entries na mesma transacao SQL.
+   - validar ledger/account/category.
+   - validar balanceamento em transferencias.
+2. Listagem paginada:
+   - ordenar por `occurred_at DESC, id DESC`.
+   - paginacao por cursor (cursor_occurred_at + cursor_id).
+   - query em 2 etapas (CTE de IDs + join entries).
+3. GetTransactionDetails:
+   - buscar por (ledger_id, transaction_id) e retornar entries.
+4. Update/Delete:
+   - bloquear se referenciado em installments/statement.
+   - preferir ajuste (`kind=adjust`).
+5. Endpoint bulk (opcional):
+   - operacoes de import/posting em lote.
 
-**Entregáveis:**
-- Fluxos `CreateTransaction`, `ListTransactions`, `GetTransactionDetails`.
-- Testes de transferência balanceada.
+**Entregaveis:**
+- Endpoints do journal com paginacao segura.
+- Testes contra “fantasmas”.
 
 ---
 
-## Etapa 6 — Orçamento mensal (% flexível)
+## Etapa 6 — Orcamento mensal (% flexivel)
 
-**Documento base:** `docs/ledger/Regras_Categorias_e_Orçamento.md`.
+**Documento base:** `docs/ledger/Regras_Categorias_e_Orcamento.md`.
 
 1. CRUD de `budget_plans`, `budget_plan_versions`, `budget_plan_lines`.
-2. Regras:
-   - 1 plano por ledger.
-   - versões válidas sempre no primeiro dia do mês.
-3. Cálculo mensal:
-   - renda base = soma IN com `is_budget_base=true`.
-   - limite = renda base * percent / 100.
-   - realizado = soma OUT com `is_budget_relevant=true`.
-4. `include_children`:
-   - implementar via CTE recursiva no SQL.
+2. Versao vigente por mes.
+3. Calculo mensal:
+   - income_base (IN com is_budget_base=true).
+   - limite = percent / 100.
+   - realizado = OUT com is_budget_relevant=true.
+4. include_children via CTE recursiva.
 
-**Entregáveis:**
+**Entregaveis:**
 - Endpoint de painel mensal.
-- Testes de versionamento e cálculo.
+- Testes de calculo e versionamento.
 
 ---
 
@@ -210,167 +184,119 @@ Referências principais:
 
 **Documento base:** `docs/ledger/Regras_Investimentos.md`.
 
-1. Fluxo de aporte:
-   - transferência Pessoal -> Investimentos (2 entries).
-2. Fluxo de resgate:
-   - transferência Investimentos -> Pessoal.
-3. Fluxo de rendimento:
-   - entry IN em Investimentos, `kind=adjust`.
+1. Fluxos:
+   - aporte (transfer).
+   - resgate (transfer).
+   - rendimento (adjust).
+2. Garantir que entradas tecnicas nao aumentam renda base.
 
-**Validações:**
-- Transferências sempre balanceadas.
-- Entradas técnicas não entram na renda base.
-
-**Entregáveis:**
+**Entregaveis:**
 - Endpoints de aporte/resgate/rendimento.
-- Relatórios de aportes e rendimentos por período.
+- Relatorios basicos.
 
 ---
 
-## Etapa 8 — Cartão de crédito (parcelas + fatura)
+## Etapa 8 — Cartao de credito
 
-**Documento base:** `docs/ledger/Regras_Cartão_de_crédito.md` + `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Cartao_de_credito.md`.
 
 1. CRUD de `credit_cards`.
-2. Catálogo `card_networks`:
-   - manter seeds e permitir expansão futura.
-3. Fluxo de compra parcelada:
-   - cria `installment_plans` + `installments` (scheduled).
-4. Posting mensal:
-   - gera `transactions` + `entries` no cartão.
-   - marca `installments.status=posted`.
-   - idempotência obrigatória.
-5. Fatura:
-   - `credit_card_statements` com status open/closed/paid.
-6. Pagamento da fatura:
-   - transferência Pessoal -> Cartão com categorias técnicas.
+2. Catalogo `card_networks`.
+3. Fluxos:
+   - criar installment_plans + installments.
+   - posting mensal (idempotente).
+   - statements open/closed/paid.
+   - pagamento da fatura via transferencias tecnicas.
 
-**Entregáveis:**
-- Endpoints de parcelamento, posting, fechamento e pagamento.
-- Testes de idempotência e dupla contagem.
+**Entregaveis:**
+- Endpoints completos de cartao.
+- Testes de idempotencia e dupla contagem.
 
 ---
 
-## Etapa 9 — Segurança e integridade transversal
+## Etapa 9 — Seguranca transversal
 
-**Documento base:** `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Seguranca.md`.
 
-1. Guard rails obrigatórios:
-   - RequireActiveUser.
-   - RequireLedgerRole.
-   - ValidateLedgerOwnershipOfRefs.
-2. Garantir que toda query filtra por `ledger_id`.
-3. Nunca expor endpoints sem ledger no path.
-4. Rate limit e backoff nos endpoints de autenticacao.
+1. Guard rails globais (ledger boundary).
+2. Rate limit nos endpoints de auth.
+3. Bloqueio de delete de transactions referenciadas.
 
-**Entregáveis:**
-- Middlewares e funções de guard.
-- Testes de acesso indevido.
+**Entregaveis:**
+- Middlewares de seguranca e testes.
 
 ---
 
-## Etapa 10 — Relatórios essenciais
+## Etapa 10 — Relatorios essenciais
 
-**Documento base:** `docs/ledger/Regras_Core_Ledger.md` + `docs/ledger/Regras_Categorias_e_Orçamento.md`.
+**Documento base:** `docs/ledger/Regras_Core_Ledger.md`.
 
-1. Saldos por conta:
-   - cash/investment: IN - OUT.
-   - credit_card: OUT - IN.
-2. Resumo por categoria (período).
-3. Visão mensal consolidada.
+1. Saldos por account.
+2. Resumo por categoria.
+3. Resumo mensal consolidado.
 
-**Entregáveis:**
-- Endpoints read-only de relatórios.
-- Queries agregadas documentadas.
+**Entregaveis:**
+- Endpoints read-only.
+- Queries agregadas.
 
 ---
 
-## Etapa 11 — Auditoria e políticas de edição
+## Etapa 11 — Auditoria e politicas de edicao
 
-**Documento base:** `docs/ledger/Regras_Segurança.md`.
+**Documento base:** `docs/ledger/Regras_Seguranca.md`.
 
-1. Política de edição de transaction:
-   - permitir editar description/occurred_at/notes.
-   - permitir substituir entries (MVP).
-2. Política de exclusão:
-   - preferir soft delete (se adotado, criar campos).
-3. Regras de proteção:
-   - não permitir delete de transactions ligadas a parcelas/faturas.
+1. Politica MVP: editar transaction e substituir entries.
+2. Bloquear edit/delete de transacoes referenciadas.
+3. Preparar caminho para append-only (futuro).
 
-**Entregáveis:**
-- Endpoints de update/delete com validações.
-- Registro de `updated_at` consistente.
+**Entregaveis:**
+- Endpoints update/delete com validacoes.
 
 ---
 
 ## Etapa 12 — Testes e qualidade
 
+**Documento base:** `docs/agent/TEST_STRATEGY.md`.
+
+1. Unit tests para regras criticas.
+2. Integration tests para queries e constraints.
+3. Coverage obrigatoria para:
+   - transfer balance.
+   - budget monthly calc.
+   - posting idempotente.
+   - refresh rotation.
+   - ledger access denial.
+
+**Entregaveis:**
+- Suite de testes minima.
+
+---
+
+## Etapa 13 — Observabilidade e operacao
+
 **Documento base:** `docs/ledger/Requisitos_Nao_Funcionais.md`.
 
-1. Testes de domínio:
-   - transferências balanceadas.
-   - cálculo do orçamento mensal.
-   - posting idempotente de parcelas.
-2. Testes de segurança:
-   - isolamento por ledger.
-   - viewer não pode escrever.
-3. Testes de integração com Postgres.
+1. Logging estruturado (ledger_id, user_id).
+2. Metricas basicas.
+3. Processo de migracao controlado (TERN_CONF externo).
 
-**Entregáveis:**
-- Suite de testes automatizada.
-- Cobertura mínima das regras críticas.
+**Entregaveis:**
+- Logs e procedimento operacional.
 
 ---
 
-## Etapa 13 — Observabilidade e operação
+## Apice — Ordem de entrega por sprints (sugestao)
 
-**Documento base:** `docs/ledger/Requisitos_Nao_Funcionais.md`.
+**Sprint 1**: Etapas 0–3 (base tecnica, auth, ledger, accounts)
 
-1. Logs estruturados com `ledger_id` e `user_id`.
-2. Métricas básicas:
-   - número de transações/dia.
-   - tempo de geração do orçamento mensal.
-3. Processo de migração controlado:
-   - uso de `TERN_CONF` externo em produção.
+**Sprint 2**: Etapas 4–5 (categorias + journal)
 
-**Entregáveis:**
-- Logging consistente em handlers e services.
-- Procedimento de migração documentado.
+**Sprint 3**: Etapa 6 (budget)
 
----
+**Sprint 4**: Etapa 7 (investimentos)
 
-## Encerramento
+**Sprint 5**: Etapa 8 (cartao)
 
-Este plano serve como roteiro completo para implementação do backend alinhado ao modelo ledger leve. Cada etapa deve ser implementada na ordem proposta, com testes e validações correspondentes, garantindo que a base (journal + ledger boundary) esteja sólida antes das camadas de orçamento, investimentos e cartão.
+**Sprint 6**: Etapas 9–11 (seguranca, relatorios, auditoria)
 
----
-
-## Apêndice — Ordem de entrega por sprints (sugestão)
-
-**Sprint 1 — Fundamentos e Core**
-- Etapas 0 a 3 (base técnica, usuário, ledger, accounts).
-- Entregável: criação de ledger e contas funcionais.
-
-**Sprint 2 — Categorias + Journal**
-- Etapas 4 e 5 (categorias e transações completas).
-- Entregável: criação de lançamentos com split e transferências balanceadas.
-
-**Sprint 3 — Orçamento**
-- Etapa 6 (budget versionado + painel mensal).
-- Entregável: painel mensal com orçado vs realizado.
-
-**Sprint 4 — Investimentos**
-- Etapa 7 (aporte, resgate, rendimento).
-- Entregável: fluxos completos e relatórios básicos.
-
-**Sprint 5 — Cartão de crédito**
-- Etapa 8 (parcelas, posting e fatura).
-- Entregável: ciclo completo do cartão com idempotência.
-
-**Sprint 6 — Segurança + Relatórios + Auditoria**
-- Etapas 9, 10 e 11.
-- Entregável: segurança consistente, relatórios essenciais e política de edição.
-
-**Sprint 7 — Qualidade e Operação**
-- Etapas 12 e 13.
-- Entregável: testes críticos, logging e fluxo de operação definido.
+**Sprint 7**: Etapas 12–13 (testes, observabilidade)
