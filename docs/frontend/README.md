@@ -1,6 +1,6 @@
 # Frontend — HausHaltsMeister
 
-Este diretório define o frontend em Nuxt 3 com **SSR habilitado** e arquitetura modular (Nuxt Layers) alinhada ao modelo de ledger do backend.
+Este diretório define o frontend em Nuxt 4 com **SSR habilitado** e arquitetura modular (Nuxt Layers) alinhada ao modelo de ledger do backend.
 
 ## Visao geral
 

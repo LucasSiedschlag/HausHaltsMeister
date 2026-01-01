@@ -1,6 +1,6 @@
 # Arquitetura do Frontend
 
-Este documento descreve a arquitetura do frontend baseada em Nuxt Layers com **SSR como padrao**, alinhada aos modulos do backend (ledger, journal, budget, cartao, investimentos e relatorios).
+Este documento descreve a arquitetura do frontend baseada em Nuxt Layers com **SSR como padrao** (Nuxt 4), alinhada aos modulos do backend (ledger, journal, budget, cartao, investimentos e relatorios).
 
 ## Estrutura de pastas (proposta)
 
