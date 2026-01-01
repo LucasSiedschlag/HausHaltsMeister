@@ -14,6 +14,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/categories"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
@@ -60,6 +61,7 @@ func main() {
 	accountsService := accounts.NewService(store)
 	categoriesService := categories.NewService(store)
 	journalService := journal.NewService(store)
+	budgetService := budget.NewService(store)
 
 	ratelimiter := httpapi.NewRateLimiter(5, 10*time.Minute)
 	
@@ -101,6 +103,12 @@ func main() {
 	}
 	journalGroup := e.Group("/ledgers/:ledgerId/transactions", httpapi.RequireAuth(authService))
 	journalHandler.Register(journalGroup)
+
+	budgetHandler := &httpapi.BudgetHandler{
+		Service: budgetService,
+	}
+	budgetGroup := e.Group("/ledgers/:ledgerId/budget", httpapi.RequireAuth(authService))
+	budgetHandler.Register(budgetGroup)
 
 	go func() {
 		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {
