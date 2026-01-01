@@ -6,11 +6,68 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email varchar NOT NULL UNIQUE,
-  password_hash varchar NOT NULL,
   display_name varchar,
+  avatar_url varchar,
+  email_verified_at timestamptz,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
+);
+
+-- Auth (identities, secrets, sessions, oauth states)
+CREATE TABLE auth_secrets (
+  user_id uuid PRIMARY KEY REFERENCES users(id),
+  password_hash varchar NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz
+);
+
+CREATE TABLE auth_identities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id),
+  provider varchar NOT NULL,
+  provider_user_id varchar NOT NULL,
+  email varchar,
+  email_verified boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  last_login_at timestamptz,
+  -- Validation: provider allowed values (extend when adding providers).
+  CONSTRAINT auth_identities_provider_check
+    CHECK (provider IN ('password', 'google', 'github')),
+  UNIQUE (provider, provider_user_id),
+  UNIQUE (user_id, provider)
+);
+
+CREATE TABLE auth_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id),
+  refresh_token_hash varchar NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz,
+  user_agent varchar,
+  ip varchar,
+  device_name varchar,
+  rotated_from_session_id uuid REFERENCES auth_sessions(id),
+  UNIQUE (refresh_token_hash)
+);
+
+CREATE TABLE oauth_states (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider varchar NOT NULL,
+  state varchar NOT NULL,
+  code_verifier varchar NOT NULL,
+  redirect_uri varchar,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz,
+  -- Validation: provider allowed values (extend when adding providers).
+  CONSTRAINT oauth_states_provider_check
+    CHECK (provider IN ('google', 'github')),
+  UNIQUE (state)
 );
 
 CREATE TABLE ledgers (
@@ -241,6 +298,16 @@ CREATE TABLE installments (
 );
 
 -- Indexes
+CREATE INDEX auth_identities_user_id_idx ON auth_identities (user_id);
+CREATE INDEX auth_identities_provider_idx ON auth_identities (provider);
+
+CREATE INDEX auth_sessions_user_id_idx ON auth_sessions (user_id);
+CREATE INDEX auth_sessions_expires_at_idx ON auth_sessions (expires_at);
+CREATE INDEX auth_sessions_revoked_at_idx ON auth_sessions (revoked_at);
+
+CREATE INDEX oauth_states_provider_idx ON oauth_states (provider);
+CREATE INDEX oauth_states_expires_at_idx ON oauth_states (expires_at);
+
 CREATE INDEX accounts_ledger_id_idx ON accounts (ledger_id);
 
 CREATE INDEX categories_ledger_id_idx ON categories (ledger_id);

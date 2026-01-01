@@ -57,6 +57,82 @@ Pseudo:
 
 ---
 
+### 1.3. Tokens e sessões (MVP+)
+
+- **Access token (JWT)**: curta duração (ex.: 15 min).
+- **Refresh token (opaco)**: longa duração (ex.: 30–90 dias), rotacionável.
+- Refresh token deve ser revogado no logout.
+- Para web: armazenar refresh em cookie HttpOnly + Secure + SameSite.
+- Não armazenar refresh token em localStorage.
+
+### 1.4. Tabela de sessões (refresh tokens)
+
+Tabela sugerida `auth_sessions`:
+
+- `id` (uuid)
+- `user_id`
+- `refresh_token_hash`
+- `created_at`, `expires_at`, `revoked_at`
+- `user_agent`, `ip`, `device_name` (opcional)
+- `rotated_from_session_id` (opcional)
+
+Uso:
+- logout de um dispositivo (revogar uma sessão)
+- logout global (revogar todas as sessões)
+
+### 1.5. Rate limit e brute force
+
+Aplicar rate limit e backoff em:
+- `/auth/login`
+- `/auth/signup`
+- `/auth/refresh`
+- `/auth/forgot-password`
+
+Respostas de login devem ser genéricas:
+- “Credenciais inválidas” (não revelar se email existe).
+
+### 1.6. Recuperação de senha (fase 2)
+
+- `POST /auth/forgot-password` gera token temporário.
+- `POST /auth/reset-password` valida token e troca senha.
+- Token deve expirar rapidamente e ser invalidado uma única vez.
+
+### 1.7. Conteúdo do JWT
+
+- Incluir apenas claims estáveis: `sub`, `exp`, `iat`, `jti` (e `sid` opcional).
+- Não incluir roles ou dados mutáveis (sempre validar no banco).
+
+### 1.8. Identidade vs credencial (OAuth pronto)
+
+- `users` representa **identidade** (email, nome, avatar, status).
+- `auth_secrets` guarda senha (se houver login local).
+- `auth_identities` guarda vínculos por provider (`password`, `google`, `github`).
+
+Regras:
+- `auth_identities` deve ser único por `(provider, provider_user_id)`.
+- Cada usuário pode ter no máximo 1 identidade por provider (se desejar limitar).
+
+### 1.9. OAuth (PKCE + anti-CSRF)
+
+- Usar Authorization Code + PKCE para SPA.
+- `oauth_states` guarda `state`, `code_verifier`, `expires_at` e `used_at`.
+- `state` é uso único e expira em poucos minutos (5–10 min).
+- Sempre validar `state` e `code_verifier` no callback.
+
+### 1.10. Regras de linking (Google/GitHub)
+
+Política recomendada:
+1. Se existe `auth_identities(provider, provider_user_id)` → login nesse `user_id`.
+2. Senão, se provider retornou email:
+   - se existe `users.email = email` **e** email verificado (ou confiança explícita no provider):
+     - vincular identidade ao usuário existente.
+   - senão: criar novo usuário e identidade.
+3. Se provider **não** retorna email (caso possível no GitHub):
+   - exigir etapa de completar cadastro com email válido **ou**
+   - rejeitar login e orientar usuário a liberar email no provider.
+
+Nunca criar dois usuários diferentes para a mesma conta externa.
+
 ## 2) Autorização por Ledger (RBAC)
 
 ### 2.1. Regra de acesso ao ledger

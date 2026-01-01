@@ -188,11 +188,80 @@ Enum statement_status {
 Table users {
   id            uuid [pk]
   email         varchar [not null, unique]
-  password_hash varchar [not null]
   display_name  varchar
+  avatar_url    varchar
+  email_verified_at timestamptz
   is_active     boolean [not null, default: true]
   created_at    timestamptz [not null]
   updated_at    timestamptz
+}
+
+// =====================
+// Auth
+// =====================
+Table auth_secrets {
+  user_id       uuid [pk, ref: > users.id]
+  password_hash varchar [not null]
+  created_at    timestamptz [not null]
+  updated_at    timestamptz
+}
+
+Table auth_identities {
+  id               uuid [pk]
+  user_id          uuid [not null, ref: > users.id]
+  provider         varchar [not null] // validated via CHECK in DB
+  provider_user_id varchar [not null]
+  email            varchar
+  email_verified   boolean [not null, default: false]
+  created_at       timestamptz [not null]
+  updated_at       timestamptz
+  last_login_at    timestamptz
+
+  Indexes {
+    (provider, provider_user_id) [unique]
+    (user_id, provider) [unique]
+    (user_id)
+    (provider)
+  }
+}
+
+Table auth_sessions {
+  id                      uuid [pk]
+  user_id                 uuid [not null, ref: > users.id]
+  refresh_token_hash      varchar [not null]
+  created_at              timestamptz [not null]
+  updated_at              timestamptz
+  expires_at              timestamptz [not null]
+  revoked_at              timestamptz
+  user_agent              varchar
+  ip                      varchar
+  device_name             varchar
+  rotated_from_session_id uuid [ref: > auth_sessions.id]
+
+  Indexes {
+    (refresh_token_hash) [unique]
+    (user_id)
+    (expires_at)
+    (revoked_at)
+  }
+}
+
+Table oauth_states {
+  id            uuid [pk]
+  provider      varchar [not null] // validated via CHECK in DB
+  state         varchar [not null]
+  code_verifier varchar [not null]
+  redirect_uri  varchar
+  created_at    timestamptz [not null]
+  updated_at    timestamptz
+  expires_at    timestamptz [not null]
+  used_at       timestamptz
+
+  Indexes {
+    (state) [unique]
+    (provider)
+    (expires_at)
+  }
 }
 
 Table ledgers {
@@ -439,6 +508,10 @@ Table installments {
 Referência: `docs/ledger/Regras_Core_Ledger.md` e `docs/ledger/Regras_Cartão_de_crédito.md`.
 
 - `users`: identidade e autenticação (base do usuário).
+- `auth_secrets`: credenciais locais (senha), separadas da identidade.
+- `auth_identities`: vínculos com provedores (password, google, github).
+- `auth_sessions`: sessões e refresh tokens.
+- `oauth_states`: estados temporários de OAuth (PKCE + anti-CSRF).
 - `ledgers`: escopo de dados; moeda e owner.
 - `ledger_members`: compartilhamento com roles.
 - `accounts`: contas internas (`cash`, `investment`, `credit_card`).
