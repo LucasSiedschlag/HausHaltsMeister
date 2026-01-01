@@ -12,6 +12,15 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/handlers"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/middleware"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
+	pgaccounts "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/accounts"
+	pgauth "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/auth"
+	pgbudget "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/budget"
+	pgcategories "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/categories"
+	pgcreditcard "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/creditcard"
+	pginvestments "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/investments"
+	pgjournal "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/journal"
+	pgledger "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/ledger"
+	pgreports "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/reports"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
@@ -55,20 +64,30 @@ func main() {
 		})
 	}
 
-	authService := auth.NewService(store, auth.ServiceConfig{
+	authRepo := pgauth.NewRepository(store)
+	ledgerRepo := pgledger.NewRepository(store)
+	accountsRepo := pgaccounts.NewRepository(store)
+	categoriesRepo := pgcategories.NewRepository(store)
+	journalRepo := pgjournal.NewRepository(store)
+	budgetRepo := pgbudget.NewRepository(store)
+	investmentsRepo := pginvestments.NewRepository(store)
+	creditCardRepo := pgcreditcard.NewRepository(store)
+	reportsRepo := pgreports.NewRepository(store)
+
+	authService := auth.NewService(authRepo, auth.ServiceConfig{
 		JWTSecret:  cfg.JWTSecret,
 		AccessTTL:  cfg.AccessTokenTTL,
 		RefreshTTL: cfg.RefreshTokenTTL,
 		Providers:  providers,
 	})
-	ledgerService := ledger.NewService(store)
-	accountsService := accounts.NewService(store)
-	categoriesService := categories.NewService(store)
-	journalService := journal.NewService(store)
-	budgetService := budget.NewService(store)
-	investmentsService := investments.NewService(store)
-	creditCardService := creditcard.NewService(store)
-	reportsService := reports.NewService(store)
+	ledgerService := ledger.NewService(ledgerRepo)
+	accountsService := accounts.NewService(accountsRepo)
+	categoriesService := categories.NewService(categoriesRepo)
+	journalService := journal.NewService(journalRepo)
+	budgetService := budget.NewService(budgetRepo)
+	investmentsService := investments.NewService(investmentsRepo)
+	creditCardService := creditcard.NewService(creditCardRepo)
+	reportsService := reports.NewService(reportsRepo)
 
 	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
 	metrics := middleware.NewMetrics()

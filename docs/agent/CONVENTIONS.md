@@ -21,6 +21,20 @@ This document defines the mechanical standards the agent must follow without ask
 
 ---
 
+## Code layout (mandatory)
+
+- HTTP handlers live in `internal/adapters/http/handlers`.
+- Middleware lives in `internal/adapters/http/middleware`.
+- HTTP DTOs live in `internal/adapters/http/dto`.
+- Shared HTTP helpers live in `internal/adapters/http/httpx`.
+- Postgres repositories live in `internal/adapters/postgres/<module>`.
+- SQL files (sqlc) live in `internal/adapters/postgres/<module>/queries`.
+- sqlc generated code lives in `internal/adapters/postgres/sqlc`.
+- Domain interfaces live in `internal/domain/<module>`.
+- Shared infrastructure lives in `internal/infra`.
+
+---
+
 ## Error response format
 
 Standard error payload:

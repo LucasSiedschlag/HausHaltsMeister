@@ -4,9 +4,89 @@ sql:
     schema:
       - "migrations"
     queries:
-      - "db/queries"
+      - "internal/adapters/postgres/accounts/queries"
     gen:
       go:
-        package: "sqlc"
-        out: "internal/adapters/postgres/sqlc"
+        package: "accounts"
+        out: "internal/adapters/postgres/sqlc/accounts"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/auth/queries"
+    gen:
+      go:
+        package: "auth"
+        out: "internal/adapters/postgres/sqlc/auth"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/budget/queries"
+    gen:
+      go:
+        package: "budget"
+        out: "internal/adapters/postgres/sqlc/budget"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/categories/queries"
+    gen:
+      go:
+        package: "categories"
+        out: "internal/adapters/postgres/sqlc/categories"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/creditcard/queries"
+    gen:
+      go:
+        package: "creditcard"
+        out: "internal/adapters/postgres/sqlc/creditcard"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/investments/queries"
+    gen:
+      go:
+        package: "investments"
+        out: "internal/adapters/postgres/sqlc/investments"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/journal/queries"
+    gen:
+      go:
+        package: "journal"
+        out: "internal/adapters/postgres/sqlc/journal"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/ledger/queries"
+    gen:
+      go:
+        package: "ledger"
+        out: "internal/adapters/postgres/sqlc/ledger"
+        sql_package: "pgx/v5"
+  - engine: "postgresql"
+    schema:
+      - "migrations"
+    queries:
+      - "internal/adapters/postgres/reports/queries"
+    gen:
+      go:
+        package: "reports"
+        out: "internal/adapters/postgres/sqlc/reports"
         sql_package: "pgx/v5"
