@@ -1,89 +1,62 @@
-# Frontend - HausHaltsMeister
+# Frontend — HausHaltsMeister
 
-Este diretório contém o frontend da aplicação HausHaltsMeister, construído com **Nuxt 3** seguindo uma **Arquitetura Modular (Nuxt Layers)**.
+Este diretório define o frontend em Nuxt 3 com **SSR habilitado** e arquitetura modular (Nuxt Layers) alinhada ao modelo de ledger do backend.
 
-## Visão Geral
+## Visao geral
 
-O projeto utiliza o conceito de [Nuxt Layers](https://nuxt.com/docs/getting-started/layers) para separar funcionalidades em domínios distintos, permitindo um desenvolvimento escalável que mantém as características de um monólito (repositório único, deploy único), mas com organização de módulos independentes.
+O frontend sera organizado por dominios equivalentes ao backend:
 
-O Sistema de Design (UI) é padronizado utilizando **shadcn-vue** + **Tailwind CSS**.
+- auth (sessao e OAuth)
+- ledgers (selecao e administracao)
+- accounts, categories
+- journal (transacoes)
+- budget (planejamento e paines)
+- investments
+- creditcard (cartoes, planos, faturas)
+- reports (relatorios agregados)
 
-## Como rodar localmente
+A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 
-Certifique-se de ter o `pnpm` instalado.
+## SSR como padrao
 
-1.  Acesse a pasta do frontend:
+- Todas as paginas rodam em SSR por default.
+- Componentes client-only devem ser explicitos (`<ClientOnly>`).
+- Evitar acesso a `window`/`document` fora de hooks client-side.
 
-    ```bash
-    cd frontend
-    ```
+## Rotas de auth (UI)
 
-2.  Instale as dependências:
+- A UI usa as mesmas rotas do backend:
+  - `/auth/login`
+  - `/auth/signup`
+  - `/auth/forgot-password`
 
-    ```bash
-    pnpm install
-    ```
+## Estrutura de layers
 
-3.  Inicie o servidor de desenvolvimento:
-    ```bash
-    pnpm dev
-    ```
-    O app estará disponível em `http://localhost:3000`.
+- `layers/shared`: UI base, tokens, utils.
+- `layers/core`: shell, layouts, navegacao.
+- `layers/auth`: login, signup, sessao.
+- `layers/ledgers`: selecao e membros.
+- `layers/accounts`: contas.
+- `layers/categories`: categorias.
+- `layers/journal`: transacoes e entradas.
+- `layers/budget`: plano e dashboards.
+- `layers/investments`: aportes e resumo.
+- `layers/creditcard`: cartoes, parcelas, faturas.
+- `layers/reports`: relatorios.
 
-## Estrutura de Módulos (Layers)
+## Principios de integracao
 
-Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é definida no `nuxt.config.ts` raiz.
+- Toda chamada de API respeita `ledgerId` quando exigido.
+- Paginacao do journal e por cursor (`cursor_occurred_at`, `cursor_id`).
+- Sem dependencia cruzada entre features: comunicacao via `core`.
+- Padroes de payload seguem `docs/api/`.
 
-- `layers/shared`: UI Kit (shadcn), utilitários globais, estilos base.
-- `layers/core`: Layouts principais, páginas base (Home), navegação.
-- `layers/dashboard`: Exemplo de feature/domínio específico.
-- `layers/payment-methods`: Cadastro de meios de pagamento.
-- `layers/picuinhas`: Pessoas e lançamentos de picuinhas.
-- `layers/cashflows`: Lançamentos manuais (entradas, fixos, variáveis, picuinhas).
+## Design system
 
-## Rotas de Picuinhas
+- Componentes shadcn-vue ficam em `layers/shared/components/ui`.
+- Tokens e CSS global ficam em `layers/shared/assets`.
+- `components.json` aponta para o layer `shared`.
 
-- `/picuinhas/pessoas`: cadastro e listagem de pessoas.
-- `/picuinhas/pessoas/:id`: detalhamento das picuinhas da pessoa (casos + parcelas).
-- `/picuinhas/lancamentos`: lançamentos vinculados às pessoas (depende do cadastro em Pessoas).
+## Referencias
 
-## Rotas de Meios de Pagamento
-
-- `/meios-de-pagamento`: cadastro e listagem de cartões e outros meios.
-- `/parcelamentos/nova-compra`: cadastro de compras parceladas.
-- `/parcelamentos/fatura`: visão da fatura por cartão/mês.
-
-## Rotas de Lançamentos
-
-- `/lancamentos/entradas`: entradas manuais do mês.
-- `/lancamentos/fixos`: gastos fixos (replicados por mês).
-- `/lancamentos/variaveis`: gastos variáveis.
-- `/lancamentos/picuinhas`: lançamentos fora do orçamento.
-
-## Adicionando um novo Módulo (Layer)
-
-1.  Crie uma nova pasta em `frontend/layers/<nome-do-modulo>`.
-2.  Adicione um arquivo `nuxt.config.ts` dentro dessa pasta para defini-la como um layer.
-    ```typescript
-    // frontend/layers/<nome-do-modulo>/nuxt.config.ts
-    export default defineNuxtConfig({
-      // Configurações específicas do layer
-    });
-    ```
-3.  Registre o layer no `frontend/nuxt.config.ts` principal:
-    ```typescript
-    export default defineNuxtConfig({
-      extends: [
-        "./layers/<nome-do-modulo>",
-        // ... outros layers
-      ],
-    });
-    ```
-    _Nota: A ordem no array `extends` importa. Layers listados primeiro podem ser sobrescritos pelos subsequentes, mas geralmente organizamos da base (shared) para o topo (features)._
-
-## Convenções
-
-- **Imports**: Use aliases automáticos do Nuxt. Componentes em `layers/shared/components` estão disponíveis globalmente se configurados corretamente.
-- **Nomes de Componentes**: PascalCase. Ex: `BaseButton`.
-- **Rotas**: As rotas são geradas automaticamente baseadas na estrutura de pastas `pages/` dentro de cada layer. Evite conflitos de nomes de arquivos entre layers.
-- **Estilos**: Use classes utilitárias do Tailwind sempre que possível. Estilos globais ficam no layer `shared`.
+Consulte `docs/frontend/references.md` para links de Nuxt Layers, shadcn-vue, OAuth e cookies.

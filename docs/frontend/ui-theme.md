@@ -1,31 +1,43 @@
-# UI & Tema (Shadcn Blue)
+# UI & Tema (shadcn + Tailwind)
 
-O sistema de design utiliza **shadcn-vue** com uma customização de tema "Azul".
+O sistema de design utiliza **shadcn-vue** com Tailwind. O tema e definido por tokens CSS no layer `shared` e deve ser compativel com SSR.
 
-## Tokens e Cores
+## Tokens e cores
 
-As variáveis CSS estão definidas globalmente em `layers/shared/assets/css/tailwind.css`.
-Seguimos o padrão HSL (Hub, Saturation, Lightness) para compatibilidade com o shadcn.
+- Tokens ficam em `layers/shared/assets/css/tailwind.css`.
+- Formato HSL (numeros, sem `hsl()`), compatível com shadcn.
+- Deve existir uma paleta clara e uma escura (classe `.dark`).
+- O tema e predominantemente azul, seguindo os defaults do shadcn (blue).
 
-### Paleta Principal (Azul)
+## Diretrizes de tema
 
-- **Primary**: `hsl(221.2 83.2% 53.3%)` (#2563EB - Blue 600)
-- **Dark Mode Primary**: `hsl(217.2 91.2% 59.8%)` (#3B82F6 - Blue 500)
+- Priorizar contraste alto para leitura financeira.
+- Base visual: azul (primary) e neutros shadcn.
+- Cores de entrada/saida devem ser consistentes:
+  - entrada: verde
+  - saida: vermelho
+  - neutro/transferencia: cinza
+- Estados de risco (ex.: fatura vencida) usam amarelo/laranja.
 
-### Modo Claro / Escuro
+## SSR e modo escuro
 
-O projeto utiliza `@nuxtjs/color-mode` configurado com a estratégia `class`.
+- A classe `dark` deve ser definida de forma consistente no SSR para evitar flash.
+- Preferir `color-mode` com `preference` persistida em cookie.
+- Componentes que leem `window` devem usar `<ClientOnly>`.
 
-- **Toggle**: O componente `layers/core/components/layout/ThemeToggle.vue` alterna a classe `.dark` no elemento `<html>`.
-- **Persistência**: A preferência do usuário é salva automaticamente em cookie/localStorage.
+## Componentes shadcn
 
-## Como customizar
+- Componentes ficam em `layers/shared/components/ui`.
+- Wrappers de dominio ficam no layer da feature.
+- `cn()` fica em `layers/shared/utils/cn.ts`.
 
-Para alterar a cor primária globalmente:
+## Personalizacao
 
-1.  Acesse [shadcn themes](https://ui.shadcn.com/themes).
-2.  Escolha uma cor ou customize os valores.
-3.  Copie os valores das variáveis CSS (`--primary`, `--ring`, etc).
-4.  Substitua em `layers/shared/assets/css/tailwind.css`.
+1. Ajuste os tokens em `layers/shared/assets/css/tailwind.css`.
+2. Mantenha o primary azul nos dois modos (claro/escuro).
+3. Atualize `tailwind.config.ts` se adicionar novas cores utilitarias.
+4. Garanta paridade entre modo claro e escuro.
 
-> **Nota**: Mantenha a conversão para HSL (sem `hsl()`, apenas os números) para garantir que as classes de opacidade do Tailwind funcionem (ex: `bg-primary/50`).
+## Referencias
+
+- Consulte `docs/frontend/references.md` para links de shadcn themes e Tailwind.

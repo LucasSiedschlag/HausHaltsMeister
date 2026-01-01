@@ -1,26 +1,43 @@
-# Referências do Frontend
+# Referencias do Frontend
 
-Lista de referências técnicas e conceituais utilizadas na construção e evolução do frontend.
+Lista de referencias tecnicas e conceituais utilizadas na construcao e evolucao do frontend.
 
 ## Arquitetura & Nuxt
 
-- [**Arquitetura Modular com Nuxt Layers (Gabriel Caiana)**](https://gabrielcaiana.com) (Link placeholder - buscar artigo original se disponível ou similar)
-  - _Relevância_: Base para a decisão de usar Nuxt Layers para modularização do frontend, evitando "spaghetti code" em projetos grandes.
-- [**Authoring Nuxt Layers (Docs Oficiais)**](https://nuxt.com/docs/guide/going-further/layers)
-  - _Relevância_: Documentação oficial sobre como criar, estender e ordenar layers. Fundamental para entender a prioridade de overrides e a estrutura de diretórios.
+- [Authoring Nuxt Layers (Docs Oficiais)](https://nuxt.com/docs/guide/going-further/layers)
+  - Relevancia: estrutura e prioridade de layers.
+- [Nuxt Config Reference](https://nuxt.com/docs/api/nuxt-config)
+  - Relevancia: configuracao de `extends`, alias e composables globais.
+- [Nuxt Route Rules](https://nuxt.com/docs/guide/going-further/route-rules)
+  - Relevancia: cache e headers por rota (futuro).
+- [Nuxt Rendering Modes](https://nuxt.com/docs/getting-started/going-further#rendering-modes)
+  - Relevancia: SSR como padrao e uso de client-only quando necessario.
 
 ## UI & Design System
 
-- [**shadcn-vue Installation for Nuxt**](https://www.shadcn-vue.com/docs/installation/nuxt.html)
-  - _Relevância_: Guia passo-a-passo para integrar shadcn-vue com Nuxt. Seguimos este guia para a configuração inicial.
-- [**shadcn-nuxt Module**](https://nuxt.com/modules/shadcn)
-  - _Relevância_: Módulo oficial/comunitário que facilita a integração, reduzindo boilerplate manual de configuração de pastas e componentes.
-- [**Tailwind CSS**](https://tailwindcss.com/docs)
-  - _Relevância_: Motor de estilos utilizado pelo shadcn e por todo o projeto.
+- [shadcn-vue (Nuxt)](https://www.shadcn-vue.com/docs/installation/nuxt.html)
+  - Relevancia: instalacao correta do shadcn-vue.
+- [shadcn UI Themes](https://ui.shadcn.com/themes)
+  - Relevancia: tokens base para o tema azul.
+- [Radix Vue](https://www.radix-vue.com/)
+  - Relevancia: acessibilidade e primitives headless.
+- [Tailwind CSS](https://tailwindcss.com/docs)
+  - Relevancia: utilitarios e tokens.
 
-## Ferramentas
+## Auth & OAuth
 
-- [**Nuxt CLI**](https://nuxt.com/docs/api/commands/add)
-  - _Relevância_: Comandos para gerar componentes, páginas e layers.
-- [**Radix Vue**](https://www.radix-vue.com/)
-  - _Relevância_: Biblioteca headless que alimenta os componentes do shadcn-vue, garantindo acessibilidade.
+- [OAuth 2.0 for Browser-Based Apps (IETF BCP)](https://www.rfc-editor.org/rfc/rfc8252)
+  - Relevancia: PKCE e fluxo seguro para SPAs/SSR.
+- [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
+  - Relevancia: claims e userinfo.
+- [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
+  - Relevancia: endpoints e parametros do provider.
+- [GitHub OAuth](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+  - Relevancia: fluxo de autorizacao do provider.
+
+## Seguranca & Cookies
+
+- [SameSite Cookies](https://web.dev/samesite-cookies-explained/)
+  - Relevancia: configuracao de refresh token em cookie.
+- [OWASP: JSON Web Token](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html)
+  - Relevancia: boas praticas de JWT (claims, expiracao).

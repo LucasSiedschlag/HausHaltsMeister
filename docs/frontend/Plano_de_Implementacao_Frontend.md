@@ -1,0 +1,173 @@
+# Plano_de_Implementacao_Frontend
+
+Este plano define as etapas detalhadas para implementar o frontend em Nuxt 3 com SSR e Nuxt Layers, alinhado ao backend ledger-based.
+
+## Etapa 0 — Fundacao do projeto
+
+Objetivo: criar a base tecnica do frontend com SSR e layers.
+
+Passos:
+1. Criar `frontend/` com Nuxt 3 (SSR habilitado por padrao).
+2. Configurar `nuxt.config.ts` raiz com `extends` dos layers base.
+3. Criar `layers/shared` com Tailwind + shadcn-vue e tokens base (tema azul).
+4. Configurar `components.json` do shadcn-vue apontando para `layers/shared`.
+5. Definir `layers/core` com layout base e shell de navegacao.
+6. Adicionar `@nuxtjs/color-mode` com persistencia em cookie (SSR-friendly).
+7. Definir `useApiClient` em `layers/shared` com proxy `/api`.
+
+Saidas esperadas:
+- Estrutura de layers criada.
+- Layout base renderizando com SSR.
+- Tokens de tema aplicados em modo claro/escuro.
+
+---
+
+## Etapa 1 — Auth e sessao
+
+Objetivo: login e signup com refresh token via cookie HttpOnly.
+
+Referencias:
+- `docs/api/01_Autenticacao.md`
+- `docs/api/00_Convencoes.md`
+
+Passos:
+1. Criar `layers/auth` com rotas `/auth/login` e `/auth/signup`.
+2. Implementar forms com validacao client-side (senha minima, email).
+3. Chamar `POST /auth/login` e `POST /auth/signup`.
+4. Salvar access token somente em memoria (store in-memory).
+5. Implementar `GET /auth/me` no bootstrap SSR para validar sessao.
+6. Criar middleware global `auth` em `layers/core` (redireciona anonimos).
+7. Implementar refresh automatico chamando `/auth/refresh` quando necessario.
+
+Saidas esperadas:
+- Sessao funciona em SSR e client.
+- Refresh token sempre via cookie.
+
+---
+
+## Etapa 2 — Selecao de ledger e shell
+
+Objetivo: selecionar ledger ativo e montar shell principal.
+
+Referencias:
+- `docs/api/02_Ledgers.md`
+
+Passos:
+1. Criar `layers/ledgers` com pagina de selecao.
+2. Consumir `GET /ledgers` e armazenar `ledgerId` atual.
+3. Adicionar switcher de ledger no header do `core`.
+4. Garantir `ledgerId` persistido (cookie SSR-friendly).
+
+Saidas esperadas:
+- Usuario sempre tem um ledger ativo.
+- Rotas dependem de ledger selecionado.
+
+---
+
+## Etapa 3 — Accounts
+
+Referencias:
+- `docs/api/03_Accounts.md`
+
+Passos:
+1. CRUD de contas.
+2. Tela de lista com filtros por status.
+3. Form de criacao/edicao.
+
+---
+
+## Etapa 4 — Categories
+
+Referencias:
+- `docs/api/04_Categories.md`
+
+Passos:
+1. CRUD de categorias.
+2. Respeitar regras `direction` e flags de budget.
+3. Exibir hierarquia (parent_id) com indentacao.
+
+---
+
+## Etapa 5 — Journal
+
+Referencias:
+- `docs/api/05_Journal.md`
+
+Passos:
+1. Listagem com cursor e filtros.
+2. Detalhe de transacao (entries agrupadas).
+3. Criacao e edicao de transacoes.
+4. Bloquear delete/edicao se referenciada.
+
+---
+
+## Etapa 6 — Budget
+
+Referencias:
+- `docs/api/06_Budget.md`
+
+Passos:
+1. Tela de plano e versoes.
+2. Editor de linhas por categoria.
+3. Painel mensal e painel por periodo.
+4. Indicadores de variancia (orcado vs realizado).
+
+---
+
+## Etapa 7 — Investments
+
+Referencias:
+- `docs/api/07_Investimentos.md`
+
+Passos:
+1. Forms para aporte, resgate e rendimento.
+2. Resumo agregado por periodo.
+
+---
+
+## Etapa 8 — Cartao
+
+Referencias:
+- `docs/api/08_Cartao.md`
+
+Passos:
+1. Cadastro de cartoes e bandeiras.
+2. Criacao de planos de parcelas.
+3. Lista de parcelas por mes.
+4. Posting mensal com idempotency key.
+5. Gestao de faturas (close, pay).
+
+---
+
+## Etapa 9 — Relatorios
+
+Referencias:
+- `docs/api/09_Relatorios.md`
+
+Passos:
+1. Relatorio de saldos.
+2. Relatorio por categoria.
+3. Fluxo de caixa.
+
+---
+
+## Etapa 10 — QA e consistencia
+
+Objetivo: garantir qualidade e padroes.
+
+Passos:
+1. Testes E2E basicos para login e ledger selection.
+2. Testes de pagina com SSR (render sem window).
+3. Validar erros e estados vazios.
+4. Alinhar UI com tokens e paleta azul.
+
+---
+
+## Checklist por feature
+
+1. Confirmar contrato em `docs/api/<modulo>.md`.
+2. Implementar composables de API no layer do modulo.
+3. Implementar page + componentes.
+4. Validar SSR (sem window).
+5. Estados de loading, erro e empty.
+6. Atualizar docs se houver nova decisao.
