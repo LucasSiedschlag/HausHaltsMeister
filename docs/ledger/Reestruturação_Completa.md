@@ -61,19 +61,23 @@ Referência: `docs/ledger/Documento_de_Arquitetura.md`.
 Referência: `docs/ledger/Regras_Core_Ledger.md`.
 
 ### 3.1 Ledger e membership
+
 - `ledgers` representa o “universo financeiro” do usuário.
 - `ledger_members` prepara o caminho para compartilhamento (roles: owner/editor/viewer).
 
 ### 3.2 Journal (transactions + entries)
+
 - `transactions` guarda data, descrição, autor e metadados de import.
 - `entries` guarda valor, conta, categoria, memo e kind.
 - Sempre criar **transaction** antes de **entries**, em transação SQL.
 
 ### 3.3 Accounts (contas internas)
+
 - `cash` (Pessoal), `investment` (Investimentos), `credit_card` (Cartão).
 - Saldos são derivados do journal, não armazenados.
 
 ### 3.4 Categories
+
 - `direction` define IN/OUT.
 - `is_budget_base` (IN) e `is_budget_relevant` (OUT) controlam orçamento.
 - `parent_id` permite hierarquia (pai/filho) e orçamento com `include_children`.
@@ -85,12 +89,14 @@ Referência: `docs/ledger/Regras_Core_Ledger.md`.
 Referência: `docs/ledger/Regras_Categorias_e_Orçamento.md`.
 
 ### 4.1 Como calcular o mês
+
 - Mês é sempre `YYYY-MM-01`.
 - **Renda base do mês** = soma de IN com `is_budget_base=true`.
-- **Limite por categoria** = renda_base_mes * (percentual / 100).
+- **Limite por categoria** = renda_base_mes \* (percentual / 100).
 - **Realizado** = soma de OUT com `is_budget_relevant=true`.
 
 ### 4.2 Versionamento
+
 - `budget_plans` (1 por ledger).
 - `budget_plan_versions` com `effective_from_month`.
 - `budget_plan_lines` com percentuais e `include_children`.
@@ -103,14 +109,17 @@ Referência: `docs/ledger/Regras_Categorias_e_Orçamento.md`.
 Referência: `docs/ledger/Regras_Investimentos.md`.
 
 ### 5.1 Conta dedicada
+
 - `accounts.type=investment` separa caixa de investimentos.
 
 ### 5.2 Fluxos padrão
+
 - Aporte: transferência Pessoal -> Investimentos.
 - Resgate: transferência Investimentos -> Pessoal.
 - Rendimento: entry IN na conta de investimentos (`kind=adjust` recomendado).
 
 ### 5.3 Flags recomendadas
+
 - Entradas técnicas e rendimentos **não** devem inflar renda base.
 
 ---
@@ -120,11 +129,13 @@ Referência: `docs/ledger/Regras_Investimentos.md`.
 Referência: `docs/ledger/Regras_Cartão_de_crédito.md`.
 
 ### 6.1 Entidades
+
 - `credit_cards` (metadados do cartão).
 - `installment_plans` + `installments` (parcelamento).
 - `credit_card_statements` (fatura mensal).
 
 ### 6.2 Regra-chave
+
 - **Orçamento é consumido apenas quando a parcela é postada**.
 - Pagamento de fatura é transferência com categorias técnicas (fora do orçamento).
 
@@ -531,22 +542,26 @@ Referência: `docs/ledger/Regras_Core_Ledger.md` e `docs/ledger/Regras_Cartão_d
 Referência: `docs/ledger/Casos_de_uso.md`.
 
 ### 9.1 Lançamento normal
+
 1. Criar `transactions` (data, descrição).
 2. Criar `entries` (1 ou N linhas).
 3. Categoria define IN/OUT; orçamento usa flags.
 
 ### 9.2 Transferência interna
+
 1. Criar `transactions`.
 2. Criar 2 `entries` com `kind=transfer` (uma IN e uma OUT).
 3. Validar balanceamento (IN == OUT).
 
 ### 9.3 Orçamento mensal
+
 1. Identificar `budget_plan_version` vigente do mês.
 2. Calcular renda base (IN com `is_budget_base=true`).
 3. Calcular limite por categoria (%).
 4. Calcular realizado (OUT com `is_budget_relevant=true`).
 
 ### 9.4 Parcelas do cartão
+
 1. Compra cria `installment_plan` + `installments` (scheduled).
 2. No mês alvo, postar parcelas -> `transactions` + `entries` no cartão.
 3. Pagamento de fatura é transferência com categorias técnicas.
@@ -558,10 +573,12 @@ Referência: `docs/ledger/Casos_de_uso.md`.
 Referência: `docs/ledger/Regras_Investimentos.md` e `docs/ledger/Regras_Cartão_de_crédito.md`.
 
 ### 10.1 Cartão
+
 - Pagamento Fatura Cartão (OUT, `is_budget_relevant=false`)
 - Entrada Pagamento Cartão (IN, `is_budget_base=false`)
 
 ### 10.2 Investimentos
+
 - Aportes Investimentos (OUT, `is_budget_relevant=false` por padrão; habilitar se for orçar)
 - Entrada Investimentos (Aporte) (IN, `is_budget_base=false`)
 - Resgate Investimentos (OUT, `is_budget_relevant=false`)

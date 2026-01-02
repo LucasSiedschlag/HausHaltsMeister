@@ -23,7 +23,7 @@ func (f fakeAuthService) SignUp(ctx context.Context, email, password, displayNam
 	return auth.AuthResult{}, nil
 }
 
-func (f fakeAuthService) Login(ctx context.Context, email, password, userAgent, ip string) (auth.AuthResult, error) {
+func (f fakeAuthService) Login(ctx context.Context, email, password, userAgent, ip string, remember bool) (auth.AuthResult, error) {
 	return auth.AuthResult{}, f.loginErr
 }
 

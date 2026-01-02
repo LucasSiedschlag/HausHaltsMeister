@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "vite-tsconfig-paths": "^6.0.3",
+    "vue-tsc": "^3.2.1"
+  }
+}

@@ -16,6 +16,7 @@ type Repository interface {
 	GetUserByID(ctx context.Context, userID string) (User, error)
 	GetAuthSecretHash(ctx context.Context, userID string) (string, error)
 	CreateAuthSession(ctx context.Context, params CreateSessionParams) (AuthSession, error)
+	GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (AuthSession, error)
 	RotateAuthSession(ctx context.Context, params RotateSessionParams) (AuthSession, User, error)
 	RevokeAuthSession(ctx context.Context, refreshTokenHash string) error
 	CreateOAuthState(ctx context.Context, provider, state, codeVerifier, redirectURI string) (OAuthState, error)
@@ -34,6 +35,7 @@ type CreateSessionParams struct {
 	IP                   string
 	DeviceName           string
 	RotatedFromSessionID *string
+	IsPersistent         bool
 }
 
 type RotateSessionParams struct {
@@ -42,6 +44,7 @@ type RotateSessionParams struct {
 	ExpiresAt           time.Time
 	UserAgent           string
 	IP                  string
+	IsPersistent        bool
 }
 
 type CreateIdentityParams struct {
@@ -60,6 +63,7 @@ type Service struct {
 	jwtSecret   []byte
 	accessTTL   time.Duration
 	refreshTTL  time.Duration
+	refreshSessionTTL time.Duration
 	now         func() time.Time
 	providers   map[string]OAuthProvider
 }
@@ -68,6 +72,7 @@ type ServiceConfig struct {
 	JWTSecret  string
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
+	RefreshSessionTTL time.Duration
 	Providers  map[string]OAuthProvider
 }
 
@@ -77,6 +82,7 @@ func NewService(repo Repository, cfg ServiceConfig) *Service {
 		jwtSecret: []byte(cfg.JWTSecret),
 		accessTTL: cfg.AccessTTL,
 		refreshTTL: cfg.RefreshTTL,
+		refreshSessionTTL: cfg.RefreshSessionTTL,
 		now:        time.Now().UTC,
 		providers:  cfg.Providers,
 	}
@@ -105,10 +111,10 @@ func (s *Service) SignUp(ctx context.Context, email, password, displayName, user
 		return AuthResult{}, err
 	}
 
-	return s.createSession(ctx, user, userAgent, ip, nil)
+	return s.createSession(ctx, user, userAgent, ip, nil, true)
 }
 
-func (s *Service) Login(ctx context.Context, email, password, userAgent, ip string) (AuthResult, error) {
+func (s *Service) Login(ctx context.Context, email, password, userAgent, ip string, remember bool) (AuthResult, error) {
 	email = normalizeEmail(email)
 	if !isValidEmail(email) || password == "" {
 		return AuthResult{}, ErrInvalidCredentials
@@ -134,11 +140,22 @@ func (s *Service) Login(ctx context.Context, email, password, userAgent, ip stri
 		return AuthResult{}, err
 	}
 
-	return s.createSession(ctx, user, userAgent, ip, nil)
+	return s.createSession(ctx, user, userAgent, ip, nil, remember)
 }
 
 func (s *Service) Refresh(ctx context.Context, refreshToken, userAgent, ip string) (AuthResult, error) {
 	if refreshToken == "" {
+		return AuthResult{}, ErrRefreshRevoked
+	}
+
+	sessionMeta, err := s.repo.GetAuthSessionByRefreshTokenHash(ctx, hashToken(refreshToken))
+	if err != nil {
+		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrRefreshRevoked) {
+			return AuthResult{}, ErrRefreshRevoked
+		}
+		return AuthResult{}, err
+	}
+	if sessionMeta.RevokedAt != nil || s.now().After(sessionMeta.ExpiresAt) {
 		return AuthResult{}, ErrRefreshRevoked
 	}
 
@@ -147,12 +164,18 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, userAgent, ip strin
 		return AuthResult{}, err
 	}
 
+	refreshTTL := s.refreshSessionTTL
+	if sessionMeta.IsPersistent {
+		refreshTTL = s.refreshTTL
+	}
+
 	session, user, err := s.repo.RotateAuthSession(ctx, RotateSessionParams{
 		OldRefreshTokenHash: hashToken(refreshToken),
 		NewRefreshTokenHash: refreshHash,
-		ExpiresAt:           s.now().Add(s.refreshTTL),
+		ExpiresAt:           s.now().Add(refreshTTL),
 		UserAgent:           userAgent,
 		IP:                  ip,
+		IsPersistent:        sessionMeta.IsPersistent,
 	})
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrRefreshRevoked) {
@@ -177,6 +200,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, userAgent, ip strin
 			ExpiresIn:    expiresIn,
 			SessionID:    session.ID,
 		},
+		Session: session,
 	}, nil
 }
 
@@ -284,7 +308,7 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 		if err := s.repo.UpdateAuthIdentityLogin(ctx, user.ID, provider); err != nil {
 			return AuthResult{}, err
 		}
-		return s.createSession(ctx, user, userAgent, ip, nil)
+		return s.createSession(ctx, user, userAgent, ip, nil, true)
 	}
 
 	if err != nil && !errors.Is(err, ErrNotFound) {
@@ -320,7 +344,7 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 			return AuthResult{}, err
 		}
 
-		return s.createSession(ctx, user, userAgent, ip, nil)
+		return s.createSession(ctx, user, userAgent, ip, nil, true)
 	}
 
 	if err != nil && !errors.Is(err, ErrNotFound) {
@@ -345,7 +369,7 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 		return AuthResult{}, err
 	}
 
-	return s.createSession(ctx, user, userAgent, ip, nil)
+	return s.createSession(ctx, user, userAgent, ip, nil, true)
 }
 
 func (s *Service) ParseAccessToken(token string) (AccessTokenClaims, error) {
@@ -355,19 +379,25 @@ func (s *Service) ParseAccessToken(token string) (AccessTokenClaims, error) {
 	return ParseAccessToken(s.jwtSecret, token)
 }
 
-func (s *Service) createSession(ctx context.Context, user User, userAgent, ip string, rotatedFrom *string) (AuthResult, error) {
+func (s *Service) createSession(ctx context.Context, user User, userAgent, ip string, rotatedFrom *string, isPersistent bool) (AuthResult, error) {
 	refreshToken, refreshHash, err := GenerateRefreshToken()
 	if err != nil {
 		return AuthResult{}, err
 	}
 
+	refreshTTL := s.refreshSessionTTL
+	if isPersistent {
+		refreshTTL = s.refreshTTL
+	}
+
 	session, err := s.repo.CreateAuthSession(ctx, CreateSessionParams{
 		UserID:               user.ID,
 		RefreshTokenHash:     refreshHash,
-		ExpiresAt:            s.now().Add(s.refreshTTL),
+		ExpiresAt:            s.now().Add(refreshTTL),
 		UserAgent:            userAgent,
 		IP:                   ip,
 		RotatedFromSessionID: rotatedFrom,
+		IsPersistent:         isPersistent,
 	})
 	if err != nil {
 		return AuthResult{}, err
@@ -386,6 +416,7 @@ func (s *Service) createSession(ctx context.Context, user User, userAgent, ip st
 			ExpiresIn:    expiresIn,
 			SessionID:    session.ID,
 		},
+		Session: session,
 	}, nil
 }
 

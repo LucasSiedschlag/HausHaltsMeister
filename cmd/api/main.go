@@ -105,10 +105,11 @@ func main() {
 	reportsRepo := pgreports.NewRepository(store)
 
 	authService := auth.NewService(authRepo, auth.ServiceConfig{
-		JWTSecret:  cfg.JWTSecret,
-		AccessTTL:  cfg.AccessTokenTTL,
-		RefreshTTL: cfg.RefreshTokenTTL,
-		Providers:  providers,
+		JWTSecret:         cfg.JWTSecret,
+		AccessTTL:         cfg.AccessTokenTTL,
+		RefreshTTL:        cfg.RefreshTokenTTL,
+		RefreshSessionTTL: cfg.RefreshTokenSessionTTL,
+		Providers:         providers,
 	})
 	ledgerService := ledger.NewService(ledgerRepo)
 	accountsService := accounts.NewService(accountsRepo)

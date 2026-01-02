@@ -42,7 +42,8 @@ func TestRefreshRotationPersists(t *testing.T) {
 	service := authdomain.NewService(repo, authdomain.ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]authdomain.OAuthProvider{},
 	})
 
@@ -90,7 +91,8 @@ func TestSignUpCreatesDefaultLedger(t *testing.T) {
 	service := authdomain.NewService(repo, authdomain.ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]authdomain.OAuthProvider{},
 	})
 

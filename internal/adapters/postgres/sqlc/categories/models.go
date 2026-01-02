@@ -41,6 +41,7 @@ type AuthSession struct {
 	ID                   pgtype.UUID
 	UserID               pgtype.UUID
 	RefreshTokenHash     string
+	IsPersistent         bool
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 	ExpiresAt            pgtype.Timestamptz

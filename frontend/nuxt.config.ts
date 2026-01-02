@@ -1,10 +1,17 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
 const apiBase = process.env.NUXT_API_BASE_URL || 'http://localhost:8080'
+const rootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   ssr: true,
   compatibilityDate: '2026-01-01',
   devtools: { enabled: true },
+  alias: {
+    '@shared': join(rootDir, 'layers/shared')
+  },
   extends: [
     './layers/shared',
     './layers/core',
@@ -19,12 +26,11 @@ export default defineNuxtConfig({
     './layers/reports'
   ],
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt'],
-  tailwindcss: {
-    cssPath: '~/layers/shared/assets/css/tailwind.css'
-  },
+  css: [join(rootDir, 'layers/shared/assets/css/tailwind.css')],
   runtimeConfig: {
     public: {
-      apiBase: '/api'
+      apiBase: '/api',
+      oauthBase: process.env.NUXT_PUBLIC_OAUTH_BASE_URL || ''
     }
   },
   nitro: {
@@ -42,7 +48,7 @@ export default defineNuxtConfig({
     storageKey: 'hhm-color-mode'
   },
   shadcn: {
-    prefix: '',
+    prefix: 'Ui',
     componentDir: './layers/shared/components/ui'
   }
 })

@@ -63,13 +63,22 @@ func (f *fakeRepo) GetAuthSecretHash(ctx context.Context, userID string) (string
 
 func (f *fakeRepo) CreateAuthSession(ctx context.Context, params CreateSessionParams) (AuthSession, error) {
 	f.sessionSet = true
-	return AuthSession{ID: "session-1", UserID: params.UserID, ExpiresAt: params.ExpiresAt}, nil
+	return AuthSession{ID: "session-1", UserID: params.UserID, ExpiresAt: params.ExpiresAt, IsPersistent: params.IsPersistent}, nil
+}
+
+func (f *fakeRepo) GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (AuthSession, error) {
+	return AuthSession{
+		ID:           "session-1",
+		UserID:       "user-1",
+		ExpiresAt:    time.Now().Add(time.Hour),
+		IsPersistent: true,
+	}, nil
 }
 
 func (f *fakeRepo) RotateAuthSession(ctx context.Context, params RotateSessionParams) (AuthSession, User, error) {
 	f.lastOldHash = params.OldRefreshTokenHash
 	f.lastNewHash = params.NewRefreshTokenHash
-	return AuthSession{ID: "session-1", UserID: "user-1", ExpiresAt: time.Now().Add(time.Hour)}, User{ID: "user-1", IsActive: true}, nil
+	return AuthSession{ID: "session-1", UserID: "user-1", ExpiresAt: time.Now().Add(time.Hour), IsPersistent: params.IsPersistent}, User{ID: "user-1", IsActive: true}, nil
 }
 
 func (f *fakeRepo) RevokeAuthSession(ctx context.Context, refreshTokenHash string) error {
@@ -106,7 +115,8 @@ func TestRefreshRotatesToken(t *testing.T) {
 	service := NewService(repo, ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]OAuthProvider{},
 	})
 
@@ -124,7 +134,8 @@ func TestSignUpCreatesSession(t *testing.T) {
 	service := NewService(repo, ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]OAuthProvider{},
 	})
 
@@ -146,11 +157,12 @@ func TestLoginCreatesSession(t *testing.T) {
 	service := NewService(repo, ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]OAuthProvider{},
 	})
 
-	result, err := service.Login(context.Background(), "user@example.com", "password123", "agent", "127.0.0.1")
+	result, err := service.Login(context.Background(), "user@example.com", "password123", "agent", "127.0.0.1", true)
 	require.NoError(t, err)
 	require.NotEmpty(t, result.Tokens.AccessToken)
 	require.True(t, repo.sessionSet)
@@ -161,7 +173,8 @@ func TestLogoutRevokesSession(t *testing.T) {
 	service := NewService(repo, ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]OAuthProvider{},
 	})
 
@@ -175,7 +188,8 @@ func TestMeReturnsUser(t *testing.T) {
 	service := NewService(repo, ServiceConfig{
 		JWTSecret:  "test",
 		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers:  map[string]OAuthProvider{},
 	})
 

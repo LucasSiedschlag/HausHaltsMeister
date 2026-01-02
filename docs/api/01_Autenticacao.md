@@ -103,7 +103,7 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
 3) Request
 - Body:
 ```json
-{ "email": "user@example.com", "password": "..." }
+{ "email": "user@example.com", "password": "...", "remember": true }
 ```
 
 4) Response
@@ -127,6 +127,51 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
 
 6) Semantics / Notes
 - Refresh token rotacionavel e criado.
+- Campo `remember` controla a duracao da sessao de refresh (curta vs longa).
+
+---
+
+### GET /auth/oauth/{provider}/start (Frontend)
+1) Summary / Purpose
+- Inicia o fluxo OAuth e redireciona o usuario.
+
+2) Auth & Authorization
+- Token: nao.
+
+3) Request
+- Path params: `provider` (google|github).
+- Query params: `redirect_uri` (URL do frontend).
+
+4) Response
+- 302 Redirect para o provider.
+
+5) Errors
+- 501 `NOT_IMPLEMENTED`
+
+6) Semantics / Notes
+- Frontend usa `/auth/oauth/callback` como `redirect_uri`.
+
+---
+
+### GET /auth/oauth/{provider}/callback (Frontend)
+1) Summary / Purpose
+- Finaliza OAuth e cria sessao local.
+
+2) Auth & Authorization
+- Token: nao.
+
+3) Request
+- Query params: `code`, `state`.
+
+4) Response
+- 302 Redirect (quando `redirect_uri` foi informado) ou JSON de sessao.
+
+5) Errors
+- 400 `AUTH_OAUTH_STATE_INVALID`
+- 504 `GATEWAY_TIMEOUT`
+
+6) Semantics / Notes
+- Frontend chama `/auth/refresh` apos o redirect para obter o access token.
 
 7) Pagination
 - n/a.

@@ -56,17 +56,17 @@ WHERE user_id = $1 AND provider = $2;
 -- Auth: sessions
 
 -- name: CreateAuthSession :one
-INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip, device_name, rotated_from_session_id, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, user_id, expires_at, revoked_at;
+INSERT INTO auth_sessions (user_id, refresh_token_hash, is_persistent, expires_at, user_agent, ip, device_name, rotated_from_session_id, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, expires_at, revoked_at, is_persistent;
 
 -- name: GetAuthSessionByRefreshHash :one
-SELECT id, user_id, expires_at, revoked_at
+SELECT id, user_id, expires_at, revoked_at, is_persistent
 FROM auth_sessions
 WHERE refresh_token_hash = $1;
 
 -- name: LockAuthSessionByRefreshHash :one
-SELECT id, user_id, expires_at, revoked_at
+SELECT id, user_id, expires_at, revoked_at, is_persistent
 FROM auth_sessions
 WHERE refresh_token_hash = $1
 FOR UPDATE;
@@ -87,7 +87,7 @@ SET revoked_at = now(), updated_at = now()
 WHERE user_id = $1 AND revoked_at IS NULL;
 
 -- name: ListAuthSessionsByUser :many
-SELECT id, user_id, refresh_token_hash, expires_at, revoked_at, user_agent, ip, device_name, created_at, updated_at, rotated_from_session_id
+SELECT id, user_id, refresh_token_hash, expires_at, revoked_at, is_persistent, user_agent, ip, device_name, created_at, updated_at, rotated_from_session_id
 FROM auth_sessions
 WHERE user_id = $1
 ORDER BY created_at DESC;

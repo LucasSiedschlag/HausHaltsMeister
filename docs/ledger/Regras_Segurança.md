@@ -77,18 +77,21 @@ Tabela sugerida `auth_sessions`:
 - `rotated_from_session_id` (opcional)
 
 Uso:
+
 - logout de um dispositivo (revogar uma sessão)
 - logout global (revogar todas as sessões)
 
 ### 1.5. Rate limit e brute force
 
 Aplicar rate limit e backoff em:
+
 - `/auth/login`
 - `/auth/signup`
 - `/auth/refresh`
 - `/auth/forgot-password`
 
 Respostas de login devem ser genéricas:
+
 - “Credenciais inválidas” (não revelar se email existe).
 
 ### 1.6. Recuperação de senha (fase 2)
@@ -109,6 +112,7 @@ Respostas de login devem ser genéricas:
 - `auth_identities` guarda vínculos por provider (`password`, `google`, `github`).
 
 Regras:
+
 - `auth_identities` deve ser único por `(provider, provider_user_id)`.
 - Cada usuário pode ter no máximo 1 identidade por provider (se desejar limitar).
 
@@ -122,6 +126,7 @@ Regras:
 ### 1.10. Regras de linking (Google/GitHub)
 
 Política recomendada:
+
 1. Se existe `auth_identities(provider, provider_user_id)` → login nesse `user_id`.
 2. Senão, se provider retornou email:
    - se existe `users.email = email` **e** email verificado (ou confiança explícita no provider):

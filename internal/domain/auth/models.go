@@ -18,6 +18,7 @@ type AuthSession struct {
 	UserID    string
 	ExpiresAt time.Time
 	RevokedAt *time.Time
+	IsPersistent bool
 }
 
 type OAuthState struct {
@@ -50,4 +51,5 @@ type AuthTokens struct {
 type AuthResult struct {
 	User   User
 	Tokens AuthTokens
+	Session AuthSession
 }

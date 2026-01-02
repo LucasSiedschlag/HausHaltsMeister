@@ -57,6 +57,20 @@ A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 - Tokens e CSS global ficam em `layers/shared/assets`.
 - `components.json` aponta para o layer `shared`.
 
+## Validacao inline
+
+- Validadores padrao ficam em `layers/shared/validators` e usam Zod.
+- Use `emailSchema`, `passwordSchema`, `nameSchema` e `useInlineValidation`.
+- Use `getInputClass` para manter o estilo de foco (outline solido + ring com opacidade 0,2).
+- Cada campo exibe apenas o primeiro erro (ordem definida no schema).
+- Erros de backend permanecem separados do erro de validacao local.
+
+## Eventos de analytics
+
+- Use `useAnalytics().track(event, payload)` para emitir eventos no frontend.
+- Eventos sao disparados via `window` com `CustomEvent` (`hhm:analytics`).
+- Fluxos de auth ja emitem: `auth.login`, `auth.signup`, `auth.oauth.start`, `auth.refresh`.
+
 ## Referencias
 
 Consulte `docs/frontend/references.md` para links de Nuxt Layers, shadcn-vue, OAuth e cookies.

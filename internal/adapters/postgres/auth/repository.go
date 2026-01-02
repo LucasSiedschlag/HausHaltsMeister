@@ -205,10 +205,23 @@ func (r *Repository) GetAuthSecretHash(ctx context.Context, userID string) (stri
 func (r *Repository) CreateAuthSession(ctx context.Context, params auth.CreateSessionParams) (auth.AuthSession, error) {
 	var session auth.AuthSession
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip, device_name, rotated_from_session_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, user_id, expires_at, revoked_at
-	`, params.UserID, params.RefreshTokenHash, params.ExpiresAt, params.UserAgent, params.IP, params.DeviceName, params.RotatedFromSessionID)
+		INSERT INTO auth_sessions (user_id, refresh_token_hash, is_persistent, expires_at, user_agent, ip, device_name, rotated_from_session_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, user_id, expires_at, revoked_at, is_persistent
+	`, params.UserID, params.RefreshTokenHash, params.IsPersistent, params.ExpiresAt, params.UserAgent, params.IP, params.DeviceName, params.RotatedFromSessionID)
+	if err := scanSession(row, &session); err != nil {
+		return auth.AuthSession{}, err
+	}
+	return session, nil
+}
+
+func (r *Repository) GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (auth.AuthSession, error) {
+	var session auth.AuthSession
+	row := r.pool.QueryRow(ctx, `
+		SELECT id, user_id, expires_at, revoked_at, is_persistent
+		FROM auth_sessions
+		WHERE refresh_token_hash = $1
+	`, refreshTokenHash)
 	if err := scanSession(row, &session); err != nil {
 		return auth.AuthSession{}, err
 	}
@@ -221,7 +234,7 @@ func (r *Repository) RotateAuthSession(ctx context.Context, params auth.RotateSe
 
 	err := postgres.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			SELECT id, user_id, expires_at, revoked_at
+			SELECT id, user_id, expires_at, revoked_at, is_persistent
 			FROM auth_sessions
 			WHERE refresh_token_hash = $1
 			FOR UPDATE
@@ -242,7 +255,7 @@ func (r *Repository) RotateAuthSession(ctx context.Context, params auth.RotateSe
 			return err
 		}
 
-		_, err := tx.Exec(ctx, `
+	_, err := tx.Exec(ctx, `
 			UPDATE auth_sessions
 			SET revoked_at = now(), updated_at = now()
 			WHERE id = $1
@@ -252,10 +265,10 @@ func (r *Repository) RotateAuthSession(ctx context.Context, params auth.RotateSe
 		}
 
 		row = tx.QueryRow(ctx, `
-			INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip, rotated_from_session_id)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING id, user_id, expires_at, revoked_at
-		`, session.UserID, params.NewRefreshTokenHash, params.ExpiresAt, params.UserAgent, params.IP, session.ID)
+			INSERT INTO auth_sessions (user_id, refresh_token_hash, is_persistent, expires_at, user_agent, ip, rotated_from_session_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, user_id, expires_at, revoked_at, is_persistent
+		`, session.UserID, params.NewRefreshTokenHash, params.IsPersistent, params.ExpiresAt, params.UserAgent, params.IP, session.ID)
 		return scanSession(row, &session)
 	})
 
@@ -354,6 +367,7 @@ func scanSession(row pgx.Row, session *auth.AuthSession) error {
 		&session.UserID,
 		&session.ExpiresAt,
 		&session.RevokedAt,
+		&session.IsPersistent,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.ErrNotFound

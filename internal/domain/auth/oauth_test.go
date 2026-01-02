@@ -52,6 +52,9 @@ func (o *oauthRepo) GetAuthSecretHash(ctx context.Context, userID string) (strin
 func (o *oauthRepo) CreateAuthSession(ctx context.Context, params CreateSessionParams) (AuthSession, error) {
 	return AuthSession{}, ErrNotFound
 }
+func (o *oauthRepo) GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (AuthSession, error) {
+	return AuthSession{}, ErrNotFound
+}
 func (o *oauthRepo) RotateAuthSession(ctx context.Context, params RotateSessionParams) (AuthSession, User, error) {
 	return AuthSession{}, User{}, ErrNotFound
 }
@@ -92,9 +95,10 @@ func TestClassifyOAuthError(t *testing.T) {
 
 func TestOAuthCallbackPropagatesGatewayTimeout(t *testing.T) {
 	service := NewService(&oauthRepo{}, ServiceConfig{
-		JWTSecret:  "test",
-		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 30 * 24 * time.Hour,
+		JWTSecret:         "test",
+		AccessTTL:         15 * time.Minute,
+		RefreshTTL:        30 * 24 * time.Hour,
+		RefreshSessionTTL: 7 * 24 * time.Hour,
 		Providers: map[string]OAuthProvider{
 			"fake": fakeOAuthProvider{exchangeErr: ErrGatewayTimeout},
 		},

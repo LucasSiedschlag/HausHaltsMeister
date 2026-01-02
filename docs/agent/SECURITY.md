@@ -3,7 +3,8 @@
 ## Tokens
 
 - Access token TTL: 15 minutes (default).
-- Refresh token TTL: 30–90 days (default).
+- Refresh token TTL: 30–90 days (persistente).
+- Refresh token TTL (sessao curta): 7 dias (default).
 - Refresh tokens are rotated on every `/auth/refresh`.
 
 ## Cookies
@@ -12,6 +13,11 @@
   - `HttpOnly`: true
   - `Secure`: true
   - `SameSite`: `None` (when frontend is on another domain) or `Lax` (same-site)
+
+## OAuth redirect
+
+- Validar `redirect_uri` via allowlist (`OAUTH_REDIRECT_ALLOWLIST`).
+- Suporte por ambiente: `OAUTH_REDIRECT_ALLOWLIST_{ENV}` substitui o valor base.
 
 ## Rate limiting
 

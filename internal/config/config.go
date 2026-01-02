@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -16,10 +17,12 @@ type Config struct {
 	JWTSecret            string
 	AccessTokenTTL       time.Duration
 	RefreshTokenTTL      time.Duration
+	RefreshTokenSessionTTL time.Duration
 	RefreshCookieName    string
 	RefreshCookieDomain  string
 	RefreshCookieSecure  bool
 	RefreshCookieSameSite string
+	OAuthRedirectAllowlist []string
 
 	GoogleClientID     string
 	GoogleClientSecret string
@@ -43,16 +46,19 @@ func Load() Config {
 		httpAddr = ":" + getEnv("PORT", "8080")
 	}
 
+	env := getEnv("ENV", "development")
 	return Config{
 		DatabaseURL:           databaseURL,
 		HTTPAddr:              httpAddr,
 		JWTSecret:             getEnv("JWT_SECRET", "change-me"),
 		AccessTokenTTL:        time.Duration(getEnvInt("ACCESS_TOKEN_TTL_SECONDS", 900)) * time.Second,
 		RefreshTokenTTL:       time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 30)) * 24 * time.Hour,
+		RefreshTokenSessionTTL: time.Duration(getEnvInt("REFRESH_TOKEN_SESSION_TTL_DAYS", 7)) * 24 * time.Hour,
 		RefreshCookieName:     getEnv("REFRESH_COOKIE_NAME", "hhm_refresh"),
 		RefreshCookieDomain:   getEnv("REFRESH_COOKIE_DOMAIN", ""),
 		RefreshCookieSecure:   getEnvBool("REFRESH_COOKIE_SECURE", true),
 		RefreshCookieSameSite: getEnv("REFRESH_COOKIE_SAMESITE", "Lax"),
+		OAuthRedirectAllowlist: splitCSV(getEnv(allowlistKey(env), getEnv("OAUTH_REDIRECT_ALLOWLIST", "http://localhost:3000"))),
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
@@ -62,6 +68,13 @@ func Load() Config {
 		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		GitHubRedirectURL:  getEnv("GITHUB_REDIRECT_URL", ""),
 	}
+}
+
+func allowlistKey(env string) string {
+	if env == "" {
+		return "OAUTH_REDIRECT_ALLOWLIST"
+	}
+	return "OAUTH_REDIRECT_ALLOWLIST_" + strings.ToUpper(env)
 }
 
 func buildDatabaseURL() string {
@@ -118,4 +131,20 @@ func getEnvBool(key string, def bool) bool {
 		return def
 	}
 	return parsed
+}
+
+func splitCSV(value string) []string {
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		out = append(out, trimmed)
+	}
+	return out
 }

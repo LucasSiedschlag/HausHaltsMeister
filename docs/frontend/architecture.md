@@ -83,6 +83,11 @@ frontend/
 
 - Usar as rotas reais do backend: `/auth/login`, `/auth/signup`, `/auth/forgot-password`.
 
+### Bootstrap de sessao
+
+- Plugin `auth-bootstrap` tenta `/auth/refresh` no SSR para hidratar sessao antes do middleware.
+- Estado `auth_bootstrapping` pode ser usado para loading sutil no layout.
+
 ## Estado e sincronizacao
 
 - `ledgerId` selecionado no `core` e compartilhado (store/composable).

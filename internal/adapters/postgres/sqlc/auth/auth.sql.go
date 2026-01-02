@@ -96,14 +96,15 @@ func (q *Queries) CreateAuthSecret(ctx context.Context, arg CreateAuthSecretPara
 
 const createAuthSession = `-- name: CreateAuthSession :one
 
-INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip, device_name, rotated_from_session_id, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, user_id, expires_at, revoked_at
+INSERT INTO auth_sessions (user_id, refresh_token_hash, is_persistent, expires_at, user_agent, ip, device_name, rotated_from_session_id, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, expires_at, revoked_at, is_persistent
 `
 
 type CreateAuthSessionParams struct {
 	UserID               pgtype.UUID
 	RefreshTokenHash     string
+	IsPersistent         bool
 	ExpiresAt            pgtype.Timestamptz
 	UserAgent            pgtype.Text
 	Ip                   pgtype.Text
@@ -113,10 +114,11 @@ type CreateAuthSessionParams struct {
 }
 
 type CreateAuthSessionRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
-	RevokedAt pgtype.Timestamptz
+	ID           pgtype.UUID
+	UserID       pgtype.UUID
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	IsPersistent bool
 }
 
 // Auth: sessions
@@ -124,6 +126,7 @@ func (q *Queries) CreateAuthSession(ctx context.Context, arg CreateAuthSessionPa
 	row := q.db.QueryRow(ctx, createAuthSession,
 		arg.UserID,
 		arg.RefreshTokenHash,
+		arg.IsPersistent,
 		arg.ExpiresAt,
 		arg.UserAgent,
 		arg.Ip,
@@ -137,6 +140,7 @@ func (q *Queries) CreateAuthSession(ctx context.Context, arg CreateAuthSessionPa
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.IsPersistent,
 	)
 	return i, err
 }
@@ -312,16 +316,17 @@ func (q *Queries) GetAuthSecretHash(ctx context.Context, userID pgtype.UUID) (st
 }
 
 const getAuthSessionByRefreshHash = `-- name: GetAuthSessionByRefreshHash :one
-SELECT id, user_id, expires_at, revoked_at
+SELECT id, user_id, expires_at, revoked_at, is_persistent
 FROM auth_sessions
 WHERE refresh_token_hash = $1
 `
 
 type GetAuthSessionByRefreshHashRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
-	RevokedAt pgtype.Timestamptz
+	ID           pgtype.UUID
+	UserID       pgtype.UUID
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	IsPersistent bool
 }
 
 func (q *Queries) GetAuthSessionByRefreshHash(ctx context.Context, refreshTokenHash string) (GetAuthSessionByRefreshHashRow, error) {
@@ -332,6 +337,7 @@ func (q *Queries) GetAuthSessionByRefreshHash(ctx context.Context, refreshTokenH
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.IsPersistent,
 	)
 	return i, err
 }
@@ -434,7 +440,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 }
 
 const listAuthSessionsByUser = `-- name: ListAuthSessionsByUser :many
-SELECT id, user_id, refresh_token_hash, expires_at, revoked_at, user_agent, ip, device_name, created_at, updated_at, rotated_from_session_id
+SELECT id, user_id, refresh_token_hash, expires_at, revoked_at, is_persistent, user_agent, ip, device_name, created_at, updated_at, rotated_from_session_id
 FROM auth_sessions
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -446,6 +452,7 @@ type ListAuthSessionsByUserRow struct {
 	RefreshTokenHash     string
 	ExpiresAt            pgtype.Timestamptz
 	RevokedAt            pgtype.Timestamptz
+	IsPersistent         bool
 	UserAgent            pgtype.Text
 	Ip                   pgtype.Text
 	DeviceName           pgtype.Text
@@ -469,6 +476,7 @@ func (q *Queries) ListAuthSessionsByUser(ctx context.Context, userID pgtype.UUID
 			&i.RefreshTokenHash,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.IsPersistent,
 			&i.UserAgent,
 			&i.Ip,
 			&i.DeviceName,
@@ -487,17 +495,18 @@ func (q *Queries) ListAuthSessionsByUser(ctx context.Context, userID pgtype.UUID
 }
 
 const lockAuthSessionByRefreshHash = `-- name: LockAuthSessionByRefreshHash :one
-SELECT id, user_id, expires_at, revoked_at
+SELECT id, user_id, expires_at, revoked_at, is_persistent
 FROM auth_sessions
 WHERE refresh_token_hash = $1
 FOR UPDATE
 `
 
 type LockAuthSessionByRefreshHashRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
-	RevokedAt pgtype.Timestamptz
+	ID           pgtype.UUID
+	UserID       pgtype.UUID
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	IsPersistent bool
 }
 
 func (q *Queries) LockAuthSessionByRefreshHash(ctx context.Context, refreshTokenHash string) (LockAuthSessionByRefreshHashRow, error) {
@@ -508,6 +517,7 @@ func (q *Queries) LockAuthSessionByRefreshHash(ctx context.Context, refreshToken
 		&i.UserID,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.IsPersistent,
 	)
 	return i, err
 }

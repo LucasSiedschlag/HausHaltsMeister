@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
@@ -26,7 +28,7 @@ type userResponse = dto.UserResponse
 
 type AuthService interface {
 	SignUp(ctx context.Context, email, password, displayName, userAgent, ip string) (auth.AuthResult, error)
-	Login(ctx context.Context, email, password, userAgent, ip string) (auth.AuthResult, error)
+	Login(ctx context.Context, email, password, userAgent, ip string, remember bool) (auth.AuthResult, error)
 	Refresh(ctx context.Context, refreshToken, userAgent, ip string) (auth.AuthResult, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Me(ctx context.Context, userID string) (auth.User, error)
@@ -61,7 +63,7 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 		return httpx.WriteAuthError(c, err)
 	}
 
-	h.setRefreshCookie(c, result.Tokens.RefreshToken)
+	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
 	return c.JSON(http.StatusCreated, buildAuthResponse(result))
 }
 
@@ -76,12 +78,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	result, err := h.Service.Login(c.Request().Context(), req.Email, req.Password, c.Request().UserAgent(), c.RealIP())
+	result, err := h.Service.Login(c.Request().Context(), req.Email, req.Password, c.Request().UserAgent(), c.RealIP(), req.Remember)
 	if err != nil {
 		return httpx.WriteAuthError(c, err)
 	}
 
-	h.setRefreshCookie(c, result.Tokens.RefreshToken)
+	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
 	return c.JSON(http.StatusOK, buildAuthResponse(result))
 }
 
@@ -101,7 +103,7 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		return httpx.WriteAuthError(c, err)
 	}
 
-	h.setRefreshCookie(c, result.Tokens.RefreshToken)
+	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
 	return c.JSON(http.StatusOK, buildAuthResponse(result))
 }
 
@@ -126,6 +128,10 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 	provider := c.Param("provider")
 	redirectURI := c.QueryParam("redirect_uri")
 
+	if redirectURI != "" && !isAllowedRedirect(redirectURI, h.Config.OAuthRedirectAllowlist) {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Redirect URI invalida", nil)
+	}
+
 	url, err := h.Service.StartOAuth(c.Request().Context(), provider, redirectURI)
 	if err != nil {
 		return httpx.WriteAuthError(c, err)
@@ -147,7 +153,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return httpx.WriteAuthError(c, err)
 	}
 
-	h.setRefreshCookie(c, result.Tokens.RefreshToken)
+	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
 	if redirectURI != "" {
 		return c.Redirect(http.StatusFound, redirectURI)
 	}
@@ -198,15 +204,15 @@ func (h *AuthHandler) getRefreshToken(c echo.Context) string {
 	return ""
 }
 
-func (h *AuthHandler) setRefreshCookie(c echo.Context, value string) {
+func (h *AuthHandler) setRefreshCookie(c echo.Context, value string, expiresAt time.Time) {
 	cookie := new(http.Cookie)
 	cookie.Name = h.Config.RefreshCookieName
 	cookie.Value = value
-	cookie.Path = "/auth"
+	cookie.Path = "/"
 	cookie.HttpOnly = true
 	cookie.Secure = h.Config.RefreshCookieSecure
 	cookie.SameSite = parseSameSite(h.Config.RefreshCookieSameSite)
-	cookie.Expires = time.Now().UTC().Add(h.Config.RefreshTokenTTL)
+	cookie.Expires = expiresAt
 	if h.Config.RefreshCookieDomain != "" {
 		cookie.Domain = h.Config.RefreshCookieDomain
 	}
@@ -217,7 +223,7 @@ func (h *AuthHandler) clearRefreshCookie(c echo.Context) {
 	cookie := new(http.Cookie)
 	cookie.Name = h.Config.RefreshCookieName
 	cookie.Value = ""
-	cookie.Path = "/auth"
+	cookie.Path = "/"
 	cookie.HttpOnly = true
 	cookie.Secure = h.Config.RefreshCookieSecure
 	cookie.SameSite = parseSameSite(h.Config.RefreshCookieSameSite)
@@ -237,4 +243,31 @@ func parseSameSite(value string) http.SameSite {
 	default:
 		return http.SameSiteLaxMode
 	}
+}
+
+func isAllowedRedirect(raw string, allowlist []string) bool {
+	if len(allowlist) == 0 {
+		return false
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return false
+	}
+	origin := parsed.Scheme + "://" + parsed.Host
+	for _, allowed := range allowlist {
+		allowed = strings.TrimSpace(allowed)
+		if allowed == "" {
+			continue
+		}
+		if allowed == raw || allowed == origin {
+			return true
+		}
+		allowedParsed, err := url.Parse(allowed)
+		if err == nil && allowedParsed.Scheme != "" && allowedParsed.Host != "" {
+			if allowedParsed.Scheme+"://"+allowedParsed.Host == origin {
+				return true
+			}
+		}
+	}
+	return false
 }
