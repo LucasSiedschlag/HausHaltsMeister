@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from '@shared/utils/cn'
+import { cn } from '@shared/utils'
 
 const attrs = useAttrs()
 </script>

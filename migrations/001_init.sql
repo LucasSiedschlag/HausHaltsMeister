@@ -14,6 +14,28 @@ CREATE TABLE users (
   updated_at timestamptz
 );
 
+CREATE TABLE user_preferences (
+  user_id uuid PRIMARY KEY REFERENCES users(id),
+  theme_mode varchar NOT NULL DEFAULT 'system',
+  theme_palette varchar NOT NULL DEFAULT 'default',
+  theme_tone varchar NOT NULL DEFAULT 'vivid',
+  locale varchar NOT NULL DEFAULT 'pt-BR',
+  compact_mode varchar NOT NULL DEFAULT 'comfortable',
+  font_scale varchar NOT NULL DEFAULT 'md',
+  notify_card_close boolean NOT NULL DEFAULT true,
+  notify_budget_over boolean NOT NULL DEFAULT true,
+  notify_payables boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  -- Validation: theme and locale values.
+  CONSTRAINT user_preferences_theme_mode_check CHECK (theme_mode IN ('light', 'dark', 'system')),
+  CONSTRAINT user_preferences_theme_palette_check CHECK (theme_palette IN ('default', 'red', 'rose', 'orange', 'green', 'yellow', 'violet', 'monochrome')),
+  CONSTRAINT user_preferences_theme_tone_check CHECK (theme_tone IN ('vivid', 'pastel', 'muted')),
+  CONSTRAINT user_preferences_locale_check CHECK (locale IN ('pt-BR', 'en-US')),
+  CONSTRAINT user_preferences_font_scale_check CHECK (font_scale IN ('sm', 'md', 'lg')),
+  CONSTRAINT user_preferences_compact_mode_check CHECK (compact_mode IN ('comfortable', 'compact', 'dense'))
+);
+
 -- Auth (identities, secrets, sessions, oauth states)
 CREATE TABLE auth_secrets (
   user_id uuid PRIMARY KEY REFERENCES users(id),
@@ -28,6 +50,8 @@ CREATE TABLE auth_identities (
   provider varchar NOT NULL,
   provider_user_id varchar NOT NULL,
   email varchar,
+  display_name varchar,
+  avatar_url varchar,
   email_verified boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,

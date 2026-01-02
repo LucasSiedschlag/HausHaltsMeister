@@ -39,12 +39,12 @@ WHERE user_id = $1;
 -- Auth: identities
 
 -- name: CreateAuthIdentity :one
-INSERT INTO auth_identities (user_id, provider, provider_user_id, email, email_verified, last_login_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, now(), $6)
-RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at;
+INSERT INTO auth_identities (user_id, provider, provider_user_id, email, display_name, avatar_url, email_verified, last_login_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8)
+RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at;
 
 -- name: GetAuthIdentityByProvider :one
-SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
+SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
 FROM auth_identities
 WHERE provider = $1 AND provider_user_id = $2;
 

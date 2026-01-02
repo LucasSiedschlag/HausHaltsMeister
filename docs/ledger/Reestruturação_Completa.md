@@ -223,6 +223,8 @@ Table auth_identities {
   provider         varchar [not null] // validated via CHECK in DB
   provider_user_id varchar [not null]
   email            varchar
+  display_name     varchar
+  avatar_url       varchar
   email_verified   boolean [not null, default: false]
   created_at       timestamptz [not null]
   updated_at       timestamptz
@@ -234,6 +236,23 @@ Table auth_identities {
     (user_id)
     (provider)
   }
+}
+
+Table user_preferences {
+  user_id         uuid [pk, ref: > users.id]
+  theme_mode      varchar [not null, default: system] // light|dark|system
+  theme_palette   varchar [not null, default: default]
+  theme_tone      varchar [not null, default: vivid]
+  locale          varchar [not null, default: pt-BR]
+  compact_mode    varchar [not null, default: comfortable]
+  font_scale      varchar [not null, default: md]
+
+  notify_card_close  boolean [not null, default: true]
+  notify_budget_over boolean [not null, default: true]
+  notify_payables    boolean [not null, default: true]
+
+  created_at      timestamptz [not null]
+  updated_at      timestamptz
 }
 
 Table auth_sessions {
@@ -521,6 +540,7 @@ Referência: `docs/ledger/Regras_Core_Ledger.md` e `docs/ledger/Regras_Cartão_d
 - `users`: identidade e autenticação (base do usuário).
 - `auth_secrets`: credenciais locais (senha), separadas da identidade.
 - `auth_identities`: vínculos com provedores (password, google, github).
+- `user_preferences`: preferências do usuário (tema, idioma, notificações, densidade).
 - `auth_sessions`: sessões e refresh tokens.
 - `oauth_states`: estados temporários de OAuth (PKCE + anti-CSRF).
 - `ledgers`: escopo de dados; moeda e owner.

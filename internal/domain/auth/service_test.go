@@ -40,6 +40,13 @@ func (f *fakeRepo) CreateAuthIdentity(ctx context.Context, params CreateIdentity
 	return AuthIdentity{}, nil
 }
 
+func (f *fakeRepo) UpdateAuthIdentityProfile(ctx context.Context, userID, provider, displayName, avatarURL string) error {
+	return nil
+}
+func (f *fakeRepo) GetLatestAuthIdentityForUser(ctx context.Context, userID string) (AuthIdentity, error) {
+	return AuthIdentity{}, ErrNotFound
+}
+
 func (f *fakeRepo) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	if f.userByEmail.ID == "" {
 		return User{}, ErrNotFound

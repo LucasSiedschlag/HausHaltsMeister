@@ -37,6 +37,8 @@ type AuthIdentity struct {
 	Provider       string
 	ProviderUserID string
 	Email          string
+	DisplayName    string
+	AvatarURL      string
 	EmailVerified  bool
 	LastLoginAt    *time.Time
 }

@@ -25,8 +25,13 @@ export default defineNuxtConfig({
     './layers/creditcard',
     './layers/reports'
   ],
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt'],
-  css: [join(rootDir, 'layers/shared/assets/css/tailwind.css')],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt', 'notivue/nuxt'],
+  css: [
+    join(rootDir, 'layers/shared/assets/css/tailwind.css'),
+    'notivue/notification.css',
+    'notivue/notification-progress.css',
+    'notivue/animations.css'
+  ],
   runtimeConfig: {
     public: {
       apiBase: '/api',

@@ -12,6 +12,8 @@ type Repository interface {
 	CreateUserWithPassword(ctx context.Context, email, displayName, passwordHash string) (User, error)
 	CreateUserWithIdentity(ctx context.Context, params CreateIdentityParams) (User, AuthIdentity, error)
 	CreateAuthIdentity(ctx context.Context, params CreateIdentityParams) (AuthIdentity, error)
+	UpdateAuthIdentityProfile(ctx context.Context, userID, provider, displayName, avatarURL string) error
+	GetLatestAuthIdentityForUser(ctx context.Context, userID string) (AuthIdentity, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, userID string) (User, error)
 	GetAuthSecretHash(ctx context.Context, userID string) (string, error)
@@ -187,6 +189,16 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, userAgent, ip strin
 		return AuthResult{}, ErrUserInactive
 	}
 
+	identity, err := s.repo.GetLatestAuthIdentityForUser(ctx, user.ID)
+	if err == nil {
+		if identity.DisplayName != "" {
+			user.DisplayName = identity.DisplayName
+		}
+		if identity.AvatarURL != "" {
+			user.AvatarURL = identity.AvatarURL
+		}
+	}
+
 	accessToken, expiresIn, err := GenerateAccessToken(s.jwtSecret, user.ID, session.ID, s.accessTTL)
 	if err != nil {
 		return AuthResult{}, err
@@ -308,6 +320,15 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 		if err := s.repo.UpdateAuthIdentityLogin(ctx, user.ID, provider); err != nil {
 			return AuthResult{}, err
 		}
+		if err := s.repo.UpdateAuthIdentityProfile(ctx, user.ID, provider, profile.DisplayName, profile.AvatarURL); err != nil {
+			return AuthResult{}, err
+		}
+		if profile.DisplayName != "" {
+			user.DisplayName = profile.DisplayName
+		}
+		if profile.AvatarURL != "" {
+			user.AvatarURL = profile.AvatarURL
+		}
 		return s.createSession(ctx, user, userAgent, ip, nil, true)
 	}
 
@@ -339,9 +360,17 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 			ProviderUserID: profile.ProviderUserID,
 			Email:          userEmail,
 			EmailVerified:  verified,
+			DisplayName:    profile.DisplayName,
+			AvatarURL:      profile.AvatarURL,
 		})
 		if err != nil {
 			return AuthResult{}, err
+		}
+		if profile.DisplayName != "" {
+			user.DisplayName = profile.DisplayName
+		}
+		if profile.AvatarURL != "" {
+			user.AvatarURL = profile.AvatarURL
 		}
 
 		return s.createSession(ctx, user, userAgent, ip, nil, true)

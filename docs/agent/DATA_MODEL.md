@@ -11,6 +11,7 @@ users ──┐
         ├─ auth_secrets
         ├─ auth_identities
         ├─ auth_sessions
+        ├─ user_preferences
         └─ ledgers ── ledger_members
                 ├─ accounts ── credit_cards ── credit_card_statements
                 │                 └─ installment_plans ── installments
@@ -31,6 +32,7 @@ oauth_states (standalone, short-lived)
 - `users`: identity profile (email, display_name, avatar_url, email_verified_at, is_active).
 - `auth_secrets`: password hash for local login.
 - `auth_identities`: provider bindings (password/google/github), unique per provider user.
+- `user_preferences`: user-level settings (theme, locale, density, notifications).
 - `auth_sessions`: refresh token sessions (revocation + rotation).
 - `oauth_states`: PKCE state store for OAuth (short-lived).
 
@@ -101,4 +103,3 @@ Seeded per ledger (from `migrations/002_seed_technical_categories.sql`):
 - Resgate Investimentos (OUT, `is_budget_relevant=false`)
 - Entrada Resgate (Investimentos) (IN, `is_budget_base=false`)
 - Rendimentos (IN, `is_budget_base=false`)
-

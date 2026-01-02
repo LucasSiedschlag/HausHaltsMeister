@@ -40,6 +40,12 @@ func (o *oauthRepo) CreateUserWithIdentity(ctx context.Context, params CreateIde
 func (o *oauthRepo) CreateAuthIdentity(ctx context.Context, params CreateIdentityParams) (AuthIdentity, error) {
 	return AuthIdentity{}, ErrNotFound
 }
+func (o *oauthRepo) UpdateAuthIdentityProfile(ctx context.Context, userID, provider, displayName, avatarURL string) error {
+	return nil
+}
+func (o *oauthRepo) GetLatestAuthIdentityForUser(ctx context.Context, userID string) (AuthIdentity, error) {
+	return AuthIdentity{}, ErrNotFound
+}
 func (o *oauthRepo) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	return User{}, ErrNotFound
 }

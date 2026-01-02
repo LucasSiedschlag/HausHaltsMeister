@@ -20,6 +20,7 @@ import (
 	pginvestments "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/investments"
 	pgjournal "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/journal"
 	pgledger "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/ledger"
+	pgpreferences "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/preferences"
 	pgreports "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/reports"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/config"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/accounts"
@@ -30,6 +31,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/investments"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/preferences"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/reports"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
@@ -102,6 +104,7 @@ func main() {
 	budgetRepo := pgbudget.NewRepository(store)
 	investmentsRepo := pginvestments.NewRepository(store)
 	creditCardRepo := pgcreditcard.NewRepository(store)
+	preferencesRepo := pgpreferences.NewRepository(store)
 	reportsRepo := pgreports.NewRepository(store)
 
 	authService := auth.NewService(authRepo, auth.ServiceConfig{
@@ -118,6 +121,7 @@ func main() {
 	budgetService := budget.NewService(budgetRepo)
 	investmentsService := investments.NewService(investmentsRepo)
 	creditCardService := creditcard.NewService(creditCardRepo)
+	preferencesService := preferences.NewService(preferencesRepo)
 	reportsService := reports.NewService(reportsRepo)
 
 	authHandler := &handlers.AuthHandler{
@@ -177,6 +181,12 @@ func main() {
 	}
 	reportsGroup := e.Group("/ledgers/:ledgerId/reports", middleware.RequireAuth(authService))
 	reportsHandler.Register(reportsGroup)
+
+	preferencesHandler := &handlers.PreferencesHandler{
+		Service: preferencesService,
+	}
+	meGroup := e.Group("/me", middleware.RequireAuth(authService))
+	preferencesHandler.Register(meGroup)
 
 	startServer(e, cfg.HTTPAddr)
 }

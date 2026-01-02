@@ -95,10 +95,10 @@ func (r *Repository) CreateUserWithIdentity(ctx context.Context, params auth.Cre
 		}
 
 		row = tx.QueryRow(ctx, `
-			INSERT INTO auth_identities (user_id, provider, provider_user_id, email, email_verified, last_login_at)
-			VALUES ($1, $2, $3, $4, $5, now())
-			RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
-		`, user.ID, params.Provider, params.ProviderUserID, params.Email, params.EmailVerified)
+			INSERT INTO auth_identities (user_id, provider, provider_user_id, email, display_name, avatar_url, email_verified, last_login_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+			RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
+		`, user.ID, params.Provider, params.ProviderUserID, params.Email, params.DisplayName, params.AvatarURL, params.EmailVerified)
 		if err := scanIdentity(row, &identity); err != nil {
 			return err
 		}
@@ -132,10 +132,10 @@ func (r *Repository) CreateUserWithIdentity(ctx context.Context, params auth.Cre
 func (r *Repository) CreateAuthIdentity(ctx context.Context, params auth.CreateIdentityParams) (auth.AuthIdentity, error) {
 	var identity auth.AuthIdentity
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO auth_identities (user_id, provider, provider_user_id, email, email_verified, last_login_at)
-		VALUES ($1, $2, $3, $4, $5, now())
-		RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
-	`, params.UserID, params.Provider, params.ProviderUserID, params.Email, params.EmailVerified)
+		INSERT INTO auth_identities (user_id, provider, provider_user_id, email, display_name, avatar_url, email_verified, last_login_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+		RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
+	`, params.UserID, params.Provider, params.ProviderUserID, params.Email, params.DisplayName, params.AvatarURL, params.EmailVerified)
 	if err := scanIdentity(row, &identity); err != nil {
 		return auth.AuthIdentity{}, err
 	}
@@ -149,6 +149,32 @@ func (r *Repository) UpdateAuthIdentityLogin(ctx context.Context, userID, provid
 		WHERE user_id = $1 AND provider = $2
 	`, userID, provider)
 	return err
+}
+
+func (r *Repository) UpdateAuthIdentityProfile(ctx context.Context, userID, provider, displayName, avatarURL string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE auth_identities
+		SET display_name = CASE WHEN $3 <> '' THEN $3 ELSE display_name END,
+		    avatar_url = CASE WHEN $4 <> '' THEN $4 ELSE avatar_url END,
+		    updated_at = now()
+		WHERE user_id = $1 AND provider = $2
+	`, userID, provider, displayName, avatarURL)
+	return err
+}
+
+func (r *Repository) GetLatestAuthIdentityForUser(ctx context.Context, userID string) (auth.AuthIdentity, error) {
+	var identity auth.AuthIdentity
+	row := r.pool.QueryRow(ctx, `
+		SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
+		FROM auth_identities
+		WHERE user_id = $1
+		ORDER BY last_login_at DESC NULLS LAST, created_at DESC
+		LIMIT 1
+	`, userID)
+	if err := scanIdentity(row, &identity); err != nil {
+		return auth.AuthIdentity{}, err
+	}
+	return identity, nil
 }
 
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (auth.User, error) {
@@ -332,7 +358,7 @@ func (r *Repository) MarkOAuthStateUsed(ctx context.Context, stateID string) err
 func (r *Repository) GetAuthIdentityByProvider(ctx context.Context, provider, providerUserID string) (auth.AuthIdentity, error) {
 	var identity auth.AuthIdentity
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
+		SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
 		FROM auth_identities
 		WHERE provider = $1 AND provider_user_id = $2
 	`, provider, providerUserID)
@@ -402,6 +428,8 @@ func scanIdentity(row pgx.Row, identity *auth.AuthIdentity) error {
 		&identity.Provider,
 		&identity.ProviderUserID,
 		&identity.Email,
+		&identity.DisplayName,
+		&identity.AvatarURL,
 		&identity.EmailVerified,
 		&identity.LastLoginAt,
 	); err != nil {

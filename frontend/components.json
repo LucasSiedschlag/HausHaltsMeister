@@ -1,0 +1,14 @@
+{
+  "$schema": "https://shadcn-vue.com/schema.json",
+  "style": "default",
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "layers/shared/assets/css/tailwind.css",
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@shared/components",
+    "utils": "@shared/utils"
+  }
+}

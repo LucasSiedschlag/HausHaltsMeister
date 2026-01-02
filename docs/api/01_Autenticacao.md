@@ -31,6 +31,8 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
 | GET | /auth/providers | Providers ativos (opcional) | Sim | viewer |
 | POST | /auth/link/{provider}/start | Linkar provider (opcional) | Sim | viewer |
 | POST | /auth/unlink/{provider} | Desvincular provider (opcional) | Sim | viewer |
+| GET | /me/preferences | Preferencias do usuario | Sim | viewer |
+| PUT | /me/preferences | Atualizar preferencias do usuario | Sim | viewer |
 
 ---
 
@@ -130,6 +132,71 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
 - Campo `remember` controla a duracao da sessao de refresh (curta vs longa).
 
 ---
+
+### GET /me/preferences
+1) Summary / Purpose
+- Retorna preferencias do usuario autenticado.
+
+2) Auth & Authorization
+- Token: sim.
+- Role: viewer.
+
+3) Request
+- Headers: `Authorization: Bearer <token>`.
+
+4) Response
+- 200
+```json
+{
+  "user_id": "uuid",
+  "theme_mode": "system",
+  "theme_palette": "default",
+  "theme_tone": "vivid",
+  "locale": "pt-BR",
+  "compact_mode": "comfortable",
+  "font_scale": "md",
+  "notify_card_close": true,
+  "notify_budget_over": true,
+  "notify_payables": true
+}
+```
+
+5) Errors
+- 401 `AUTH_INVALID_CREDENTIALS`
+- 500 `INTERNAL_SERVER_ERROR`
+
+---
+
+### PUT /me/preferences
+1) Summary / Purpose
+- Atualiza preferencias do usuario autenticado.
+
+2) Auth & Authorization
+- Token: sim.
+- Role: viewer.
+
+3) Request
+- Body (campos opcionais):
+```json
+{
+  "theme_mode": "dark",
+  "theme_palette": "green",
+  "theme_tone": "pastel",
+  "locale": "en-US",
+  "compact_mode": "compact",
+  "font_scale": "lg",
+  "notify_card_close": false,
+  "notify_budget_over": true,
+  "notify_payables": true
+}
+```
+
+4) Response
+- 200 (mesmo formato do GET)
+
+5) Errors
+- 401 `AUTH_INVALID_CREDENTIALS`
+- 422 `VALIDATION_ERROR`
 
 ### GET /auth/oauth/{provider}/start (Frontend)
 1) Summary / Purpose

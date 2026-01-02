@@ -24,6 +24,8 @@ tags:
     description: Credit card lifecycle and statements
   - name: Relatorios
     description: Aggregated reporting endpoints
+  - name: Preferences
+    description: User preferences
 security:
   - BearerAuth: []
 paths:
@@ -101,6 +103,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+  /me/preferences:
+    get:
+      tags: [Preferences]
+      summary: Get user preferences
+      responses:
+        '200':
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+    put:
+      tags: [Preferences]
+      summary: Update user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /auth/oauth/{provider}/start:
     get:
       tags: [Auth]
@@ -1414,6 +1445,73 @@ components:
           type: string
         display_name:
           type: string
+        avatar_url:
+          type: string
+        email_verified_at:
+          type: string
+          format: date-time
+    UserPreferences:
+      type: object
+      properties:
+        user_id:
+          type: string
+        theme_mode:
+          type: string
+          enum: [light, dark, system]
+        theme_palette:
+          type: string
+          enum: [default, red, rose, orange, green, yellow, violet, monochrome]
+        theme_tone:
+          type: string
+          enum: [vivid, pastel, muted]
+        locale:
+          type: string
+          enum: [pt-BR, en-US]
+        compact_mode:
+          type: string
+          enum: [comfortable, compact, dense]
+        font_scale:
+          type: string
+          enum: [sm, md, lg]
+        notify_card_close:
+          type: boolean
+        notify_budget_over:
+          type: boolean
+        notify_payables:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UserPreferencesUpdate:
+      type: object
+      properties:
+        theme_mode:
+          type: string
+          enum: [light, dark, system]
+        theme_palette:
+          type: string
+          enum: [default, red, rose, orange, green, yellow, violet, monochrome]
+        theme_tone:
+          type: string
+          enum: [vivid, pastel, muted]
+        locale:
+          type: string
+          enum: [pt-BR, en-US]
+        compact_mode:
+          type: string
+          enum: [comfortable, compact, dense]
+        font_scale:
+          type: string
+          enum: [sm, md, lg]
+        notify_card_close:
+          type: boolean
+        notify_budget_over:
+          type: boolean
+        notify_payables:
+          type: boolean
     Ledger:
       type: object
       properties:
