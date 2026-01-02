@@ -21,6 +21,20 @@ type AuthSession struct {
 	IsPersistent bool
 }
 
+type AuthSessionDetails struct {
+	ID                 string
+	UserID             string
+	ExpiresAt          time.Time
+	RevokedAt          *time.Time
+	IsPersistent       bool
+	UserAgent          string
+	IP                 string
+	DeviceName         string
+	CreatedAt          time.Time
+	UpdatedAt          *time.Time
+	RotatedFromSession *string
+}
+
 type OAuthState struct {
 	ID          string
 	Provider    string

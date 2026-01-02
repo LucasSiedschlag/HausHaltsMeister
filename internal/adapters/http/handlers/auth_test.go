@@ -35,6 +35,18 @@ func (f fakeAuthService) Logout(ctx context.Context, refreshToken string) error 
 	return nil
 }
 
+func (f fakeAuthService) ListSessions(ctx context.Context, userID string) ([]auth.AuthSessionDetails, error) {
+	return []auth.AuthSessionDetails{}, nil
+}
+
+func (f fakeAuthService) RevokeSession(ctx context.Context, userID, sessionID string) error {
+	return nil
+}
+
+func (f fakeAuthService) LogoutAll(ctx context.Context, userID string) error {
+	return nil
+}
+
 func (f fakeAuthService) Me(ctx context.Context, userID string) (auth.User, error) {
 	return auth.User{}, nil
 }

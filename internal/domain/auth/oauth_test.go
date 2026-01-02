@@ -67,6 +67,15 @@ func (o *oauthRepo) RotateAuthSession(ctx context.Context, params RotateSessionP
 func (o *oauthRepo) RevokeAuthSession(ctx context.Context, refreshTokenHash string) error {
 	return ErrNotFound
 }
+func (o *oauthRepo) ListAuthSessionsByUser(ctx context.Context, userID string) ([]AuthSessionDetails, error) {
+	return []AuthSessionDetails{}, nil
+}
+func (o *oauthRepo) RevokeAuthSessionByID(ctx context.Context, userID, sessionID string) error {
+	return ErrNotFound
+}
+func (o *oauthRepo) RevokeAllAuthSessionsForUser(ctx context.Context, userID string) error {
+	return nil
+}
 func (o *oauthRepo) CreateOAuthState(ctx context.Context, provider, state, codeVerifier, redirectURI string) (OAuthState, error) {
 	return OAuthState{}, ErrNotFound
 }

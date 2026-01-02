@@ -58,6 +58,7 @@ func main() {
 	}
 
 	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
+	refreshLimiter := middleware.NewRateLimiter(60, 10*time.Minute)
 	metrics := middleware.NewMetrics()
 
 	e := echo.New()
@@ -125,9 +126,10 @@ func main() {
 	reportsService := reports.NewService(reportsRepo)
 
 	authHandler := &handlers.AuthHandler{
-		Service:     authService,
-		Config:      cfg,
-		RateLimiter: ratelimiter,
+		Service:        authService,
+		Config:         cfg,
+		RateLimiter:    ratelimiter,
+		RefreshLimiter: refreshLimiter,
 	}
 	group := e.Group("/auth")
 	authHandler.Register(group)

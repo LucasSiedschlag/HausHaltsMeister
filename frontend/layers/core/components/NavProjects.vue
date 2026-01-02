@@ -6,6 +6,7 @@ type NavItem = {
   title: string
   url: string
   icon: Component
+  isActive?: boolean
 }
 
 defineProps<{
@@ -16,7 +17,7 @@ defineProps<{
 <template>
   <SidebarMenu>
     <SidebarMenuItem v-for="item in items" :key="item.url">
-      <SidebarMenuButton as-child :tooltip="item.title">
+      <SidebarMenuButton as-child :is-active="item.isActive" :tooltip="item.title">
         <NuxtLink :to="item.url">
           <component :is="item.icon" />
           <span>{{ item.title }}</span>

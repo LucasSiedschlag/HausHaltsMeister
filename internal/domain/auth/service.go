@@ -21,6 +21,9 @@ type Repository interface {
 	GetAuthSessionByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (AuthSession, error)
 	RotateAuthSession(ctx context.Context, params RotateSessionParams) (AuthSession, User, error)
 	RevokeAuthSession(ctx context.Context, refreshTokenHash string) error
+	ListAuthSessionsByUser(ctx context.Context, userID string) ([]AuthSessionDetails, error)
+	RevokeAuthSessionByID(ctx context.Context, userID, sessionID string) error
+	RevokeAllAuthSessionsForUser(ctx context.Context, userID string) error
 	CreateOAuthState(ctx context.Context, provider, state, codeVerifier, redirectURI string) (OAuthState, error)
 	GetOAuthState(ctx context.Context, state string) (OAuthState, error)
 	MarkOAuthStateUsed(ctx context.Context, stateID string) error
@@ -241,6 +244,22 @@ func (s *Service) Me(ctx context.Context, userID string) (User, error) {
 		return User{}, ErrUserInactive
 	}
 	return user, nil
+}
+
+func (s *Service) ListSessions(ctx context.Context, userID string) ([]AuthSessionDetails, error) {
+	return s.repo.ListAuthSessionsByUser(ctx, userID)
+}
+
+func (s *Service) RevokeSession(ctx context.Context, userID, sessionID string) error {
+	err := s.repo.RevokeAuthSessionByID(ctx, userID, sessionID)
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	return err
+}
+
+func (s *Service) LogoutAll(ctx context.Context, userID string) error {
+	return s.repo.RevokeAllAuthSessionsForUser(ctx, userID)
 }
 
 func (s *Service) StartOAuth(ctx context.Context, provider, redirectURI string) (string, error) {

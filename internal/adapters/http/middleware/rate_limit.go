@@ -43,3 +43,9 @@ func (r *RateLimiter) Allow(key string) (bool, time.Duration) {
 	bucket.count++
 	return true, 0
 }
+
+func (r *RateLimiter) Reset(key string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.keys, key)
+}

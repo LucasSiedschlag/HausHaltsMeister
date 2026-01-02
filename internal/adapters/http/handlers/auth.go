@@ -17,9 +17,10 @@ import (
 )
 
 type AuthHandler struct {
-	Service     AuthService
-	Config      config.Config
-	RateLimiter *middleware.RateLimiter
+	Service        AuthService
+	Config         config.Config
+	RateLimiter    *middleware.RateLimiter
+	RefreshLimiter *middleware.RateLimiter
 }
 
 type authRequest = dto.AuthRequest
@@ -31,6 +32,9 @@ type AuthService interface {
 	Login(ctx context.Context, email, password, userAgent, ip string, remember bool) (auth.AuthResult, error)
 	Refresh(ctx context.Context, refreshToken, userAgent, ip string) (auth.AuthResult, error)
 	Logout(ctx context.Context, refreshToken string) error
+	ListSessions(ctx context.Context, userID string) ([]auth.AuthSessionDetails, error)
+	RevokeSession(ctx context.Context, userID, sessionID string) error
+	LogoutAll(ctx context.Context, userID string) error
 	Me(ctx context.Context, userID string) (auth.User, error)
 	StartOAuth(ctx context.Context, provider, redirectURI string) (string, error)
 	HandleOAuthCallback(ctx context.Context, provider, code, state, userAgent, ip string) (auth.AuthResult, string, error)
@@ -43,16 +47,14 @@ func (h *AuthHandler) Register(g *echo.Group) {
 	g.POST("/refresh", h.Refresh)
 	g.POST("/logout", h.Logout)
 	g.GET("/me", h.Me, middleware.RequireAuth(h.Service))
+	g.GET("/sessions", h.ListSessions, middleware.RequireAuth(h.Service))
+	g.DELETE("/sessions/:sessionId", h.RevokeSession, middleware.RequireAuth(h.Service))
+	g.POST("/logout-all", h.LogoutAll, middleware.RequireAuth(h.Service))
 	g.GET("/oauth/:provider/start", h.OAuthStart)
 	g.GET("/oauth/:provider/callback", h.OAuthCallback)
 }
 
 func (h *AuthHandler) SignUp(c echo.Context) error {
-	allowed, retryAfter := h.allow(c, "signup")
-	if !allowed {
-		return rateLimitError(c, retryAfter)
-	}
-
 	var req authRequest
 	if err := c.Bind(&req); err != nil {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
@@ -60,7 +62,18 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	result, err := h.Service.SignUp(c.Request().Context(), req.Email, req.Password, req.DisplayName, c.Request().UserAgent(), c.RealIP())
 	if err != nil {
+		if authErr, ok := err.(*auth.Error); ok && authErr.Code() == "VALIDATION_ERROR" {
+			key := strings.ToLower(strings.TrimSpace(req.Email))
+			allowed, retryAfter := h.allow(c, "signup:"+key)
+			if !allowed {
+				return rateLimitError(c, retryAfter)
+			}
+		}
 		return httpx.WriteAuthError(c, err)
+	}
+	if h.RateLimiter != nil {
+		key := strings.ToLower(strings.TrimSpace(req.Email))
+		h.RateLimiter.Reset(c.RealIP() + ":signup:" + key)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
@@ -68,11 +81,6 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
-	allowed, retryAfter := h.allow(c, "login")
-	if !allowed {
-		return rateLimitError(c, retryAfter)
-	}
-
 	var req authRequest
 	if err := c.Bind(&req); err != nil {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
@@ -80,7 +88,18 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	result, err := h.Service.Login(c.Request().Context(), req.Email, req.Password, c.Request().UserAgent(), c.RealIP(), req.Remember)
 	if err != nil {
+		if authErr, ok := err.(*auth.Error); ok && authErr.Code() == "AUTH_INVALID_CREDENTIALS" {
+			key := strings.ToLower(strings.TrimSpace(req.Email))
+			allowed, retryAfter := h.allow(c, "login:"+key)
+			if !allowed {
+				return rateLimitError(c, retryAfter)
+			}
+		}
 		return httpx.WriteAuthError(c, err)
+	}
+	if h.RateLimiter != nil {
+		key := strings.ToLower(strings.TrimSpace(req.Email))
+		h.RateLimiter.Reset(c.RealIP() + ":login:" + key)
 	}
 
 	h.setRefreshCookie(c, result.Tokens.RefreshToken, result.Session.ExpiresAt)
@@ -88,11 +107,6 @@ func (h *AuthHandler) Login(c echo.Context) error {
 }
 
 func (h *AuthHandler) Refresh(c echo.Context) error {
-	allowed, retryAfter := h.allow(c, "refresh")
-	if !allowed {
-		return rateLimitError(c, retryAfter)
-	}
-
 	refreshToken := h.getRefreshToken(c)
 	if refreshToken == "" {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_REFRESH_REVOKED", "Refresh token revogado", nil)
@@ -122,6 +136,73 @@ func (h *AuthHandler) Me(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	return c.JSON(http.StatusOK, userResponseFrom(user))
+}
+
+func (h *AuthHandler) ListSessions(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+
+	currentSessionID := ""
+	authHeader := c.Request().Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		claims, err := h.Service.ParseAccessToken(strings.TrimPrefix(authHeader, "Bearer "))
+		if err == nil {
+			currentSessionID = claims.Sid
+		}
+	}
+
+	sessions, err := h.Service.ListSessions(c.Request().Context(), user.ID)
+	if err != nil {
+		return httpx.WriteError(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Erro interno", nil)
+	}
+
+	resp := make([]dto.AuthSessionResponse, 0, len(sessions))
+	for _, session := range sessions {
+		resp = append(resp, dto.AuthSessionResponse{
+			ID:         session.ID,
+			CreatedAt:  session.CreatedAt,
+			ExpiresAt:  session.ExpiresAt,
+			UserAgent:  session.UserAgent,
+			IP:         session.IP,
+			DeviceName: session.DeviceName,
+			IsCurrent:  session.ID == currentSessionID,
+		})
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (h *AuthHandler) RevokeSession(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Session invalida", nil)
+	}
+
+	if err := h.Service.RevokeSession(c.Request().Context(), user.ID, sessionID); err != nil {
+		return httpx.WriteError(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Erro interno", nil)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *AuthHandler) LogoutAll(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+
+	if err := h.Service.LogoutAll(c.Request().Context(), user.ID); err != nil {
+		return httpx.WriteError(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Erro interno", nil)
+	}
+	h.clearRefreshCookie(c)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *AuthHandler) OAuthStart(c echo.Context) error {
@@ -161,11 +242,15 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 }
 
 func (h *AuthHandler) allow(c echo.Context, action string) (bool, time.Duration) {
-	if h.RateLimiter == nil {
+	limiter := h.RateLimiter
+	if action == "refresh" && h.RefreshLimiter != nil {
+		limiter = h.RefreshLimiter
+	}
+	if limiter == nil {
 		return true, 0
 	}
 	key := c.RealIP() + ":" + action
-	allowed, retryAfter := h.RateLimiter.Allow(key)
+	allowed, retryAfter := limiter.Allow(key)
 	return allowed, retryAfter
 }
 

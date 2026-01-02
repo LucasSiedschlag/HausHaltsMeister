@@ -12,7 +12,8 @@ import { push } from 'notivue'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { useDebounceFn } from '@vueuse/core'
 
-const { user } = useAuth()
+const { user, listSessions, revokeSession, logoutAll, logout, clearSession } = useAuth()
+const router = useRouter()
 const { preferences, fetchPreferences, updatePreferences } = usePreferences()
 
 const savingSection = ref<'account' | 'notifications' | 'visual' | null>(null)
@@ -35,6 +36,43 @@ const lastSavedVisual = reactive({
   font_scale: 'md',
   theme_palette: 'default',
   theme_tone: 'vivid'
+})
+
+const activeTab = ref('conta')
+const sessions = ref<Array<{
+  id: string
+  created_at: string
+  expires_at: string
+  user_agent?: string
+  ip?: string
+  device_name?: string
+  is_current?: boolean
+}>>([])
+const sessionsLoading = ref(false)
+
+const formatSessionDate = (value: string) => {
+  if (!value) return ''
+  return new Date(value).toLocaleString('pt-BR')
+}
+
+const sessionDeviceKey = (session: {
+  user_agent?: string
+  device_name?: string
+  ip?: string
+}) => {
+  return session.device_name || session.user_agent || session.ip || 'unknown'
+}
+
+const latestSessionsByDevice = computed(() => {
+  const seen = new Set<string>()
+  const items: typeof sessions.value = []
+  for (const session of sessions.value) {
+    const key = sessionDeviceKey(session)
+    if (seen.has(key)) continue
+    seen.add(key)
+    items.push(session)
+  }
+  return items
 })
 
 const form = reactive({
@@ -219,6 +257,47 @@ onMounted(async () => {
   await nextTick()
   isHydrating.value = false
 })
+
+const loadSessions = async () => {
+  if (sessionsLoading.value) return
+  sessionsLoading.value = true
+  try {
+    sessions.value = await listSessions()
+  } catch {
+    push.error({
+      title: 'Sessões',
+      message: 'Não foi possível carregar as sessões.'
+    })
+  } finally {
+    sessionsLoading.value = false
+  }
+}
+
+const handleRevokeSession = async (sessionId: string, isCurrent?: boolean) => {
+  if (isCurrent) {
+    try {
+      await logout()
+    } catch {
+      clearSession()
+    }
+    await router.push('/auth/login')
+    return
+  }
+  await revokeSession(sessionId)
+  await loadSessions()
+}
+
+const handleLogoutAll = async () => {
+  await logoutAll()
+  clearSession()
+  await router.push('/auth/login')
+}
+
+watch(activeTab, async (value) => {
+  if (value === 'seguranca' && sessions.value.length === 0) {
+    await loadSessions()
+  }
+})
 </script>
 
 <template>
@@ -230,7 +309,7 @@ onMounted(async () => {
       </p>
     </section>
 
-    <Tabs default-value="conta" class="space-y-6">
+    <Tabs v-model="activeTab" class="space-y-6">
       <TabsList class="flex w-full flex-wrap justify-start gap-2">
         <TabsTrigger value="conta">Conta</TabsTrigger>
         <TabsTrigger value="seguranca">Segurança</TabsTrigger>
@@ -325,7 +404,7 @@ onMounted(async () => {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction>Encerrar</AlertDialogAction>
+                  <AlertDialogAction @click="handleLogoutAll">Encerrar</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -339,19 +418,35 @@ onMounted(async () => {
             <CardDescription>Dispositivos conectados recentemente.</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3 text-sm">
-            <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
-              <div>
-                <p class="font-medium">MacBook Pro</p>
-                <p class="text-xs text-muted-foreground">Último acesso: agora</p>
-              </div>
-              <Button variant="ghost" size="sm">Sair</Button>
+            <div v-if="sessionsLoading" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
+              Carregando sessões...
             </div>
-            <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
+            <div v-else-if="latestSessionsByDevice.length === 0" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
+              Nenhuma sessão ativa.
+            </div>
+            <div
+              v-for="session in latestSessionsByDevice"
+              :key="session.id"
+              class="flex items-center justify-between rounded-lg border border-border/60 p-3"
+            >
               <div>
-                <p class="font-medium">iPhone</p>
-                <p class="text-xs text-muted-foreground">Último acesso: ontem</p>
+                <p class="font-medium">
+                  {{ session.device_name || session.user_agent || 'Sessão' }}
+                  <span v-if="session.is_current" class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                    Atual
+                  </span>
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  Início: {{ formatSessionDate(session.created_at) }}
+                </p>
               </div>
-              <Button variant="ghost" size="sm">Sair</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="handleRevokeSession(session.id, session.is_current)"
+              >
+                Sair
+              </Button>
             </div>
           </CardContent>
         </Card>

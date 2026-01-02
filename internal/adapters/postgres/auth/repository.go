@@ -320,6 +320,68 @@ func (r *Repository) RevokeAuthSession(ctx context.Context, refreshTokenHash str
 	return nil
 }
 
+func (r *Repository) ListAuthSessionsByUser(ctx context.Context, userID string) ([]auth.AuthSessionDetails, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, user_id, expires_at, revoked_at, is_persistent, COALESCE(user_agent, ''), COALESCE(ip, ''), COALESCE(device_name, ''), created_at, updated_at, rotated_from_session_id
+		FROM auth_sessions
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+		ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []auth.AuthSessionDetails
+	for rows.Next() {
+		var session auth.AuthSessionDetails
+		if err := rows.Scan(
+			&session.ID,
+			&session.UserID,
+			&session.ExpiresAt,
+			&session.RevokedAt,
+			&session.IsPersistent,
+			&session.UserAgent,
+			&session.IP,
+			&session.DeviceName,
+			&session.CreatedAt,
+			&session.UpdatedAt,
+			&session.RotatedFromSession,
+		); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+func (r *Repository) RevokeAuthSessionByID(ctx context.Context, userID, sessionID string) error {
+	cmd, err := r.pool.Exec(ctx, `
+		UPDATE auth_sessions
+		SET revoked_at = now(), updated_at = now()
+		WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+	`, sessionID, userID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return auth.ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repository) RevokeAllAuthSessionsForUser(ctx context.Context, userID string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE auth_sessions
+		SET revoked_at = now(), updated_at = now()
+		WHERE user_id = $1 AND revoked_at IS NULL
+	`, userID)
+	return err
+}
+
 func (r *Repository) CreateOAuthState(ctx context.Context, provider, state, codeVerifier, redirectURI string) (auth.OAuthState, error) {
 	var saved auth.OAuthState
 	row := r.pool.QueryRow(ctx, `

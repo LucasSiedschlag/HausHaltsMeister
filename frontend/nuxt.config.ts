@@ -35,7 +35,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: '/api',
-      oauthBase: process.env.NUXT_PUBLIC_OAUTH_BASE_URL || ''
+      oauthBase: process.env.NUXT_PUBLIC_OAUTH_BASE_URL || '',
+      refreshCookieName: process.env.NUXT_PUBLIC_REFRESH_COOKIE_NAME || 'hhm_refresh'
     }
   },
   nitro: {

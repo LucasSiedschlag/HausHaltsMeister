@@ -93,6 +93,18 @@ func (f *fakeRepo) RevokeAuthSession(ctx context.Context, refreshTokenHash strin
 	return nil
 }
 
+func (f *fakeRepo) ListAuthSessionsByUser(ctx context.Context, userID string) ([]AuthSessionDetails, error) {
+	return []AuthSessionDetails{}, nil
+}
+
+func (f *fakeRepo) RevokeAuthSessionByID(ctx context.Context, userID, sessionID string) error {
+	return nil
+}
+
+func (f *fakeRepo) RevokeAllAuthSessionsForUser(ctx context.Context, userID string) error {
+	return nil
+}
+
 func (f *fakeRepo) CreateOAuthState(ctx context.Context, provider, state, codeVerifier, redirectURI string) (OAuthState, error) {
 	return OAuthState{}, nil
 }

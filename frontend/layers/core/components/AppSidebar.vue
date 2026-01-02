@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   Sidebar,
   SidebarContent,
@@ -13,12 +14,22 @@ import {
   SidebarRail
 } from '@shared/components/ui/sidebar'
 import { Calendar, CreditCard, LayoutDashboard, LineChart, Send, Settings, Tag, Wallet } from 'lucide-vue-next'
+import { useRoute } from '#imports'
 import NavMain from './NavMain.vue'
 import NavProjects from './NavProjects.vue'
 import NavSecondary from './NavSecondary.vue'
 import NavUser from './NavUser.vue'
 
-const navMain = [
+const route = useRoute()
+
+const isActiveRoute = (url: string) => {
+  if (url === '/') {
+    return route.path === '/'
+  }
+  return route.path.startsWith(url)
+}
+
+const navMainItems = [
   { title: 'Visão geral', url: '/', icon: LayoutDashboard },
   { title: 'Transações', url: '/journal', icon: Wallet },
   { title: 'Contas', url: '/accounts', icon: Calendar },
@@ -27,15 +38,25 @@ const navMain = [
   { title: 'Investimentos', url: '/investments', icon: Wallet }
 ]
 
-const navProjects = [
+const navProjectsItems = [
   { title: 'Ledger principal', url: '/ledgers/current', icon: Tag },
   { title: 'Relatórios', url: '/reports', icon: LineChart }
 ]
 
-const navSecondary = [
+const navSecondaryItems = [
   { title: 'Categorias', url: '/categories', icon: Tag },
   { title: 'Configurações', url: '/settings', icon: Settings }
 ]
+
+const navMain = computed(() =>
+  navMainItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+)
+const navProjects = computed(() =>
+  navProjectsItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+)
+const navSecondary = computed(() =>
+  navSecondaryItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+)
 </script>
 
 <template>

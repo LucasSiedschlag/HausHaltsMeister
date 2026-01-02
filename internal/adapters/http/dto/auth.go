@@ -23,3 +23,13 @@ type UserResponse struct {
 	AvatarURL       string     `json:"avatar_url,omitempty"`
 	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 }
+
+type AuthSessionResponse struct {
+	ID         string    `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	UserAgent  string    `json:"user_agent,omitempty"`
+	IP         string    `json:"ip,omitempty"`
+	DeviceName string    `json:"device_name,omitempty"`
+	IsCurrent  bool      `json:"is_current"`
+}
