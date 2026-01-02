@@ -56,6 +56,7 @@ export const usePreferences = () => {
   const preferences = useState<UserPreferences | null>('user_preferences', () => null)
   const isLoading = useState<boolean>('preferences_loading', () => false)
   const isSaving = useState<boolean>('preferences_saving', () => false)
+  const preferencesNeeded = useState<boolean>('preferences_needed', () => false)
   const api = useApiClient()
   const { accessToken, refresh } = useAuth()
   const colorMode = useColorMode()
@@ -120,6 +121,15 @@ export const usePreferences = () => {
       }
     },
     { immediate: true }
+  )
+
+  watch(
+    () => preferencesNeeded.value,
+    async (needed) => {
+      if (!needed || preferences.value) return
+      preferencesNeeded.value = false
+      await fetchPreferences()
+    }
   )
 
   watch(

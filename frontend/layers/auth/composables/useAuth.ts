@@ -60,6 +60,7 @@ export const useAuth = () => {
   const sessionExpired = useState<boolean>('auth_session_expired', () => false)
   const api = useApiClient()
   const { track } = useAnalytics()
+  const preferencesNeeded = useState<boolean>('preferences_needed', () => false)
   const router = useRouter()
 
   const clearExpiryTimer = () => {
@@ -148,6 +149,7 @@ export const useAuth = () => {
     user.value = payload.user
     scheduleExpiry(payload.access_token)
     ensureExpiryWatcher()
+    preferencesNeeded.value = true
   }
 
   const login = async (email: string, password: string, remember: boolean) => {
