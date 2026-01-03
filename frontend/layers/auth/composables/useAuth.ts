@@ -1,4 +1,6 @@
 import { useAnalytics } from '@shared/composables/useAnalytics'
+import type { ApiError } from '#layers/shared/types/api-error'
+import { isApiError } from '#layers/shared/utils/api-error'
 
 type AuthUser = {
   id: string
@@ -25,31 +27,9 @@ type AuthSession = {
   is_current?: boolean
 }
 
-type ApiError = {
-  code?: string
-  message?: string
-  details?: Record<string, string>
-  error?: {
-    code?: string
-    message?: string
-    details?: Record<string, string>
-  }
-}
-
-const extractErrorMessage = (err: unknown) => {
-  const data = (err as { data?: ApiError })?.data
-  return data?.message || data?.error?.message || 'Erro inesperado'
-}
-
-const extractErrorCode = (err: unknown) => {
-  const data = (err as { data?: ApiError })?.data
-  return data?.code || data?.error?.code || ''
-}
-
-const extractErrorDetails = (err: unknown) => {
-  const data = (err as { data?: ApiError })?.data
-  return data?.details || data?.error?.details || {}
-}
+const extractErrorMessage = (err: unknown) => (isApiError(err) ? err.message : 'Erro inesperado')
+const extractErrorCode = (err: unknown) => (isApiError(err) ? err.code : '')
+const extractErrorDetails = (err: unknown) => (isApiError(err) ? err.details ?? {} : {})
 
 export const useAuth = () => {
   const accessToken = useState<string | null>('access_token', () => null)
