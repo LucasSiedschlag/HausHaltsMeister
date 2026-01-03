@@ -57,9 +57,11 @@ export const usePreferences = () => {
   const isLoading = useState<boolean>('preferences_loading', () => false)
   const isSaving = useState<boolean>('preferences_saving', () => false)
   const preferencesNeeded = useState<boolean>('preferences_needed', () => false)
+  const route = useRoute()
   const api = useApiClient()
   const { accessToken, refresh } = useAuth()
   const colorMode = useColorMode()
+  const { locale, setLocale } = useI18n()
 
   const ensureAccessToken = async () => {
     if (accessToken.value) return true
@@ -72,7 +74,17 @@ export const usePreferences = () => {
   }
 
   const applyPreferences = (prefs: UserPreferences) => {
+    const localeMatch = route.path.match(/^\/([^/]+)(?:\/|$)/)
+    const routeLocale =
+      localeMatch && (localeMatch[1] === 'pt-BR' || localeMatch[1] === 'en-US')
+        ? localeMatch[1]
+        : null
     colorMode.preference = prefs.theme_mode
+    if (!routeLocale && locale.value !== prefs.locale) {
+      void setLocale(prefs.locale)
+    } else if (routeLocale === prefs.locale && locale.value !== routeLocale) {
+      void setLocale(routeLocale)
+    }
     applyThemeAttributes(prefs)
   }
 

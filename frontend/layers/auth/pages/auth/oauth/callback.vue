@@ -4,13 +4,14 @@ definePageMeta({ layout: false })
 
 const { refresh } = useAuth()
 const error = ref('')
+const { t } = useI18n()
 
 onMounted(async () => {
   try {
     await refresh()
     await navigateTo('/')
   } catch {
-    error.value = 'Não foi possível concluir o login. Tente novamente.'
+    error.value = t('auth.oauth.error')
   }
 })
 
@@ -22,7 +23,7 @@ const goToLogin = () => {
 <template>
   <div class="bg-muted flex min-h-svh items-center justify-center p-6">
     <div class="w-full max-w-sm rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-      <p v-if="!error">Finalizando login...</p>
+      <p v-if="!error">{{ t('auth.oauth.finishing') }}</p>
       <div v-else class="space-y-4">
         <p class="text-destructive">{{ error }}</p>
         <button
@@ -30,7 +31,7 @@ const goToLogin = () => {
           type="button"
           @click="goToLogin"
         >
-          Voltar ao login
+          {{ t('auth.oauth.backToLogin') }}
         </button>
       </div>
     </div>

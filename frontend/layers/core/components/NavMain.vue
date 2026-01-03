@@ -2,6 +2,8 @@
 import type { Component } from 'vue'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@shared/components/ui/sidebar'
 
+const { t } = useI18n()
+
 type NavItem = {
   title: string
   url: string
@@ -16,7 +18,7 @@ defineProps<{
 
 <template>
   <SidebarGroup>
-    <SidebarGroupLabel>Principal</SidebarGroupLabel>
+    <SidebarGroupLabel>{{ t('sidebar.groups.main') }}</SidebarGroupLabel>
     <SidebarGroupContent>
       <SidebarMenu>
         <SidebarMenuItem v-for="item in items" :key="item.url">

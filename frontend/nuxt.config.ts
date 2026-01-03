@@ -25,7 +25,7 @@ export default defineNuxtConfig({
     './layers/creditcard',
     './layers/reports'
   ],
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt', 'notivue/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', '@nuxtjs/i18n', 'shadcn-nuxt', 'notivue/nuxt'],
   css: [
     join(rootDir, 'layers/shared/assets/css/tailwind.css'),
     'notivue/notification.css',
@@ -52,6 +52,22 @@ export default defineNuxtConfig({
     fallback: 'light',
     storage: 'cookie',
     storageKey: 'hhm-color-mode'
+  },
+  i18n: {
+    strategy: 'prefix_except_default',
+    defaultLocale: 'pt-BR',
+    fallbackLocale: 'pt-BR',
+    detectBrowserLanguage: false,
+    restructureDir: '.',
+    compilation: {
+      strictMessage: false
+    },
+    lazy: true,
+    langDir: 'layers/shared/i18n',
+    locales: [
+      { code: 'pt-BR', iso: 'pt-BR', name: 'Português (Brasil)', file: 'pt-BR.json' },
+      { code: 'en-US', iso: 'en-US', name: 'English (US)', file: 'en-US.json' }
+    ]
   },
   shadcn: {
     prefix: 'Ui',

@@ -10,6 +10,8 @@ import githubIcon from '@shared/icons/github.svg'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { emailSchema, passwordSchema, useInlineValidation, getInputClass } from '@shared/validators'
 
+const { t } = useI18n()
+
 const email = ref('')
 const password = ref('')
 const remember = ref(false)
@@ -38,17 +40,17 @@ const onSubmit = async () => {
   } catch (err) {
     const code = extractErrorCode(err)
     if (code === 'AUTH_INVALID_CREDENTIALS') {
-      error.value = 'Credenciais inválidas.'
+      error.value = t('auth.login.errors.invalidCredentials')
       return
     }
     if (code === 'VALIDATION_ERROR') {
       const details = extractErrorDetails(err)
       if (details.email === 'invalid') {
-        error.value = 'E-mail inválido.'
+        error.value = t('auth.login.errors.invalidEmail')
         return
       }
       if (details.password === 'min_length') {
-        error.value = 'A senha deve ter pelo menos 8 caracteres.'
+        error.value = t('auth.login.errors.passwordMin')
         return
       }
     }
@@ -69,20 +71,20 @@ const handleOAuth = (provider: 'google' | 'github') => {
     <Card class="overflow-hidden p-0">
       <CardContent class="grid p-0 md:grid-cols-2">
         <form class="p-6 md:p-8" @submit.prevent="onSubmit">
-          <div class="flex flex-col gap-6">
-            <div class="flex flex-col items-center gap-2 text-center">
-              <h1 class="text-2xl font-bold">Bem-vindo de volta</h1>
-              <p class="text-balance text-sm text-muted-foreground">
-                Entre na sua conta HausHaltsMeister
-              </p>
-            </div>
-            <div class="grid gap-2">
-              <Label for-id="email">E-mail <span class="text-destructive">*</span></Label>
+            <div class="flex flex-col gap-6">
+              <div class="flex flex-col items-center gap-2 text-center">
+                <h1 class="text-2xl font-bold">{{ t('auth.login.title') }}</h1>
+                <p class="text-balance text-sm text-muted-foreground">
+                  {{ t('auth.login.subtitle') }}
+                </p>
+              </div>
+              <div class="grid gap-2">
+                <Label for-id="email">{{ t('auth.login.emailLabel') }} <span class="text-destructive">*</span></Label>
               <Input
                 id="email"
                 v-model="email"
                 type="email"
-                placeholder="email@exemplo.com"
+                :placeholder="t('auth.login.emailPlaceholder')"
                 :class="getInputClass({ touched: touched.email, hasError: Boolean(errors.email[0]) })"
                 @blur="touchField('email')"
               />
@@ -92,9 +94,9 @@ const handleOAuth = (provider: 'google' | 'github') => {
             </div>
             <div class="grid gap-2">
               <div class="flex items-center">
-                <Label for-id="password">Senha <span class="text-destructive">*</span></Label>
+                <Label for-id="password">{{ t('auth.login.passwordLabel') }} <span class="text-destructive">*</span></Label>
                 <NuxtLink to="/auth/forgot-password" class="ml-auto text-sm underline-offset-2 hover:underline">
-                  Esqueceu a senha?
+                  {{ t('auth.login.forgotPassword') }}
                 </NuxtLink>
               </div>
               <Input
@@ -115,15 +117,15 @@ const handleOAuth = (provider: 'google' | 'github') => {
                 type="checkbox"
                 class="h-4 w-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
               />
-              <Label for-id="remember" class="text-sm text-muted-foreground">Manter conectado</Label>
+              <Label for-id="remember" class="text-sm text-muted-foreground">{{ t('auth.login.remember') }}</Label>
             </div>
             <Button type="submit" class="w-full" :disabled="isLoading">
-              {{ isLoading ? 'Entrando...' : 'Entrar' }}
+              {{ isLoading ? t('auth.login.submitting') : t('auth.login.submit') }}
             </Button>
             <p v-if="error" class="text-center text-sm text-destructive">
               {{ error }}
             </p>
-            <Separator>Ou continue com</Separator>
+            <Separator>{{ t('auth.login.oauthSeparator') }}</Separator>
             <div class="grid grid-cols-2 gap-4">
               <Button variant="outline" type="button" :disabled="oauthLoading !== null" @click="handleOAuth('google')">
                 <span
@@ -131,7 +133,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
                   class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 <img v-else :src="googleIcon" alt="" class="h-4 w-4" />
-                <span>Google</span>
+                <span>{{ t('auth.login.oauthGoogle') }}</span>
               </Button>
               <Button variant="outline" type="button" :disabled="oauthLoading !== null" @click="handleOAuth('github')">
                 <span
@@ -139,12 +141,12 @@ const handleOAuth = (provider: 'google' | 'github') => {
                   class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 <img v-else :src="githubIcon" alt="" class="h-4 w-4" />
-                <span>GitHub</span>
+                <span>{{ t('auth.login.oauthGithub') }}</span>
               </Button>
             </div>
             <div class="text-center text-sm text-muted-foreground">
-              Não tem conta?
-              <NuxtLink to="/auth/signup" class="underline underline-offset-4">Criar conta</NuxtLink>
+              {{ t('auth.login.noAccount') }}
+              <NuxtLink to="/auth/signup" class="underline underline-offset-4">{{ t('auth.login.signupLink') }}</NuxtLink>
             </div>
           </div>
         </form>
@@ -158,10 +160,10 @@ const handleOAuth = (provider: 'google' | 'github') => {
       </CardContent>
     </Card>
     <p class="px-6 text-center text-xs text-muted-foreground">
-      Ao continuar, você concorda com nossos
-      <a href="#" class="underline underline-offset-4">Termos de Uso</a>
-      e
-      <a href="#" class="underline underline-offset-4">Política de Privacidade</a>.
+      {{ t('auth.login.termsPrefix') }}
+      <a href="#" class="underline underline-offset-4">{{ t('auth.login.termsLink') }}</a>
+      {{ t('auth.login.termsMiddle') }}
+      <a href="#" class="underline underline-offset-4">{{ t('auth.login.privacyLink') }}</a>.
     </p>
   </div>
 </template>

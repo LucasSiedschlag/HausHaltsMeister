@@ -10,6 +10,8 @@ import githubIcon from '@shared/icons/github.svg'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { emailSchema, nameSchema, passwordSchema, useInlineValidation, getInputClass } from '@shared/validators'
 
+const { t } = useI18n()
+
 const displayName = ref('')
 const email = ref('')
 const password = ref('')
@@ -50,11 +52,11 @@ const onSubmit = async () => {
     if (code === 'VALIDATION_ERROR') {
       const details = extractErrorDetails(err)
       if (details.email === 'invalid') {
-        error.value = 'E-mail inválido.'
+        error.value = t('auth.signup.errors.invalidEmail')
         return
       }
       if (details.password === 'min_length') {
-        error.value = 'A senha deve ter pelo menos 8 caracteres.'
+        error.value = t('auth.signup.errors.passwordMin')
         return
       }
     }
@@ -77,13 +79,13 @@ const handleOAuth = (provider: 'google' | 'github') => {
         <form class="p-6 md:p-8" @submit.prevent="onSubmit">
           <div class="flex flex-col gap-6">
             <div class="flex flex-col items-center gap-2 text-center">
-              <h1 class="text-2xl font-bold">Criar conta</h1>
+              <h1 class="text-2xl font-bold">{{ t('auth.signup.title') }}</h1>
               <p class="text-balance text-sm text-muted-foreground">
-                Crie seu ledger HausHaltsMeister em minutos
+                {{ t('auth.signup.subtitle') }}
               </p>
             </div>
             <div class="grid gap-2">
-              <Label for-id="display_name">Nome <span class="text-destructive">*</span></Label>
+              <Label for-id="display_name">{{ t('auth.signup.nameLabel') }} <span class="text-destructive">*</span></Label>
               <Input
                 id="display_name"
                 v-model="displayName"
@@ -97,13 +99,13 @@ const handleOAuth = (provider: 'google' | 'github') => {
               </p>
             </div>
             <div class="grid gap-2">
-              <Label for-id="email">E-mail <span class="text-destructive">*</span></Label>
+              <Label for-id="email">{{ t('auth.signup.emailLabel') }} <span class="text-destructive">*</span></Label>
               <Input
                 id="email"
                 v-model="email"
                 type="email"
                 autocomplete="email"
-                placeholder="email@exemplo.com"
+                :placeholder="t('auth.signup.emailPlaceholder')"
                 :class="inputClass('email')"
                 @blur="touchField('email')"
               />
@@ -112,7 +114,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
               </p>
             </div>
             <div class="grid gap-2 relative">
-              <Label for-id="password">Senha <span class="text-destructive">*</span></Label>
+              <Label for-id="password">{{ t('auth.signup.passwordLabel') }} <span class="text-destructive">*</span></Label>
               <Input
                 id="password"
                 v-model="password"
@@ -122,7 +124,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
                 @focus="passwordFocused = true"
                 @blur="passwordFocused = false; touchField('password')"
               />
-              <p class="text-xs text-muted-foreground">Mínimo de 8 caracteres.</p>
+              <p class="text-xs text-muted-foreground">{{ t('auth.signup.passwordHint') }}</p>
               <p v-if="touched.password && errors.password[0]" class="text-xs text-destructive">
                 {{ errors.password[0].message }}
               </p>
@@ -131,40 +133,40 @@ const handleOAuth = (provider: 'google' | 'github') => {
                 class="absolute top-1/2 right-full z-10 mr-4 w-72 -translate-y-1/2 rounded-lg border bg-card p-4 text-sm shadow-lg"
                 :class="errors.password[0] ? 'border-destructive/40' : 'border-primary/30'"
               >
-                <div class="font-medium text-foreground">Requisitos da senha</div>
-                <div class="mt-1 text-muted-foreground">Recomendamos:</div>
+                <div class="font-medium text-foreground">{{ t('auth.signup.passwordRequirementsTitle') }}</div>
+                <div class="mt-1 text-muted-foreground">{{ t('auth.signup.passwordRequirementsIntro') }}</div>
                 <div class="mt-3 space-y-2">
                   <div class="flex items-center gap-2">
                     <span
                       class="inline-flex h-2.5 w-2.5 rounded-full"
                       :class="passwordHints.minLength ? 'bg-primary' : 'bg-muted-foreground/40'"
                     />
-                    <span>Mínimo de 8 caracteres</span>
+                    <span>{{ t('auth.signup.passwordRequirementMin') }}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span
                       class="inline-flex h-2.5 w-2.5 rounded-full"
                       :class="passwordHints.uppercase ? 'bg-primary' : 'bg-muted-foreground/40'"
                     />
-                    <span>Ao menos 1 letra maiúscula</span>
+                    <span>{{ t('auth.signup.passwordRequirementUpper') }}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span
                       class="inline-flex h-2.5 w-2.5 rounded-full"
                       :class="passwordHints.number ? 'bg-primary' : 'bg-muted-foreground/40'"
                     />
-                    <span>Ao menos 1 número</span>
+                    <span>{{ t('auth.signup.passwordRequirementNumber') }}</span>
                   </div>
                 </div>
               </div>
             </div>
             <Button type="submit" class="w-full" :disabled="isLoading">
-              {{ isLoading ? 'Criando...' : 'Criar conta' }}
+              {{ isLoading ? t('auth.signup.submitting') : t('auth.signup.submit') }}
             </Button>
             <p v-if="error" class="text-center text-sm text-destructive">
               {{ error }}
             </p>
-            <Separator>Ou continue com</Separator>
+            <Separator>{{ t('auth.signup.oauthSeparator') }}</Separator>
             <div class="grid grid-cols-2 gap-4">
               <Button variant="outline" type="button" :disabled="oauthLoading !== null" @click="handleOAuth('google')">
                 <span
@@ -172,7 +174,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
                   class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 <img v-else :src="googleIcon" alt="" class="h-4 w-4" />
-                <span>Google</span>
+                <span>{{ t('auth.signup.oauthGoogle') }}</span>
               </Button>
               <Button variant="outline" type="button" :disabled="oauthLoading !== null" @click="handleOAuth('github')">
                 <span
@@ -180,12 +182,12 @@ const handleOAuth = (provider: 'google' | 'github') => {
                   class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 <img v-else :src="githubIcon" alt="" class="h-4 w-4" />
-                <span>GitHub</span>
+                <span>{{ t('auth.signup.oauthGithub') }}</span>
               </Button>
             </div>
             <div class="text-center text-sm text-muted-foreground">
-              Já tem conta?
-              <NuxtLink to="/auth/login" class="underline underline-offset-4">Entrar</NuxtLink>
+              {{ t('auth.signup.hasAccount') }}
+              <NuxtLink to="/auth/login" class="underline underline-offset-4">{{ t('auth.signup.loginLink') }}</NuxtLink>
             </div>
           </div>
         </form>
@@ -199,10 +201,10 @@ const handleOAuth = (provider: 'google' | 'github') => {
       </CardContent>
     </Card>
     <p class="px-6 text-center text-xs text-muted-foreground">
-      Ao continuar, você concorda com nossos
-      <a href="#" class="underline underline-offset-4">Termos de Uso</a>
-      e
-      <a href="#" class="underline underline-offset-4">Política de Privacidade</a>.
+      {{ t('auth.signup.termsPrefix') }}
+      <a href="#" class="underline underline-offset-4">{{ t('auth.signup.termsLink') }}</a>
+      {{ t('auth.signup.termsMiddle') }}
+      <a href="#" class="underline underline-offset-4">{{ t('auth.signup.privacyLink') }}</a>.
     </p>
   </div>
 </template>

@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@nuxtjs/color-mode": "^3.5.1",
+    "@nuxtjs/i18n": "^10.2.1",
     "@nuxtjs/tailwindcss": "^6.12.1",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.17.0",

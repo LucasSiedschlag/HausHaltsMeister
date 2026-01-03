@@ -12,6 +12,8 @@ import { push } from 'notivue'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { useDebounceFn } from '@vueuse/core'
 
+const { t, locale, setLocale } = useI18n()
+
 const { user, listSessions, revokeSession, logoutAll, logout, clearSession } = useAuth()
 const router = useRouter()
 const { preferences, fetchPreferences, updatePreferences } = usePreferences()
@@ -21,6 +23,7 @@ const autosaveReady = ref(false)
 const autosaveAccountReady = ref(false)
 const autosaveVisualReady = ref(false)
 const isHydrating = ref(true)
+const isLocaleSwitching = ref(false)
 
 const lastSavedAccount = reactive({
   locale: 'pt-BR',
@@ -52,7 +55,7 @@ const sessionsLoading = ref(false)
 
 const formatSessionDate = (value: string) => {
   if (!value) return ''
-  return new Date(value).toLocaleString('pt-BR')
+  return new Date(value).toLocaleString(locale.value)
 }
 
 const sessionDeviceKey = (session: {
@@ -136,20 +139,20 @@ const saveSection = async (
     const updated = await updatePreferences(payload)
     if (updated) {
       push.success({
-        title: 'Preferências',
-        message: 'Preferências atualizadas.'
+        title: t('settings.title'),
+        message: t('settings.messages.updated')
       })
       return updated
     }
     push.error({
-      title: 'Preferências',
-      message: 'Não foi possível salvar. Faça login novamente.'
+      title: t('settings.title'),
+      message: t('settings.messages.sessionError')
     })
     return null
   } catch {
     push.error({
-      title: 'Preferências',
-      message: 'Não foi possível salvar. Tente novamente.'
+      title: t('settings.title'),
+      message: t('settings.messages.saveError')
     })
     return null
   } finally {
@@ -196,8 +199,7 @@ const saveVisual = async () => {
   }
 }
 
-const isAccountDirty = () =>
-  form.locale !== lastSavedAccount.locale || form.theme_mode !== lastSavedAccount.theme_mode
+const isAccountDirty = () => form.theme_mode !== lastSavedAccount.theme_mode
 
 const isNotificationsDirty = () =>
   form.notify_card_close !== lastSavedNotifications.notify_card_close ||
@@ -229,9 +231,27 @@ const autosaveVisual = useDebounceFn(() => {
 }, 600)
 
 watch(
-  () => [form.locale, form.theme_mode],
+  () => form.theme_mode,
   () => {
     autosaveAccount()
+  }
+)
+
+watch(
+  () => form.locale,
+  async (value, previous) => {
+    if (isHydrating.value || isLocaleSwitching.value) return
+    if (value === previous) return
+    if (value === lastSavedAccount.locale) return
+    isLocaleSwitching.value = true
+    const updated = await saveSection('account', { locale: value })
+    if (updated) {
+      lastSavedAccount.locale = value
+      await setLocale(value)
+    } else {
+      form.locale = lastSavedAccount.locale
+    }
+    isLocaleSwitching.value = false
   }
 )
 
@@ -265,8 +285,8 @@ const loadSessions = async () => {
     sessions.value = await listSessions()
   } catch {
     push.error({
-      title: 'Sessões',
-      message: 'Não foi possível carregar as sessões.'
+      title: t('settings.security.sessionsTitle'),
+      message: t('settings.security.sessionsLoadError')
     })
   } finally {
     sessionsLoading.value = false
@@ -303,59 +323,59 @@ watch(activeTab, async (value) => {
 <template>
   <div class="grid gap-6">
     <section class="grid gap-2">
-      <h1 class="text-2xl font-semibold">Configurações</h1>
+      <h1 class="text-2xl font-semibold">{{ t('settings.title') }}</h1>
       <p class="text-sm text-muted-foreground">
-        Preferências pessoais, segurança e ajustes do ledger.
+        {{ t('settings.description') }}
       </p>
     </section>
 
     <Tabs v-model="activeTab" class="space-y-6">
       <TabsList class="flex w-full flex-wrap justify-start gap-2">
-        <TabsTrigger value="conta">Conta</TabsTrigger>
-        <TabsTrigger value="seguranca">Segurança</TabsTrigger>
-        <TabsTrigger value="ledger">Ledger</TabsTrigger>
-        <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-        <TabsTrigger value="privacidade">Privacidade</TabsTrigger>
-        <TabsTrigger value="visualizacao">Visualização</TabsTrigger>
+        <TabsTrigger value="conta">{{ t('settings.tabs.account') }}</TabsTrigger>
+        <TabsTrigger value="seguranca">{{ t('settings.tabs.security') }}</TabsTrigger>
+        <TabsTrigger value="ledger">{{ t('settings.tabs.ledger') }}</TabsTrigger>
+        <TabsTrigger value="notificacoes">{{ t('settings.tabs.notifications') }}</TabsTrigger>
+        <TabsTrigger value="privacidade">{{ t('settings.tabs.privacy') }}</TabsTrigger>
+        <TabsTrigger value="visualizacao">{{ t('settings.tabs.visual') }}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="conta" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Perfil</CardTitle>
-            <CardDescription>Informações públicas e preferências de idioma.</CardDescription>
+            <CardTitle>{{ t('settings.profile.title') }}</CardTitle>
+            <CardDescription>{{ t('settings.profile.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 md:grid-cols-2">
             <div class="grid gap-2">
-              <Label for="displayName">Nome exibido</Label>
-              <Input id="displayName" v-model="form.displayName" placeholder="Seu nome" disabled />
+              <Label for="displayName">{{ t('settings.profile.displayName') }}</Label>
+              <Input id="displayName" v-model="form.displayName" :placeholder="t('settings.profile.displayNamePlaceholder')" disabled />
             </div>
             <div class="grid gap-2">
-              <Label for="email">E-mail</Label>
-              <Input id="email" v-model="form.email" type="email" placeholder="email@exemplo.com" disabled />
+              <Label for="email">{{ t('settings.profile.email') }}</Label>
+              <Input id="email" v-model="form.email" type="email" :placeholder="t('settings.profile.emailPlaceholder')" disabled />
             </div>
             <div class="grid gap-2">
-              <Label>Idioma</Label>
+              <Label>{{ t('settings.locale') }}</Label>
               <Select v-model="form.locale">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                  <SelectItem value="en-US">English (US)</SelectItem>
+                  <SelectItem value="pt-BR">{{ t('settings.locales.ptBR') }}</SelectItem>
+                  <SelectItem value="en-US">{{ t('settings.locales.enUS') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label>Tema</Label>
+              <Label>{{ t('settings.profile.theme') }}</Label>
               <Select v-model="form.theme_mode">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">Claro</SelectItem>
-                  <SelectItem value="dark">Escuro</SelectItem>
-                  <SelectItem value="system">Sistema</SelectItem>
+                  <SelectItem value="light">{{ t('settings.profile.themeOptions.light') }}</SelectItem>
+                  <SelectItem value="dark">{{ t('settings.profile.themeOptions.dark') }}</SelectItem>
+                  <SelectItem value="system">{{ t('settings.profile.themeOptions.system') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -366,26 +386,26 @@ watch(activeTab, async (value) => {
       <TabsContent value="seguranca" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Segurança</CardTitle>
-            <CardDescription>Senha, 2FA e sessões ativas.</CardDescription>
+            <CardTitle>{{ t('settings.sections.security') }}</CardTitle>
+            <CardDescription>{{ t('settings.security.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 md:grid-cols-2">
             <div class="grid gap-2">
-              <Label for="currentPassword">Senha atual</Label>
+              <Label for="currentPassword">{{ t('settings.security.currentPassword') }}</Label>
               <Input id="currentPassword" type="password" />
             </div>
             <div class="grid gap-2">
-              <Label for="newPassword">Nova senha</Label>
+              <Label for="newPassword">{{ t('settings.security.newPassword') }}</Label>
               <Input id="newPassword" type="password" />
             </div>
             <div class="grid gap-2">
-              <Label for="confirmPassword">Confirmar nova senha</Label>
+              <Label for="confirmPassword">{{ t('settings.security.confirmPassword') }}</Label>
               <Input id="confirmPassword" type="password" />
             </div>
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-4">
               <div>
-                <p class="text-sm font-medium">Autenticação em duas etapas</p>
-                <p class="text-xs text-muted-foreground">Disponível em breve</p>
+                <p class="text-sm font-medium">{{ t('settings.security.twoFactor') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.common.comingSoon') }}</p>
               </div>
               <Switch disabled />
             </div>
@@ -393,36 +413,36 @@ watch(activeTab, async (value) => {
           <CardFooter class="flex justify-between">
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button variant="outline">Encerrar sessões</Button>
+                <Button variant="outline">{{ t('settings.security.endSessions') }}</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Encerrar todas as sessões?</AlertDialogTitle>
+                  <AlertDialogTitle>{{ t('settings.security.endAllTitle') }}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Isso desconecta todos os dispositivos, incluindo este.
+                    {{ t('settings.security.endAllDescription') }}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction @click="handleLogoutAll">Encerrar</AlertDialogAction>
+                  <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+                  <AlertDialogAction @click="handleLogoutAll">{{ t('settings.security.endAllConfirm') }}</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Button>Atualizar senha</Button>
+            <Button>{{ t('settings.security.updatePassword') }}</Button>
           </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sessões</CardTitle>
-            <CardDescription>Dispositivos conectados recentemente.</CardDescription>
+            <CardTitle>{{ t('settings.security.sessionsTitle') }}</CardTitle>
+            <CardDescription>{{ t('settings.security.sessionsDescription') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3 text-sm">
             <div v-if="sessionsLoading" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
-              Carregando sessões...
+              {{ t('settings.security.sessionsLoading') }}
             </div>
             <div v-else-if="latestSessionsByDevice.length === 0" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
-              Nenhuma sessão ativa.
+              {{ t('settings.security.sessionsEmpty') }}
             </div>
             <div
               v-for="session in latestSessionsByDevice"
@@ -431,13 +451,13 @@ watch(activeTab, async (value) => {
             >
               <div>
                 <p class="font-medium">
-                  {{ session.device_name || session.user_agent || 'Sessão' }}
+                  {{ session.device_name || session.user_agent || t('settings.security.sessionDefault') }}
                   <span v-if="session.is_current" class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                    Atual
+                    {{ t('settings.security.sessionCurrent') }}
                   </span>
                 </p>
                 <p class="text-xs text-muted-foreground">
-                  Início: {{ formatSessionDate(session.created_at) }}
+                  {{ t('settings.security.sessionStart') }}: {{ formatSessionDate(session.created_at) }}
                 </p>
               </div>
               <Button
@@ -445,7 +465,7 @@ watch(activeTab, async (value) => {
                 size="sm"
                 @click="handleRevokeSession(session.id, session.is_current)"
               >
-                Sair
+                {{ t('settings.security.sessionSignOut') }}
               </Button>
             </div>
           </CardContent>
@@ -455,15 +475,15 @@ watch(activeTab, async (value) => {
       <TabsContent value="ledger" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Preferências do ledger</CardTitle>
-            <CardDescription>Definições padrão para o seu ledger.</CardDescription>
+            <CardTitle>{{ t('settings.ledger.title') }}</CardTitle>
+            <CardDescription>{{ t('settings.ledger.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 md:grid-cols-2">
             <div class="grid gap-2">
-              <Label for="currency">Moeda base</Label>
+              <Label for="currency">{{ t('settings.ledger.currency') }}</Label>
               <Select default-value="BRL">
                 <SelectTrigger id="currency">
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="BRL">BRL</SelectItem>
@@ -473,13 +493,13 @@ watch(activeTab, async (value) => {
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label for="timezone">Fuso horário</Label>
+              <Label for="timezone">{{ t('settings.ledger.timezone') }}</Label>
               <Select default-value="America/Sao_Paulo">
                 <SelectTrigger id="timezone">
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="America/Sao_Paulo">América/São Paulo</SelectItem>
+                  <SelectItem value="America/Sao_Paulo">{{ t('settings.ledger.timezoneOptions.saoPaulo') }}</SelectItem>
                   <SelectItem value="UTC">UTC</SelectItem>
                 </SelectContent>
               </Select>
@@ -489,48 +509,48 @@ watch(activeTab, async (value) => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Contas</CardTitle>
-            <CardDescription>Preferências para contas e cartões.</CardDescription>
+            <CardTitle>{{ t('settings.sections.accounts') }}</CardTitle>
+            <CardDescription>{{ t('settings.accounts.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3">
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Conta principal padrão</p>
-                <p class="text-xs text-muted-foreground">Selecionada ao criar transações.</p>
+                <p class="font-medium">{{ t('settings.ledger.defaultAccount') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.accounts.defaultAccountHint') }}</p>
               </div>
-              <Button variant="outline" size="sm">Selecionar</Button>
+              <Button variant="outline" size="sm">{{ t('settings.accounts.select') }}</Button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Membros e permissões</CardTitle>
-            <CardDescription>Controle de acesso ao ledger.</CardDescription>
+            <CardTitle>{{ t('settings.members.title') }}</CardTitle>
+            <CardDescription>{{ t('settings.members.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3 text-sm">
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Lucas (owner)</p>
-                <p class="text-xs text-muted-foreground">Você</p>
+                <p class="font-medium">{{ t('settings.members.currentUser') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.members.you') }}</p>
               </div>
-              <Button variant="outline" size="sm">Gerenciar</Button>
+              <Button variant="outline" size="sm">{{ t('settings.members.manage') }}</Button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Política de alterações</CardTitle>
-            <CardDescription>Regra padrão para exclusões e edições.</CardDescription>
+            <CardTitle>{{ t('settings.changePolicy.title') }}</CardTitle>
+            <CardDescription>{{ t('settings.changePolicy.description') }}</CardDescription>
           </CardHeader>
           <CardContent>
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Ajustes obrigatórios</p>
-                <p class="text-xs text-muted-foreground">Alterações via entradas de ajuste.</p>
+                <p class="font-medium">{{ t('settings.changePolicy.requiredAdjustments') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.changePolicy.requiredAdjustmentsHint') }}</p>
               </div>
-              <Button variant="outline" size="sm" disabled>Ativo</Button>
+              <Button variant="outline" size="sm" disabled>{{ t('settings.common.active') }}</Button>
             </div>
           </CardContent>
         </Card>
@@ -539,28 +559,28 @@ watch(activeTab, async (value) => {
       <TabsContent value="notificacoes" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Notificações</CardTitle>
-            <CardDescription>Alertas essenciais do ledger.</CardDescription>
+            <CardTitle>{{ t('settings.sections.notifications') }}</CardTitle>
+            <CardDescription>{{ t('settings.notifications.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3">
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Fechamento de cartão</p>
-                <p class="text-xs text-muted-foreground">Avisar 3 dias antes do fechamento.</p>
+                <p class="font-medium">{{ t('settings.notifications.cardCloseTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.notifications.cardCloseDesc') }}</p>
               </div>
               <Switch v-model="form.notify_card_close" />
             </div>
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Orçamento estourado</p>
-                <p class="text-xs text-muted-foreground">Alertas quando exceder o limite.</p>
+                <p class="font-medium">{{ t('settings.notifications.budgetOverTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.notifications.budgetOverDesc') }}</p>
               </div>
               <Switch v-model="form.notify_budget_over" />
             </div>
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Lembretes de contas a pagar</p>
-                <p class="text-xs text-muted-foreground">Notificar 1 dia antes.</p>
+                <p class="font-medium">{{ t('settings.notifications.payablesTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.notifications.payablesDesc') }}</p>
               </div>
               <Switch v-model="form.notify_payables" />
             </div>
@@ -571,23 +591,23 @@ watch(activeTab, async (value) => {
       <TabsContent value="privacidade" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Privacidade</CardTitle>
-            <CardDescription>Controle de visibilidade de dados.</CardDescription>
+            <CardTitle>{{ t('settings.sections.privacy') }}</CardTitle>
+            <CardDescription>{{ t('settings.privacy.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="space-y-3">
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Exportar meus dados</p>
-                <p class="text-xs text-muted-foreground">Disponível em breve.</p>
+                <p class="font-medium">{{ t('settings.privacy.exportTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.common.comingSoon') }}</p>
               </div>
-              <Button variant="outline" size="sm" disabled>Exportar</Button>
+              <Button variant="outline" size="sm" disabled>{{ t('settings.privacy.exportAction') }}</Button>
             </div>
             <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <p class="font-medium">Importar meus dados</p>
-                <p class="text-xs text-muted-foreground">Disponível em breve.</p>
+                <p class="font-medium">{{ t('settings.privacy.importTitle') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('settings.common.comingSoon') }}</p>
               </div>
-              <Button variant="outline" size="sm" disabled>Importar</Button>
+              <Button variant="outline" size="sm" disabled>{{ t('settings.privacy.importAction') }}</Button>
             </div>
           </CardContent>
         </Card>
@@ -596,64 +616,64 @@ watch(activeTab, async (value) => {
       <TabsContent value="visualizacao" class="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Visualização</CardTitle>
-            <CardDescription>Preferências de visualização.</CardDescription>
+            <CardTitle>{{ t('settings.sections.visual') }}</CardTitle>
+            <CardDescription>{{ t('settings.visual.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 md:grid-cols-2">
             <div class="grid gap-2">
-              <Label>Densidade</Label>
+              <Label>{{ t('settings.visual.density') }}</Label>
               <Select v-model="form.compact_mode">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="comfortable">Confortável</SelectItem>
-                  <SelectItem value="compact">Compacta</SelectItem>
-                  <SelectItem value="dense">Densa</SelectItem>
+                  <SelectItem value="comfortable">{{ t('settings.visual.densityOptions.comfortable') }}</SelectItem>
+                  <SelectItem value="compact">{{ t('settings.visual.densityOptions.compact') }}</SelectItem>
+                  <SelectItem value="dense">{{ t('settings.visual.densityOptions.dense') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label>Tamanho da fonte</Label>
+              <Label>{{ t('settings.visual.fontScale') }}</Label>
               <Select v-model="form.font_scale">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sm">Pequena</SelectItem>
-                  <SelectItem value="md">Média</SelectItem>
-                  <SelectItem value="lg">Grande</SelectItem>
+                  <SelectItem value="sm">{{ t('settings.visual.fontOptions.small') }}</SelectItem>
+                  <SelectItem value="md">{{ t('settings.visual.fontOptions.medium') }}</SelectItem>
+                  <SelectItem value="lg">{{ t('settings.visual.fontOptions.large') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label>Paleta</Label>
+              <Label>{{ t('settings.visual.palette') }}</Label>
               <Select v-model="form.theme_palette">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="default">Azul padrão</SelectItem>
-                  <SelectItem value="red">Vermelho</SelectItem>
-                  <SelectItem value="rose">Rose</SelectItem>
-                  <SelectItem value="orange">Laranja</SelectItem>
-                  <SelectItem value="green">Verde</SelectItem>
-                  <SelectItem value="yellow">Amarelo</SelectItem>
-                  <SelectItem value="violet">Violeta</SelectItem>
-                  <SelectItem value="monochrome">Monocromático</SelectItem>
+                  <SelectItem value="default">{{ t('settings.visual.paletteOptions.default') }}</SelectItem>
+                  <SelectItem value="red">{{ t('settings.visual.paletteOptions.red') }}</SelectItem>
+                  <SelectItem value="rose">{{ t('settings.visual.paletteOptions.rose') }}</SelectItem>
+                  <SelectItem value="orange">{{ t('settings.visual.paletteOptions.orange') }}</SelectItem>
+                  <SelectItem value="green">{{ t('settings.visual.paletteOptions.green') }}</SelectItem>
+                  <SelectItem value="yellow">{{ t('settings.visual.paletteOptions.yellow') }}</SelectItem>
+                  <SelectItem value="violet">{{ t('settings.visual.paletteOptions.violet') }}</SelectItem>
+                  <SelectItem value="monochrome">{{ t('settings.visual.paletteOptions.monochrome') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label>Tom</Label>
+              <Label>{{ t('settings.visual.tone') }}</Label>
               <Select v-model="form.theme_tone">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="vivid">Vivo</SelectItem>
-                  <SelectItem value="pastel">Pastel</SelectItem>
-                  <SelectItem value="muted">Suave</SelectItem>
+                  <SelectItem value="vivid">{{ t('settings.visual.toneOptions.vivid') }}</SelectItem>
+                  <SelectItem value="pastel">{{ t('settings.visual.toneOptions.pastel') }}</SelectItem>
+                  <SelectItem value="muted">{{ t('settings.visual.toneOptions.muted') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

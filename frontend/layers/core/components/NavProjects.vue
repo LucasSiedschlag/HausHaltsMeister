@@ -2,16 +2,16 @@
 import type { Component } from 'vue'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@shared/components/ui/sidebar'
 
+defineProps<{
+  items: NavItem[]
+}>()
+
 type NavItem = {
   title: string
   url: string
   icon: Component
   isActive?: boolean
 }
-
-defineProps<{
-  items: NavItem[]
-}>()
 </script>
 
 <template>

@@ -20,6 +20,8 @@ import NavProjects from './NavProjects.vue'
 import NavSecondary from './NavSecondary.vue'
 import NavUser from './NavUser.vue'
 
+const { t } = useI18n()
+
 const route = useRoute()
 
 const isActiveRoute = (url: string) => {
@@ -30,32 +32,47 @@ const isActiveRoute = (url: string) => {
 }
 
 const navMainItems = [
-  { title: 'Visão geral', url: '/', icon: LayoutDashboard },
-  { title: 'Transações', url: '/journal', icon: Wallet },
-  { title: 'Contas', url: '/accounts', icon: Calendar },
-  { title: 'Cartões', url: '/credit-cards', icon: CreditCard },
-  { title: 'Orçamentos', url: '/budgets', icon: LineChart },
-  { title: 'Investimentos', url: '/investments', icon: Wallet }
+  { key: 'dashboard', url: '/', icon: LayoutDashboard },
+  { key: 'transactions', url: '/journal', icon: Wallet },
+  { key: 'accounts', url: '/accounts', icon: Calendar },
+  { key: 'cards', url: '/credit-cards', icon: CreditCard },
+  { key: 'budgets', url: '/budgets', icon: LineChart },
+  { key: 'investments', url: '/investments', icon: Wallet }
 ]
 
 const navProjectsItems = [
-  { title: 'Ledger principal', url: '/ledgers/current', icon: Tag },
-  { title: 'Relatórios', url: '/reports', icon: LineChart }
+  { key: 'ledgerMain', url: '/ledgers/current', icon: Tag },
+  { key: 'reports', url: '/reports', icon: LineChart }
 ]
 
 const navSecondaryItems = [
-  { title: 'Categorias', url: '/categories', icon: Tag },
-  { title: 'Configurações', url: '/settings', icon: Settings }
+  { key: 'categories', url: '/categories', icon: Tag },
+  { key: 'settings', url: '/settings', icon: Settings }
 ]
 
 const navMain = computed(() =>
-  navMainItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+  navMainItems.map((item) => ({
+    title: t(`sidebar.main.${item.key}`),
+    url: item.url,
+    icon: item.icon,
+    isActive: isActiveRoute(item.url)
+  }))
 )
 const navProjects = computed(() =>
-  navProjectsItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+  navProjectsItems.map((item) => ({
+    title: t(`sidebar.projects.${item.key}`),
+    url: item.url,
+    icon: item.icon,
+    isActive: isActiveRoute(item.url)
+  }))
 )
 const navSecondary = computed(() =>
-  navSecondaryItems.map((item) => ({ ...item, isActive: isActiveRoute(item.url) }))
+  navSecondaryItems.map((item) => ({
+    title: t(`sidebar.secondary.${item.key}`),
+    url: item.url,
+    icon: item.icon,
+    isActive: isActiveRoute(item.url)
+  }))
 )
 </script>
 
@@ -82,7 +99,7 @@ const navSecondary = computed(() =>
     <SidebarContent>
       <NavMain :items="navMain" />
       <SidebarGroup>
-        <SidebarGroupLabel>Projetos</SidebarGroupLabel>
+        <SidebarGroupLabel>{{ t('sidebar.groups.projects') }}</SidebarGroupLabel>
         <SidebarGroupContent>
           <NavProjects :items="navProjects" />
         </SidebarGroupContent>
@@ -96,7 +113,7 @@ const navSecondary = computed(() =>
           <SidebarMenuButton as-child>
             <NuxtLink to="/feedback">
               <Send />
-              <span>Feedback</span>
+              <span>{{ t('sidebar.secondary.feedback') }}</span>
             </NuxtLink>
           </SidebarMenuButton>
         </SidebarMenuItem>

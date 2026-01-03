@@ -7,6 +7,8 @@ import { useAuth } from '#layers/auth/composables/useAuth'
 import { emailSchema, useInlineValidation, getInputClass } from '@shared/validators'
 definePageMeta({ layout: false })
 
+const { t } = useI18n()
+
 const email = ref('')
 const error = ref('')
 const success = ref('')
@@ -24,13 +26,13 @@ const onSubmit = async () => {
   isLoading.value = true
   try {
     await forgotPassword(email.value)
-    success.value = 'Se o e-mail existir, enviaremos instruções.'
+    success.value = t('auth.forgot.success')
   } catch (err) {
     const code = extractErrorCode(err)
     if (code === 'VALIDATION_ERROR') {
       const details = extractErrorDetails(err)
       if (details.email === 'invalid') {
-        error.value = 'E-mail inválido.'
+        error.value = t('auth.forgot.errors.invalidEmail')
         return
       }
     }
@@ -44,19 +46,19 @@ const onSubmit = async () => {
 <template>
   <div class="grid gap-6">
     <div class="grid gap-2 text-center">
-      <h1 class="text-3xl font-semibold tracking-tight">Recuperar senha</h1>
-      <p class="text-sm text-muted-foreground">Enviaremos um link para seu e-mail</p>
+      <h1 class="text-3xl font-semibold tracking-tight">{{ t('auth.forgot.title') }}</h1>
+      <p class="text-sm text-muted-foreground">{{ t('auth.forgot.subtitle') }}</p>
     </div>
     <div class="grid gap-4">
       <form class="grid gap-4" @submit.prevent="onSubmit">
         <div class="grid gap-2">
-          <Label for-id="email">E-mail <span class="text-destructive">*</span></Label>
+          <Label for-id="email">{{ t('auth.forgot.emailLabel') }} <span class="text-destructive">*</span></Label>
           <Input
             id="email"
             v-model="email"
             type="email"
             autocomplete="email"
-            placeholder="email@exemplo.com"
+            :placeholder="t('auth.forgot.emailPlaceholder')"
             :class="getInputClass({ touched: touched.email, hasError: Boolean(errors.email[0]) })"
             @blur="touchField('email')"
           />
@@ -71,13 +73,13 @@ const onSubmit = async () => {
           {{ success }}
         </p>
         <Button class="w-full" type="submit" :disabled="isLoading">
-          {{ isLoading ? 'Enviando...' : 'Enviar' }}
+          {{ isLoading ? t('auth.forgot.submitting') : t('auth.forgot.submit') }}
         </Button>
       </form>
     </div>
     <div class="text-center text-sm text-muted-foreground">
-      Lembrou da senha?
-      <NuxtLink to="/auth/login" class="underline underline-offset-4">Voltar ao login</NuxtLink>
+      {{ t('auth.forgot.remembered') }}
+      <NuxtLink to="/auth/login" class="underline underline-offset-4">{{ t('auth.forgot.backToLogin') }}</NuxtLink>
     </div>
   </div>
 </template>

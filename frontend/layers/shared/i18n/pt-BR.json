@@ -1,0 +1,251 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "loading": "Carregando"
+  },
+  "auth": {
+    "login": {
+      "title": "Bem-vindo de volta",
+      "subtitle": "Entre na sua conta HausHaltsMeister",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "email (exemplo.com)",
+      "passwordLabel": "Senha",
+      "forgotPassword": "Esqueceu a senha?",
+      "remember": "Manter conectado",
+      "submit": "Entrar",
+      "submitting": "Entrando...",
+      "oauthSeparator": "Ou continue com",
+      "oauthGoogle": "Google",
+      "oauthGithub": "GitHub",
+      "noAccount": "Não tem conta?",
+      "signupLink": "Criar conta",
+      "termsPrefix": "Ao continuar, você concorda com nossos",
+      "termsMiddle": "e",
+      "termsLink": "Termos de Uso",
+      "privacyLink": "Política de Privacidade",
+      "errors": {
+        "invalidCredentials": "Credenciais inválidas.",
+        "invalidEmail": "E-mail inválido.",
+        "passwordMin": "A senha deve ter pelo menos 8 caracteres."
+      }
+    },
+    "signup": {
+      "title": "Criar conta",
+      "subtitle": "Crie seu ledger HausHaltsMeister em minutos",
+      "nameLabel": "Nome",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "email (exemplo.com)",
+      "passwordLabel": "Senha",
+      "passwordHint": "Mínimo de 8 caracteres.",
+      "passwordRequirementsTitle": "Requisitos da senha",
+      "passwordRequirementsIntro": "Recomendamos:",
+      "passwordRequirementMin": "Mínimo de 8 caracteres",
+      "passwordRequirementUpper": "Ao menos 1 letra maiúscula",
+      "passwordRequirementNumber": "Ao menos 1 número",
+      "submit": "Criar conta",
+      "submitting": "Criando...",
+      "oauthSeparator": "Ou continue com",
+      "oauthGoogle": "Google",
+      "oauthGithub": "GitHub",
+      "hasAccount": "Já tem conta?",
+      "loginLink": "Entrar",
+      "termsPrefix": "Ao continuar, você concorda com nossos",
+      "termsMiddle": "e",
+      "termsLink": "Termos de Uso",
+      "privacyLink": "Política de Privacidade",
+      "errors": {
+        "invalidEmail": "E-mail inválido.",
+        "passwordMin": "A senha deve ter pelo menos 8 caracteres."
+      }
+    },
+    "forgot": {
+      "title": "Recuperar senha",
+      "subtitle": "Enviaremos um link para seu e-mail",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "email (exemplo.com)",
+      "submit": "Enviar",
+      "submitting": "Enviando...",
+      "success": "Se o e-mail existir, enviaremos instruções.",
+      "remembered": "Lembrou da senha?",
+      "backToLogin": "Voltar ao login",
+      "errors": {
+        "invalidEmail": "E-mail inválido."
+      }
+    },
+    "oauth": {
+      "finishing": "Finalizando login...",
+      "error": "Não foi possível concluir o login. Tente novamente.",
+      "backToLogin": "Voltar ao login"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "description": "Preferências pessoais, segurança e ajustes do ledger.",
+    "tabs": {
+      "account": "Conta",
+      "security": "Segurança",
+      "ledger": "Ledger",
+      "notifications": "Notificações",
+      "privacy": "Privacidade",
+      "visual": "Visualização"
+    },
+    "sections": {
+      "security": "Segurança",
+      "accounts": "Contas",
+      "notifications": "Notificações",
+      "privacy": "Privacidade",
+      "visual": "Visualização"
+    },
+    "common": {
+      "selectPlaceholder": "Selecione",
+      "comingSoon": "Disponível em breve",
+      "active": "Ativo"
+    },
+    "profile": {
+      "title": "Perfil",
+      "description": "Informações públicas e preferências de idioma.",
+      "displayName": "Nome exibido",
+      "displayNamePlaceholder": "Seu nome",
+      "email": "E-mail",
+      "emailPlaceholder": "email (exemplo.com)",
+      "theme": "Tema",
+      "themeOptions": {
+        "light": "Claro",
+        "dark": "Escuro",
+        "system": "Sistema"
+      }
+    },
+    "locale": "Idioma",
+    "locales": {
+      "ptBR": "Português (Brasil)",
+      "enUS": "English (US)"
+    },
+    "ledger": {
+      "title": "Preferências do ledger",
+      "description": "Definições padrão para o seu ledger.",
+      "currency": "Moeda base",
+      "timezone": "Fuso horário",
+      "timezoneOptions": {
+        "saoPaulo": "América/São Paulo"
+      },
+      "defaultAccount": "Conta principal padrão"
+    },
+    "accounts": {
+      "description": "Preferências para contas e cartões.",
+      "defaultAccountHint": "Selecionada ao criar transações.",
+      "select": "Selecionar"
+    },
+    "members": {
+      "title": "Membros e permissões",
+      "description": "Controle de acesso ao ledger.",
+      "currentUser": "Lucas (owner)",
+      "you": "Você",
+      "manage": "Gerenciar"
+    },
+    "changePolicy": {
+      "title": "Política de alterações",
+      "description": "Regra padrão para exclusões e edições.",
+      "requiredAdjustments": "Ajustes obrigatórios",
+      "requiredAdjustmentsHint": "Alterações via entradas de ajuste."
+    },
+    "security": {
+      "description": "Senha, 2FA e sessões ativas.",
+      "currentPassword": "Senha atual",
+      "newPassword": "Nova senha",
+      "confirmPassword": "Confirmar nova senha",
+      "twoFactor": "Autenticação em duas etapas",
+      "endSessions": "Encerrar sessões",
+      "endAllTitle": "Encerrar todas as sessões?",
+      "endAllDescription": "Isso desconecta todos os dispositivos, incluindo este.",
+      "endAllConfirm": "Encerrar",
+      "updatePassword": "Atualizar senha",
+      "sessionsTitle": "Sessões",
+      "sessionsDescription": "Dispositivos conectados recentemente.",
+      "sessionsLoading": "Carregando sessões...",
+      "sessionsEmpty": "Nenhuma sessão ativa.",
+      "sessionsLoadError": "Não foi possível carregar as sessões.",
+      "sessionCurrent": "Atual",
+      "sessionStart": "Início",
+      "sessionDefault": "Sessão",
+      "sessionSignOut": "Sair"
+    },
+    "notifications": {
+      "description": "Alertas essenciais do ledger.",
+      "cardCloseTitle": "Fechamento de cartão",
+      "cardCloseDesc": "Avisar 3 dias antes do fechamento.",
+      "budgetOverTitle": "Orçamento estourado",
+      "budgetOverDesc": "Alertas quando exceder o limite.",
+      "payablesTitle": "Lembretes de contas a pagar",
+      "payablesDesc": "Notificar 1 dia antes."
+    },
+    "privacy": {
+      "description": "Controle de visibilidade de dados.",
+      "exportTitle": "Exportar meus dados",
+      "importTitle": "Importar meus dados",
+      "exportAction": "Exportar",
+      "importAction": "Importar"
+    },
+    "visual": {
+      "description": "Preferências de visualização.",
+      "density": "Densidade",
+      "densityOptions": {
+        "comfortable": "Confortável",
+        "compact": "Compacta",
+        "dense": "Densa"
+      },
+      "fontScale": "Tamanho da fonte",
+      "fontOptions": {
+        "small": "Pequena",
+        "medium": "Média",
+        "large": "Grande"
+      },
+      "palette": "Paleta",
+      "paletteOptions": {
+        "default": "Azul padrão",
+        "red": "Vermelho",
+        "rose": "Rose",
+        "orange": "Laranja",
+        "green": "Verde",
+        "yellow": "Amarelo",
+        "violet": "Violeta",
+        "monochrome": "Monocromático"
+      },
+      "tone": "Tom",
+      "toneOptions": {
+        "vivid": "Vivo",
+        "pastel": "Pastel",
+        "muted": "Suave"
+      }
+    },
+    "messages": {
+      "updated": "Preferências atualizadas.",
+      "sessionError": "Não foi possível salvar. Faça login novamente.",
+      "saveError": "Não foi possível salvar. Tente novamente."
+    }
+  },
+  "sidebar": {
+    "groups": {
+      "main": "Principal",
+      "projects": "Projetos",
+      "secondary": "Administração"
+    },
+    "main": {
+      "dashboard": "Visão geral",
+      "transactions": "Transações",
+      "accounts": "Contas",
+      "cards": "Cartões",
+      "budgets": "Orçamentos",
+      "investments": "Investimentos"
+    },
+    "projects": {
+      "ledgerMain": "Ledger principal",
+      "reports": "Relatórios"
+    },
+    "secondary": {
+      "categories": "Categorias",
+      "settings": "Configurações",
+      "feedback": "Feedback"
+    }
+  }
+}

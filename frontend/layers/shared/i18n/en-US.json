@@ -1,0 +1,251 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your HausHaltsMeister account",
+      "emailLabel": "Email",
+      "emailPlaceholder": "email (example.com)",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "remember": "Keep me signed in",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "oauthSeparator": "Or continue with",
+      "oauthGoogle": "Google",
+      "oauthGithub": "GitHub",
+      "noAccount": "Don’t have an account?",
+      "signupLink": "Create account",
+      "termsPrefix": "By continuing, you agree to our",
+      "termsMiddle": "and",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "errors": {
+        "invalidCredentials": "Invalid credentials.",
+        "invalidEmail": "Invalid email.",
+        "passwordMin": "Password must be at least 8 characters."
+      }
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Set up your HausHaltsMeister ledger in minutes",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "email (example.com)",
+      "passwordLabel": "Password",
+      "passwordHint": "Minimum 8 characters.",
+      "passwordRequirementsTitle": "Password requirements",
+      "passwordRequirementsIntro": "We recommend:",
+      "passwordRequirementMin": "At least 8 characters",
+      "passwordRequirementUpper": "At least 1 uppercase letter",
+      "passwordRequirementNumber": "At least 1 number",
+      "submit": "Create account",
+      "submitting": "Creating...",
+      "oauthSeparator": "Or continue with",
+      "oauthGoogle": "Google",
+      "oauthGithub": "GitHub",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "termsPrefix": "By continuing, you agree to our",
+      "termsMiddle": "and",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "errors": {
+        "invalidEmail": "Invalid email.",
+        "passwordMin": "Password must be at least 8 characters."
+      }
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "We’ll send a link to your email",
+      "emailLabel": "Email",
+      "emailPlaceholder": "email (example.com)",
+      "submit": "Send",
+      "submitting": "Sending...",
+      "success": "If the email exists, we’ll send instructions.",
+      "remembered": "Remembered your password?",
+      "backToLogin": "Back to login",
+      "errors": {
+        "invalidEmail": "Invalid email."
+      }
+    },
+    "oauth": {
+      "finishing": "Finishing sign-in...",
+      "error": "We couldn't complete the login. Please try again.",
+      "backToLogin": "Back to login"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Personal preferences, security, and ledger settings.",
+    "tabs": {
+      "account": "Account",
+      "security": "Security",
+      "ledger": "Ledger",
+      "notifications": "Notifications",
+      "privacy": "Privacy",
+      "visual": "Appearance"
+    },
+    "sections": {
+      "security": "Security",
+      "accounts": "Accounts",
+      "notifications": "Notifications",
+      "privacy": "Privacy",
+      "visual": "Appearance"
+    },
+    "common": {
+      "selectPlaceholder": "Select",
+      "comingSoon": "Coming soon",
+      "active": "Active"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Public information and language preferences.",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Your name",
+      "email": "Email",
+      "emailPlaceholder": "email (example.com)",
+      "theme": "Theme",
+      "themeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    },
+    "locale": "Language",
+    "locales": {
+      "ptBR": "Portuguese (Brazil)",
+      "enUS": "English (US)"
+    },
+    "ledger": {
+      "title": "Ledger preferences",
+      "description": "Default settings for your ledger.",
+      "currency": "Base currency",
+      "timezone": "Time zone",
+      "timezoneOptions": {
+        "saoPaulo": "America/Sao Paulo"
+      },
+      "defaultAccount": "Default primary account"
+    },
+    "accounts": {
+      "description": "Preferences for accounts and cards.",
+      "defaultAccountHint": "Selected when creating transactions.",
+      "select": "Select"
+    },
+    "members": {
+      "title": "Members and permissions",
+      "description": "Ledger access control.",
+      "currentUser": "Lucas (owner)",
+      "you": "You",
+      "manage": "Manage"
+    },
+    "changePolicy": {
+      "title": "Change policy",
+      "description": "Default rule for deletes and edits.",
+      "requiredAdjustments": "Adjustments required",
+      "requiredAdjustmentsHint": "Changes via adjustment entries."
+    },
+    "security": {
+      "description": "Password, 2FA, and active sessions.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "twoFactor": "Two-factor authentication",
+      "endSessions": "End sessions",
+      "endAllTitle": "End all sessions?",
+      "endAllDescription": "This signs out all devices, including this one.",
+      "endAllConfirm": "End",
+      "updatePassword": "Update password",
+      "sessionsTitle": "Sessions",
+      "sessionsDescription": "Recently connected devices.",
+      "sessionsLoading": "Loading sessions...",
+      "sessionsEmpty": "No active sessions.",
+      "sessionsLoadError": "Unable to load sessions.",
+      "sessionCurrent": "Current",
+      "sessionStart": "Started",
+      "sessionDefault": "Session",
+      "sessionSignOut": "Sign out"
+    },
+    "notifications": {
+      "description": "Essential ledger alerts.",
+      "cardCloseTitle": "Card closing",
+      "cardCloseDesc": "Notify 3 days before closing.",
+      "budgetOverTitle": "Budget over limit",
+      "budgetOverDesc": "Alerts when exceeding the limit.",
+      "payablesTitle": "Payables reminders",
+      "payablesDesc": "Notify 1 day before."
+    },
+    "privacy": {
+      "description": "Control data visibility.",
+      "exportTitle": "Export my data",
+      "importTitle": "Import my data",
+      "exportAction": "Export",
+      "importAction": "Import"
+    },
+    "visual": {
+      "description": "Appearance preferences.",
+      "density": "Density",
+      "densityOptions": {
+        "comfortable": "Comfortable",
+        "compact": "Compact",
+        "dense": "Dense"
+      },
+      "fontScale": "Font size",
+      "fontOptions": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "palette": "Palette",
+      "paletteOptions": {
+        "default": "Default blue",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "yellow": "Yellow",
+        "violet": "Violet",
+        "monochrome": "Monochrome"
+      },
+      "tone": "Tone",
+      "toneOptions": {
+        "vivid": "Vivid",
+        "pastel": "Pastel",
+        "muted": "Muted"
+      }
+    },
+    "messages": {
+      "updated": "Preferences updated.",
+      "sessionError": "Unable to save. Please sign in again.",
+      "saveError": "Unable to save. Please try again."
+    }
+  },
+  "sidebar": {
+    "groups": {
+      "main": "Main",
+      "projects": "Projects",
+      "secondary": "Administration"
+    },
+    "main": {
+      "dashboard": "Dashboard",
+      "transactions": "Transactions",
+      "accounts": "Accounts",
+      "cards": "Cards",
+      "budgets": "Budgets",
+      "investments": "Investments"
+    },
+    "projects": {
+      "ledgerMain": "Primary ledger",
+      "reports": "Reports"
+    },
+    "secondary": {
+      "categories": "Categories",
+      "settings": "Settings",
+      "feedback": "Feedback"
+    }
+  }
+}
