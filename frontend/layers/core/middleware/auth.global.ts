@@ -2,7 +2,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const publicRoutes = ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/oauth/callback']
   const supportedLocales = ['pt-BR', 'en-US']
   const localeMatch = to.path.match(/^\/([^/]+)(?:\/|$)/)
-  const currentLocale = localeMatch && supportedLocales.includes(localeMatch[1]) ? localeMatch[1] : null
+  const localeSegment = localeMatch?.[1] ?? ''
+  const currentLocale = supportedLocales.includes(localeSegment) ? localeSegment : null
   const normalizedPath = currentLocale ? to.path.replace(`/${currentLocale}`, '') || '/' : to.path
 
   if (publicRoutes.includes(normalizedPath)) {

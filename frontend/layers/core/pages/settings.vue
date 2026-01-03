@@ -7,7 +7,7 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs'
-import { usePreferences } from '@shared/composables/usePreferences'
+import { usePreferences, type UserPreferences } from '@shared/composables/usePreferences'
 import { push } from 'notivue'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { useDebounceFn } from '@vueuse/core'
@@ -17,6 +17,21 @@ const { t, locale, setLocale } = useI18n()
 const { user, listSessions, revokeSession, logoutAll, logout, clearSession } = useAuth()
 const router = useRouter()
 const { preferences, fetchPreferences, updatePreferences } = usePreferences()
+type LocaleOption = 'pt-BR' | 'en-US'
+type PreferencesUpdate = Partial<
+  Pick<
+    UserPreferences,
+    | 'theme_mode'
+    | 'theme_palette'
+    | 'theme_tone'
+    | 'locale'
+    | 'compact_mode'
+    | 'font_scale'
+    | 'notify_card_close'
+    | 'notify_budget_over'
+    | 'notify_payables'
+  >
+>
 
 const savingSection = ref<'account' | 'notifications' | 'visual' | null>(null)
 const autosaveReady = ref(false)
@@ -25,7 +40,7 @@ const autosaveVisualReady = ref(false)
 const isHydrating = ref(true)
 const isLocaleSwitching = ref(false)
 
-const lastSavedAccount = reactive({
+const lastSavedAccount = reactive<{ locale: LocaleOption; theme_mode: 'light' | 'dark' | 'system' }>({
   locale: 'pt-BR',
   theme_mode: 'system'
 })
@@ -81,12 +96,20 @@ const latestSessionsByDevice = computed(() => {
 const form = reactive({
   displayName: '',
   email: '',
-  locale: 'pt-BR',
-  theme_mode: 'system',
-  theme_palette: 'default',
-  theme_tone: 'vivid',
-  compact_mode: 'comfortable',
-  font_scale: 'md',
+  locale: 'pt-BR' as LocaleOption,
+  theme_mode: 'system' as 'light' | 'dark' | 'system',
+  theme_palette: 'default' as
+    | 'default'
+    | 'red'
+    | 'rose'
+    | 'orange'
+    | 'green'
+    | 'yellow'
+    | 'violet'
+    | 'monochrome',
+  theme_tone: 'vivid' as 'vivid' | 'pastel' | 'muted',
+  compact_mode: 'comfortable' as 'comfortable' | 'compact' | 'dense',
+  font_scale: 'md' as 'sm' | 'md' | 'lg',
   notify_card_close: true,
   notify_budget_over: true,
   notify_payables: true
@@ -122,17 +145,7 @@ const syncPreferences = () => {
 
 const saveSection = async (
   section: 'account' | 'notifications' | 'visual',
-  payload: {
-    theme_mode?: string
-    theme_palette?: string
-    theme_tone?: string
-    locale?: string
-    compact_mode?: string
-    font_scale?: string
-    notify_card_close?: boolean
-    notify_budget_over?: boolean
-    notify_payables?: boolean
-  }
+  payload: PreferencesUpdate
 ) => {
   savingSection.value = section
   try {
@@ -244,10 +257,10 @@ watch(
     if (value === previous) return
     if (value === lastSavedAccount.locale) return
     isLocaleSwitching.value = true
-    const updated = await saveSection('account', { locale: value })
+    const updated = await saveSection('account', { locale: value as LocaleOption })
     if (updated) {
       lastSavedAccount.locale = value
-      await setLocale(value)
+      await setLocale(value as LocaleOption)
     } else {
       form.locale = lastSavedAccount.locale
     }

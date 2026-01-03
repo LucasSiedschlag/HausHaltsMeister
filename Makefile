@@ -8,7 +8,7 @@ DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME
 TERN ?= tern
 TERN_CONF ?= internal/db/tern.conf
 
-.PHONY: all build run migrate migrate-status migrate-prod migrate-status-prod sqlc sqlc-ledger test clean
+.PHONY: all build run migrate migrate-status migrate-prod migrate-status-prod sqlc sqlc-ledger test typecheck clean
 
 all: build
 
@@ -60,6 +60,9 @@ sqlc-ledger:
 
 test:
 	go test ./...
+
+typecheck:
+	cd frontend && npx nuxi typecheck
 
 clean:
 	rm -rf bin

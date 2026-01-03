@@ -56,13 +56,11 @@ export default defineNuxtConfig({
   i18n: {
     strategy: 'prefix_except_default',
     defaultLocale: 'pt-BR',
-    fallbackLocale: 'pt-BR',
     detectBrowserLanguage: false,
     restructureDir: '.',
     compilation: {
       strictMessage: false
     },
-    lazy: true,
     langDir: 'layers/shared/i18n',
     locales: [
       { code: 'pt-BR', iso: 'pt-BR', name: 'Português (Brasil)', file: 'pt-BR.json' },
