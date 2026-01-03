@@ -23,6 +23,12 @@ A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 - Componentes client-only devem ser explicitos (`<ClientOnly>`).
 - Evitar acesso a `window`/`document` fora de hooks client-side.
 
+## i18n
+
+- Idiomas: `pt-BR` (default) e `en-US`.
+- Estrategia atual: `no_prefix` (sem idioma na URL).
+- Detecao automatica usa idioma do navegador apenas no primeiro acesso (cookie `hhm_locale`), inclusive nas telas de auth.
+
 ## Rotas de auth (UI)
 
 - A UI usa as mesmas rotas do backend:

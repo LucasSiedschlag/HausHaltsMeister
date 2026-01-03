@@ -54,9 +54,15 @@ export default defineNuxtConfig({
     storageKey: 'hhm-color-mode'
   },
   i18n: {
-    strategy: 'prefix_except_default',
+    strategy: 'no_prefix',
     defaultLocale: 'pt-BR',
-    detectBrowserLanguage: false,
+    detectBrowserLanguage: {
+      alwaysRedirect: false,
+      redirectOn: 'root',
+      useCookie: true,
+      cookieKey: 'hhm_locale',
+      fallbackLocale: 'pt-BR'
+    },
     restructureDir: '.',
     compilation: {
       strictMessage: false

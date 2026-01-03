@@ -1,17 +1,42 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const publicRoutes = ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/oauth/callback']
-  const supportedLocales = ['pt-BR', 'en-US']
-  const localeMatch = to.path.match(/^\/([^/]+)(?:\/|$)/)
-  const localeSegment = localeMatch?.[1] ?? ''
-  const currentLocale = supportedLocales.includes(localeSegment) ? localeSegment : null
-  const normalizedPath = currentLocale ? to.path.replace(`/${currentLocale}`, '') || '/' : to.path
 
-  if (publicRoutes.includes(normalizedPath)) {
+  if (publicRoutes.includes(to.path)) {
+    const { accessToken } = useAuth()
+    if (!accessToken.value) {
+      const localeCookie = useCookie<string | null>('hhm_locale')
+      if (!localeCookie.value) {
+        const normalizeLocale = (value: string) => {
+          const lower = value.toLowerCase()
+          if (lower.startsWith('en')) return 'en-US'
+          return 'pt-BR'
+        }
+        const detectLocale = () => {
+          if (import.meta.server) {
+            const headers = useRequestHeaders(['accept-language'])
+            const header = headers['accept-language'] || ''
+            const primary = header.split(',')[0]?.trim()
+            return normalizeLocale(primary || 'pt-BR')
+          }
+          if (typeof navigator !== 'undefined') {
+            const primary = navigator.languages?.[0] || navigator.language || 'pt-BR'
+            return normalizeLocale(primary)
+          }
+          return 'pt-BR'
+        }
+        const detected = detectLocale()
+        localeCookie.value = detected
+        const { $i18n } = useNuxtApp()
+        if ($i18n?.setLocale) {
+          await $i18n.setLocale(detected)
+        }
+      }
+    }
     return
   }
 
   const { accessToken } = useAuth()
   if (!accessToken.value) {
-    return navigateTo(currentLocale ? `/${currentLocale}/auth/login` : '/auth/login')
+    return navigateTo('/auth/login')
   }
 })

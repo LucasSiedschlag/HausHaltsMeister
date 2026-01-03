@@ -38,6 +38,11 @@ Este documento consolida as decisões e padrões aplicados no frontend para evit
 - Locales oficiais: `pt-BR` (default) e `en-US`.
 - Sempre usar `t('...')` para textos; nada hardcoded em componentes.
 - Para placeholders com `@`, use interpolacao (ex.: `exemplo{at}dominio.com` + `t(..., { at: '@' })`).
+- Estrategia atual: `no_prefix` (o idioma nao aparece na URL).
+- Detecao automatica usa idioma do navegador **apenas no primeiro acesso** (cookie `hhm_locale`).
+- Fallback: `pt-BR`. Qualquer variante de ingles resolve para `en-US`.
+- Paginas publicas (login/cadastro/recuperacao) aplicam a deteccao quando nao ha sessao.
+- Troca de idioma via `setLocale()` apos salvar a preferencia no backend.
 
 ## Tema e UI
 
