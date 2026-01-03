@@ -9,6 +9,7 @@ Este modulo cobre aportes, resgates e rendimentos (atalhos para journal), alem d
 - IDs: UUID (string).
 - Auth: `Authorization: Bearer <access_token>`.
 - Ledger boundary obrigatorio em todos os endpoints.
+- Respostas incluem `ledger_id`.
 
 ## Inventario de endpoints
 
@@ -134,7 +135,16 @@ Este modulo cobre aportes, resgates e rendimentos (atalhos para journal), alem d
 4) Response
 - 200
 ```json
-{ "contributions_cents": 0, "redemptions_cents": 0, "earnings_cents": 0, "net_cents": 0 }
+{
+  "ledger_id": "uuid",
+  "from": "2026-02-01T00:00:00Z",
+  "to": "2026-03-31T23:59:59Z",
+  "total_contributions": 0,
+  "total_redemptions": 0,
+  "total_earnings": 0,
+  "total_losses": 0,
+  "net_variation": 0
+}
 ```
 
 5) Errors

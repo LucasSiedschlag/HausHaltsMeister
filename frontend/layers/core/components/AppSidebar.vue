@@ -19,8 +19,10 @@ import NavMain from './NavMain.vue'
 import NavProjects from './NavProjects.vue'
 import NavSecondary from './NavSecondary.vue'
 import NavUser from './NavUser.vue'
+import { useLedger } from '@shared/composables/useLedger'
 
 const { t } = useI18n()
+const { currentLedger, currentLedgerId, ledgers, fetchLedgers } = useLedger()
 
 const route = useRoute()
 
@@ -41,7 +43,7 @@ const navMainItems = [
 ]
 
 const navProjectsItems = [
-  { key: 'ledgerMain', url: '/ledgers/current', icon: Tag },
+  { key: 'ledgerMain', url: '/ledgers', icon: Tag },
   { key: 'reports', url: '/reports', icon: LineChart }
 ]
 
@@ -59,13 +61,25 @@ const navMain = computed(() =>
   }))
 )
 const navProjects = computed(() =>
-  navProjectsItems.map((item) => ({
-    title: t(`sidebar.projects.${item.key}`),
-    url: item.url,
-    icon: item.icon,
-    isActive: isActiveRoute(item.url)
-  }))
+  navProjectsItems.map((item) => {
+    const title =
+      item.key === 'ledgerMain'
+        ? currentLedger.value?.name || t('ledgers.sidebar.placeholder')
+        : t(`sidebar.projects.${item.key}`)
+    return {
+      title,
+      url: item.url,
+      icon: item.icon,
+      isActive: isActiveRoute(item.url)
+    }
+  })
 )
+
+onMounted(async () => {
+  if (currentLedgerId.value && ledgers.value.length === 0) {
+    await fetchLedgers()
+  }
+})
 const navSecondary = computed(() =>
   navSecondaryItems.map((item) => ({
     title: t(`sidebar.secondary.${item.key}`),

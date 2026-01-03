@@ -9,6 +9,7 @@ type InvestmentRequest struct {
 }
 
 type InvestmentSummaryResponse struct {
+	LedgerID           string    `json:"ledger_id"`
 	From               time.Time `json:"from"`
 	To                 time.Time `json:"to"`
 	TotalContributions int64     `json:"total_contributions"`

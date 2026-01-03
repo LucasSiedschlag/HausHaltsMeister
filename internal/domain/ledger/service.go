@@ -40,6 +40,14 @@ func (s *Service) ListLedgers(ctx context.Context, userID string) ([]LedgerWithR
 	return s.repo.ListLedgersForUser(ctx, userID)
 }
 
+func (s *Service) GetMembership(ctx context.Context, userID, ledgerID string) (string, error) {
+	role, err := s.repo.GetLedgerRole(ctx, ledgerID, userID)
+	if err != nil {
+		return "", s.mapAccessError(ctx, ledgerID, err)
+	}
+	return role, nil
+}
+
 func (s *Service) CreateLedger(ctx context.Context, userID, name, currencyCode string) (Ledger, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {

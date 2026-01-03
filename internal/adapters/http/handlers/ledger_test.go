@@ -22,6 +22,10 @@ func (f fakeLedgerService) ListLedgers(ctx context.Context, userID string) ([]le
 	return nil, nil
 }
 
+func (f fakeLedgerService) GetMembership(ctx context.Context, userID, ledgerID string) (string, error) {
+	return "viewer", nil
+}
+
 func (f fakeLedgerService) CreateLedger(ctx context.Context, userID, name, currencyCode string) (ledger.Ledger, error) {
 	return ledger.Ledger{}, nil
 }

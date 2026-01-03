@@ -17,6 +17,7 @@ type LedgerHandler struct {
 
 type LedgerService interface {
 	ListLedgers(ctx context.Context, userID string) ([]ledger.LedgerWithRole, error)
+	GetMembership(ctx context.Context, userID, ledgerID string) (string, error)
 	CreateLedger(ctx context.Context, userID, name, currencyCode string) (ledger.Ledger, error)
 	GetLedger(ctx context.Context, userID, ledgerID string) (ledger.LedgerWithRole, error)
 	UpdateLedger(ctx context.Context, userID, ledgerID, name string) (ledger.Ledger, error)
@@ -32,9 +33,11 @@ type ledgerUpdateRequest = dto.LedgerUpdateRequest
 type memberRequest = dto.LedgerMemberRequest
 type ledgerResponse = dto.LedgerResponse
 type memberResponse = dto.LedgerMemberResponse
+type ledgerMeResponse = dto.LedgerMeResponse
 
 func (h *LedgerHandler) Register(g *echo.Group) {
 	g.GET("", h.ListLedgers)
+	g.GET("/:ledgerId/me", h.Me)
 	g.POST("", h.CreateLedger)
 	g.GET("/:ledgerId", h.GetLedger)
 	g.PATCH("/:ledgerId", h.UpdateLedger)
@@ -70,6 +73,27 @@ func (h *LedgerHandler) ListLedgers(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func (h *LedgerHandler) Me(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+	ledgerID := c.Param("ledgerId")
+	if ledgerID == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	}
+
+	role, err := h.Service.GetMembership(c.Request().Context(), user.ID, ledgerID)
+	if err != nil {
+		return httpx.WriteAppError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, ledgerMeResponse{
+		LedgerID: ledgerID,
+		Role:     role,
+	})
 }
 
 func (h *LedgerHandler) CreateLedger(c echo.Context) error {

@@ -3,6 +3,7 @@ package dto
 import "time"
 
 type BalanceResponse struct {
+	LedgerID string              `json:"ledger_id"`
 	Month time.Time             `json:"month"`
 	Items []BalanceItemResponse `json:"items"`
 }
@@ -15,9 +16,10 @@ type BalanceItemResponse struct {
 }
 
 type CategorySummaryResponse struct {
-	From  time.Time                     `json:"from"`
-	To    time.Time                     `json:"to"`
-	Items []CategorySummaryItemResponse `json:"items"`
+	LedgerID string                      `json:"ledger_id"`
+	From     time.Time                   `json:"from"`
+	To       time.Time                   `json:"to"`
+	Items    []CategorySummaryItemResponse `json:"items"`
 }
 
 type CategorySummaryItemResponse struct {
@@ -28,9 +30,10 @@ type CategorySummaryItemResponse struct {
 }
 
 type CashflowResponse struct {
-	From  time.Time              `json:"from"`
-	To    time.Time              `json:"to"`
-	Items []CashflowItemResponse `json:"items"`
+	LedgerID string                `json:"ledger_id"`
+	From     time.Time             `json:"from"`
+	To       time.Time             `json:"to"`
+	Items    []CashflowItemResponse `json:"items"`
 }
 
 type CashflowItemResponse struct {

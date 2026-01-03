@@ -224,6 +224,36 @@
       "saveError": "Não foi possível salvar. Tente novamente."
     }
   },
+  "ledgers": {
+    "title": "Ledgers",
+    "description": "Selecione o ledger ativo ou crie um novo.",
+    "loading": "Carregando ledgers...",
+    "empty": "Nenhum ledger encontrado.",
+    "selectPlaceholder": "Selecionar ledger",
+    "selectAction": "Selecionar ledger",
+    "sidebar": {
+      "placeholder": "Selecione um ledger"
+    },
+    "list": {
+      "title": "Seus ledgers",
+      "description": "Escolha qual ledger usar.",
+      "role": "Permissão",
+      "select": "Selecionar",
+      "active": "Ativo"
+    },
+    "create": {
+      "title": "Criar ledger",
+      "description": "Crie um ledger para começar.",
+      "nameLabel": "Nome do ledger",
+      "namePlaceholder": "Ex: Pessoal",
+      "currencyLabel": "Moeda base",
+      "currencyPlaceholder": "Selecione",
+      "submit": "Criar ledger",
+      "submitting": "Criando...",
+      "nameRequired": "Informe um nome.",
+      "error": "Não foi possível criar o ledger."
+    }
+  },
   "sidebar": {
     "groups": {
       "main": "Principal",

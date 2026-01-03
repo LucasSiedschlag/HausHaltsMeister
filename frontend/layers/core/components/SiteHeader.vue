@@ -2,6 +2,7 @@
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { SidebarTrigger } from '@shared/components/ui/sidebar'
+import LedgerSwitcher from './LedgerSwitcher.vue'
 import SearchForm from './SearchForm.vue'
 </script>
 
@@ -9,6 +10,7 @@ import SearchForm from './SearchForm.vue'
   <header class="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
     <SidebarTrigger class="lg:hidden" />
     <Separator orientation="vertical" class="h-6 lg:hidden" />
+    <LedgerSwitcher />
     <div class="flex-1">
       <SearchForm />
     </div>

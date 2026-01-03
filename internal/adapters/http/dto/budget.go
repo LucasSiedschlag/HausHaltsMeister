@@ -27,6 +27,7 @@ type BudgetVersionLineRequest struct {
 
 type BudgetVersionResponse struct {
 	ID                 string               `json:"id"`
+	LedgerID           string               `json:"ledger_id"`
 	PlanID             string               `json:"plan_id"`
 	EffectiveFromMonth time.Time            `json:"effective_from_month"`
 	CreatedByUserID    string               `json:"created_by_user_id"`
@@ -37,6 +38,7 @@ type BudgetVersionResponse struct {
 
 type BudgetLineResponse struct {
 	ID              string     `json:"id"`
+	LedgerID        string     `json:"ledger_id"`
 	VersionID       string     `json:"version_id"`
 	CategoryID      string     `json:"category_id"`
 	Percent         float64    `json:"percent"`
@@ -46,6 +48,7 @@ type BudgetLineResponse struct {
 }
 
 type BudgetMonthlyResponse struct {
+	LedgerID           string                     `json:"ledger_id"`
 	Month              time.Time                   `json:"month"`
 	IncomeBaseCents    int64                       `json:"income_base_cents"`
 	OutsideBudgetCents int64                       `json:"outside_budget_cents"`
@@ -64,6 +67,7 @@ type BudgetMonthlyLineResponse struct {
 }
 
 type BudgetPeriodResponse struct {
+	LedgerID           string                      `json:"ledger_id"`
 	From               time.Time                    `json:"from"`
 	To                 time.Time                    `json:"to"`
 	OutsideBudgetCents int64                        `json:"outside_budget_cents"`

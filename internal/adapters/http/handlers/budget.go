@@ -159,7 +159,7 @@ func (h *BudgetHandler) CreateVersion(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
-	return c.JSON(http.StatusCreated, toVersionResponse(version))
+	return c.JSON(http.StatusCreated, toVersionResponse(version, ledgerID))
 }
 
 func (h *BudgetHandler) ListVersions(c echo.Context) error {
@@ -196,7 +196,7 @@ func (h *BudgetHandler) ListVersions(c echo.Context) error {
 
 	response := make([]versionResponse, 0, len(versions))
 	for _, version := range versions {
-		response = append(response, toVersionResponse(version))
+		response = append(response, toVersionResponse(version, ledgerID))
 	}
 	return c.JSON(http.StatusOK, response)
 }
@@ -216,7 +216,7 @@ func (h *BudgetHandler) GetVersion(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
-	return c.JSON(http.StatusOK, toVersionResponse(version))
+	return c.JSON(http.StatusOK, toVersionResponse(version, ledgerID))
 }
 
 func (h *BudgetHandler) UpdateVersion(c echo.Context) error {
@@ -251,7 +251,7 @@ func (h *BudgetHandler) AddLine(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
-	return c.JSON(http.StatusCreated, toLineResponse(line))
+	return c.JSON(http.StatusCreated, toLineResponse(line, ledgerID))
 }
 
 func (h *BudgetHandler) UpdateLine(c echo.Context) error {
@@ -274,7 +274,7 @@ func (h *BudgetHandler) UpdateLine(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
-	return c.JSON(http.StatusOK, toLineResponse(line))
+	return c.JSON(http.StatusOK, toLineResponse(line, ledgerID))
 }
 
 func (h *BudgetHandler) DeleteLine(c echo.Context) error {
@@ -318,7 +318,7 @@ func (h *BudgetHandler) Monthly(c echo.Context) error {
 		return httpx.WriteAppError(c, err)
 	}
 
-	return c.JSON(http.StatusOK, toMonthlyResponse(summary))
+	return c.JSON(http.StatusOK, toMonthlyResponse(summary, ledgerID))
 }
 
 func (h *BudgetHandler) PeriodSummary(c echo.Context) error {
@@ -351,6 +351,7 @@ func (h *BudgetHandler) PeriodSummary(c echo.Context) error {
 	}
 
 	response := periodResponse{
+		LedgerID:           ledgerID,
 		From:               summary.From,
 		To:                 summary.To,
 		OutsideBudgetCents: summary.OutsideBudgetCents,
@@ -362,7 +363,7 @@ func (h *BudgetHandler) PeriodSummary(c echo.Context) error {
 	}
 
 	for _, month := range summary.Months {
-		response.Months = append(response.Months, toMonthlyResponse(month))
+		response.Months = append(response.Months, toMonthlyResponse(month, ledgerID))
 	}
 	for _, line := range summary.Categories {
 		response.Categories = append(response.Categories, periodLineResponse{
@@ -387,9 +388,10 @@ func toPlanResponse(plan budget.Plan) planResponse {
 	}
 }
 
-func toVersionResponse(version budget.Version) versionResponse {
+func toVersionResponse(version budget.Version, ledgerID string) versionResponse {
 	resp := versionResponse{
 		ID:                 version.ID,
+		LedgerID:           ledgerID,
 		PlanID:             version.PlanID,
 		EffectiveFromMonth: version.EffectiveFromMonth,
 		CreatedByUserID:    version.CreatedByUserID,
@@ -400,16 +402,17 @@ func toVersionResponse(version budget.Version) versionResponse {
 	if len(version.Lines) > 0 {
 		lines := make([]lineResponse, 0, len(version.Lines))
 		for _, line := range version.Lines {
-			lines = append(lines, toLineResponse(line))
+			lines = append(lines, toLineResponse(line, ledgerID))
 		}
 		resp.Lines = lines
 	}
 	return resp
 }
 
-func toLineResponse(line budget.Line) lineResponse {
+func toLineResponse(line budget.Line, ledgerID string) lineResponse {
 	return lineResponse{
 		ID:              line.ID,
+		LedgerID:        ledgerID,
 		VersionID:       line.VersionID,
 		CategoryID:      line.CategoryID,
 		Percent:         line.Percent,
@@ -419,8 +422,9 @@ func toLineResponse(line budget.Line) lineResponse {
 	}
 }
 
-func toMonthlyResponse(summary budget.MonthlySummary) monthlyResponse {
+func toMonthlyResponse(summary budget.MonthlySummary, ledgerID string) monthlyResponse {
 	response := monthlyResponse{
+		LedgerID:           ledgerID,
 		Month:              summary.Month,
 		IncomeBaseCents:    summary.IncomeBaseCents,
 		OutsideBudgetCents: summary.OutsideBudgetCents,
@@ -428,7 +432,7 @@ func toMonthlyResponse(summary budget.MonthlySummary) monthlyResponse {
 	}
 
 	if summary.Version != nil {
-		version := toVersionResponse(*summary.Version)
+		version := toVersionResponse(*summary.Version, ledgerID)
 		response.Version = &version
 	}
 

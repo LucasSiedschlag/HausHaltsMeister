@@ -68,7 +68,7 @@ func (h *ReportsHandler) Balances(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, balanceResponse{Month: report.Month, Items: items})
+	return c.JSON(http.StatusOK, balanceResponse{LedgerID: ledgerID, Month: report.Month, Items: items})
 }
 
 func (h *ReportsHandler) Categories(c echo.Context) error {
@@ -110,7 +110,7 @@ func (h *ReportsHandler) Categories(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, categorySummaryResponse{From: report.From, To: report.To, Items: items})
+	return c.JSON(http.StatusOK, categorySummaryResponse{LedgerID: ledgerID, From: report.From, To: report.To, Items: items})
 }
 
 func (h *ReportsHandler) Cashflow(c echo.Context) error {
@@ -152,5 +152,5 @@ func (h *ReportsHandler) Cashflow(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, cashflowResponse{From: report.From, To: report.To, Items: items})
+	return c.JSON(http.StatusOK, cashflowResponse{LedgerID: ledgerID, From: report.From, To: report.To, Items: items})
 }

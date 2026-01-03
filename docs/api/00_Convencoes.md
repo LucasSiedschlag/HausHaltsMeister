@@ -7,6 +7,7 @@ Este documento consolida os padroes globais e o template obrigatorio de contrato
 ### 1.1 JSON e nomes
 - JSON em `snake_case`.
 - Campos de ID: `*_id` (UUID).
+- Respostas de recursos ledger-scoped incluem `ledger_id` para logs e cache.
 
 ### 1.2 Datas, horarios e timezone
 - Datas e timestamps: ISO-8601 em UTC.
@@ -28,7 +29,11 @@ Este documento consolida os padroes globais e o template obrigatorio de contrato
 - Toda rota de dominio exige `ledgerId`.
 - Sempre filtrar por `ledger_id` para evitar vazamentos.
 
-### 1.6 Paginacao
+### 1.6 Expansoes opcionais
+- Use `expand=ledger` apenas quando a tela precisar dos detalhes do ledger.
+- Por padrao, as respostas sao flat e incluem `ledger_id`.
+
+### 1.7 Paginacao
 - Cursor para journal (transactions).
 - Ordenacao fixa: `occurred_at DESC, id DESC`.
 - Cursor shape:
@@ -36,7 +41,7 @@ Este documento consolida os padroes globais e o template obrigatorio de contrato
 { "cursor_occurred_at": "2026-01-10T00:00:00Z", "cursor_id": "uuid" }
 ```
 
-### 1.7 Erros
+### 1.8 Erros
 - Payload padrao:
 ```json
 {
@@ -48,14 +53,14 @@ Este documento consolida os padroes globais e o template obrigatorio de contrato
 }
 ```
 
-### 1.8 Enum values oficiais
+### 1.9 Enum values oficiais
 - `category_direction`: `in`, `out`
 - `entry_kind`: `normal`, `transfer`, `adjust`
 - `installment_plan_status`: `active`, `cancelled`, `finished`
 - `installment_status`: `scheduled`, `posted`, `paid`, `skipped`
 - `statement_status`: `open`, `closed`, `paid`
 
-### 1.9 Erros 5xx (globais)
+### 1.10 Erros 5xx (globais)
 - `INTERNAL_SERVER_ERROR` (500) — erro inesperado.
 - `SERVICE_UNAVAILABLE` (503) — dependencia/servico indisponivel.
 - `GATEWAY_TIMEOUT` (504) — timeout em dependencia.

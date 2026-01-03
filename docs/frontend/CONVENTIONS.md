@@ -33,6 +33,12 @@ Este documento consolida as decisões e padrões aplicados no frontend para evit
 - `usePreferences` é a fonte de verdade para tema, idioma e notificações.
 - **Mudança de idioma**: só via `setLocale()` após salvar no backend.
 
+## Ledger ativo
+
+- Ledger selecionado é salvo no cookie `hhm_ledger_id`.
+- Estado central em `useLedger` (shared).
+- Rotas não-auth exigem ledger ativo; caso contrário redireciona para `/ledgers`.
+
 ## i18n
 
 - Locales oficiais: `pt-BR` (default) e `en-US`.

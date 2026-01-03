@@ -441,14 +441,12 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 ```json
 [
   {
-    "ledger": {
-      "id": "uuid",
-      "owner_user_id": "uuid",
-      "name": "Pessoal",
-      "currency_code": "BRL",
-      "created_at": "...",
-      "updated_at": "..."
-    },
+    "id": "uuid",
+    "owner_user_id": "uuid",
+    "name": "Pessoal",
+    "currency_code": "BRL",
+    "created_at": "...",
+    "updated_at": "...",
     "role": "owner"
   }
 ]
@@ -459,6 +457,36 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 6) Semantics / Notes
 - Sempre filtra por user_id.
+
+7) Pagination
+- n/a.
+
+8) Idempotency
+- n/a.
+
+#### GET /ledgers/{ledgerId}/me
+1) Summary / Purpose
+- Role do usuario no ledger.
+
+2) Auth & Authorization
+- Token: sim.
+- Role: viewer+.
+
+3) Request
+- Path: `ledgerId` (uuid).
+
+4) Response
+- 200
+```json
+{ "ledger_id": "uuid", "role": "viewer" }
+```
+
+5) Errors
+- 404 `LEDGER_NOT_FOUND`
+- 403 `LEDGER_ACCESS_DENIED`
+
+6) Semantics / Notes
+- Usa o usuario autenticado.
 
 7) Pagination
 - n/a.
@@ -507,7 +535,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 - Path: `ledgerId` (uuid).
 
 4) Response
-- 200 (ledger + role).
+- 200 (ledger + role, flat).
 
 5) Errors
 - 404 `LEDGER_NOT_FOUND`
@@ -1640,7 +1668,16 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 4) Response
 - 200
 ```json
-{ "contributions_cents": 0, "redemptions_cents": 0, "earnings_cents": 0, "net_cents": 0 }
+{
+  "ledger_id": "uuid",
+  "from": "2026-02-01T00:00:00Z",
+  "to": "2026-03-31T23:59:59Z",
+  "total_contributions": 0,
+  "total_redemptions": 0,
+  "total_earnings": 0,
+  "total_losses": 0,
+  "net_variation": 0
+}
 ```
 
 5) Errors
@@ -2273,7 +2310,11 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 4) Response
 - 200
 ```json
-{ "month": "2026-01-01", "accounts": [ { "account_id": "uuid", "balance_cents": 0 } ] }
+{
+  "ledger_id": "uuid",
+  "month": "2026-01-01",
+  "items": [ { "account_id": "uuid", "account_name": "Conta", "account_type": "cash", "balance_cents": 0 } ]
+}
 ```
 
 5) Errors
@@ -2301,7 +2342,12 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 4) Response
 - 200
 ```json
-{ "from": "...", "to": "...", "items": [ { "category_id": "uuid", "spent_cents": 0 } ] }
+{
+  "ledger_id": "uuid",
+  "from": "...",
+  "to": "...",
+  "items": [ { "category_id": "uuid", "name": "Mercado", "direction": "out", "total_cents": 0 } ]
+}
 ```
 
 5) Errors
@@ -2329,7 +2375,12 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 4) Response
 - 200
 ```json
-{ "from": "...", "to": "...", "in_cents": 0, "out_cents": 0, "net_cents": 0 }
+{
+  "ledger_id": "uuid",
+  "from": "...",
+  "to": "...",
+  "items": [ { "month": "2026-01-01", "total_in_cents": 0, "total_out_cents": 0, "net_cents": 0 } ]
+}
 ```
 
 5) Errors

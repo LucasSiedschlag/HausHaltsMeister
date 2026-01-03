@@ -33,3 +33,8 @@ type LedgerMemberResponse struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+type LedgerMeResponse struct {
+	LedgerID string `json:"ledger_id"`
+	Role     string `json:"role"`
+}

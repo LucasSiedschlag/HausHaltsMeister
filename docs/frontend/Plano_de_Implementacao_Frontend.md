@@ -1,24 +1,29 @@
 # Plano_de_Implementacao_Frontend
 
-Este plano define as etapas detalhadas para implementar o frontend em Nuxt 3 com SSR e Nuxt Layers, alinhado ao backend ledger-based.
+Este plano define as etapas detalhadas para implementar o frontend em Nuxt 4 com SSR e Nuxt Layers, alinhado ao backend ledger-based.
 
 ## Etapa 0 — Fundacao do projeto
 
 Objetivo: criar a base tecnica do frontend com SSR e layers.
 
 Passos:
-1. Criar `frontend/` com Nuxt 3 (SSR habilitado por padrao).
+1. Criar `frontend/` com Nuxt 4 (SSR habilitado por padrao).
 2. Configurar `nuxt.config.ts` raiz com `extends` dos layers base.
 3. Criar `layers/shared` com Tailwind + shadcn-vue e tokens base (tema azul).
 4. Configurar `components.json` do shadcn-vue apontando para `layers/shared`.
 5. Definir `layers/core` com layout base e shell de navegacao.
 6. Adicionar `@nuxtjs/color-mode` com persistencia em cookie (SSR-friendly).
 7. Definir `useApiClient` em `layers/shared` com proxy `/api`.
+8. Configurar i18n com `no_prefix` e pt-BR/en-US.
+9. Integrar Notivue no app shell (tema sincronizado).
 
 Saidas esperadas:
 - Estrutura de layers criada.
 - Layout base renderizando com SSR.
 - Tokens de tema aplicados em modo claro/escuro.
+- i18n ativo sem prefixo em URL.
+
+Status: concluida.
 
 ---
 
@@ -35,13 +40,44 @@ Passos:
 2. Implementar forms com validacao client-side (senha minima, email).
 3. Chamar `POST /auth/login` e `POST /auth/signup`.
 4. Salvar access token somente em memoria (store in-memory).
-5. Implementar `GET /auth/me` no bootstrap SSR para validar sessao.
+5. Implementar `GET /auth/me` e refresh via `/auth/refresh`.
 6. Criar middleware global `auth` em `layers/core` (redireciona anonimos).
-7. Implementar refresh automatico chamando `/auth/refresh` quando necessario.
+7. Implementar OAuth (Google/GitHub) + callback.
+8. Implementar expiracao de sessao com aviso no UI.
+9. Implementar rotas auxiliares: forgot password, logout, sessions.
 
 Saidas esperadas:
 - Sessao funciona em SSR e client.
 - Refresh token sempre via cookie.
+- Fluxo OAuth funcionando.
+- Feedback visual em erros de auth.
+
+Status: concluida.
+
+---
+
+## Etapa 1.1 — Configuracoes do usuario
+
+Objetivo: centralizar preferencias do usuario e aplicar no UI.
+
+Referencias:
+- `docs/api/01_Autenticacao.md`
+- `docs/agent/CONVENTIONS.md`
+
+Passos:
+1. Implementar pagina `/settings` no `layers/core`.
+2. Criar `usePreferences` com `GET/PUT /me/preferences`.
+3. Aplicar `theme_mode`, `theme_palette`, `theme_tone` e densidade no layout.
+4. Trocar idioma via `setLocale()` apos salvar preferencia.
+5. Adicionar notificacoes (Notivue) e estados de erro.
+6. Listar sessoes e permitir logout de dispositivos.
+
+Saidas esperadas:
+- Preferencias persistem no banco e refletem no UI.
+- Idioma aplicado sem prefixo de URL.
+- Notificacoes padronizadas.
+
+Status: concluida.
 
 ---
 
@@ -57,10 +93,13 @@ Passos:
 2. Consumir `GET /ledgers` e armazenar `ledgerId` atual.
 3. Adicionar switcher de ledger no header do `core`.
 4. Garantir `ledgerId` persistido (cookie SSR-friendly).
+5. Adicionar middleware de ledger para bloquear rotas sem selecao.
 
 Saidas esperadas:
 - Usuario sempre tem um ledger ativo.
 - Rotas dependem de ledger selecionado.
+
+Status: concluida.
 
 ---
 

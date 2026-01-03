@@ -10,6 +10,7 @@ Este modulo cobre relatorios agregados por ledger.
 - IDs: UUID (string).
 - Auth: `Authorization: Bearer <access_token>`.
 - Ledger boundary obrigatorio em todos os endpoints.
+- Respostas incluem `ledger_id`.
 
 ## Inventario de endpoints
 
@@ -43,7 +44,11 @@ Este modulo cobre relatorios agregados por ledger.
 4) Response
 - 200
 ```json
-{ "month": "2026-01-01", "accounts": [ { "account_id": "uuid", "balance_cents": 0 } ] }
+{
+  "ledger_id": "uuid",
+  "month": "2026-01-01",
+  "items": [ { "account_id": "uuid", "account_name": "Conta", "account_type": "cash", "balance_cents": 0 } ]
+}
 ```
 
 5) Errors
@@ -73,7 +78,12 @@ Este modulo cobre relatorios agregados por ledger.
 4) Response
 - 200
 ```json
-{ "from": "...", "to": "...", "items": [ { "category_id": "uuid", "spent_cents": 0 } ] }
+{
+  "ledger_id": "uuid",
+  "from": "...",
+  "to": "...",
+  "items": [ { "category_id": "uuid", "name": "Mercado", "direction": "out", "total_cents": 0 } ]
+}
 ```
 
 5) Errors
@@ -103,7 +113,12 @@ Este modulo cobre relatorios agregados por ledger.
 4) Response
 - 200
 ```json
-{ "from": "...", "to": "...", "in_cents": 0, "out_cents": 0, "net_cents": 0 }
+{
+  "ledger_id": "uuid",
+  "from": "...",
+  "to": "...",
+  "items": [ { "month": "2026-01-01", "total_in_cents": 0, "total_out_cents": 0, "net_cents": 0 } ]
+}
 ```
 
 5) Errors

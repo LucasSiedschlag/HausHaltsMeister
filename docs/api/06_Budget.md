@@ -10,6 +10,7 @@ Este modulo cobre plano de budget, versoes, linhas e paines de acompanhamento (m
 - IDs: UUID (string).
 - Auth: `Authorization: Bearer <access_token>`.
 - Ledger boundary obrigatorio em todos os endpoints.
+- Respostas de versoes/linhas/paineis incluem `ledger_id`.
 
 ## Inventario de endpoints
 

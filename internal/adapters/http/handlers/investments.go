@@ -77,6 +77,7 @@ func (h *InvestmentsHandler) Summary(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, investmentSummaryResponse{
+		LedgerID:           ledgerID,
 		From:               summary.From,
 		To:                 summary.To,
 		TotalContributions: summary.TotalContributions,

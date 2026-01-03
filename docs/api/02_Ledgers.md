@@ -16,6 +16,7 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 | Metodo | Path | Descricao | Auth | Role |
 |---|---|---|---|---|
 | GET | /ledgers | Listar ledgers do usuario | Sim | viewer |
+| GET | /ledgers/{ledgerId}/me | Role do usuario no ledger | Sim | viewer |
 | POST | /ledgers | Criar ledger | Sim | viewer |
 | GET | /ledgers/{ledgerId} | Detalhe do ledger | Sim | viewer |
 | PATCH | /ledgers/{ledgerId} | Atualizar ledger | Sim | editor |
@@ -53,14 +54,12 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 ```json
 [
   {
-    "ledger": {
-      "id": "uuid",
-      "owner_user_id": "uuid",
-      "name": "Pessoal",
-      "currency_code": "BRL",
-      "created_at": "...",
-      "updated_at": "..."
-    },
+    "id": "uuid",
+    "owner_user_id": "uuid",
+    "name": "Pessoal",
+    "currency_code": "BRL",
+    "created_at": "...",
+    "updated_at": "...",
     "role": "owner"
   }
 ]
@@ -71,6 +70,42 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 
 6) Semantics / Notes
 - Filtra apenas ledgers do usuario.
+
+7) Pagination
+- n/a.
+
+8) Idempotency
+- n/a.
+
+---
+
+### GET /ledgers/{ledgerId}/me
+1) Summary / Purpose
+- Retorna a role do usuario no ledger.
+
+2) Auth & Authorization
+- Token: sim.
+- Role: viewer+.
+
+3) Request
+- Path params:
+  - `ledgerId` (uuid, obrigatorio).
+
+4) Response
+- 200
+```json
+{
+  "ledger_id": "uuid",
+  "role": "viewer"
+}
+```
+
+5) Errors
+- 404 `LEDGER_NOT_FOUND`
+- 403 `LEDGER_ACCESS_DENIED`
+
+6) Semantics / Notes
+- Usa o contexto do usuario autenticado.
 
 7) Pagination
 - n/a.
@@ -98,14 +133,12 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 201
 ```json
 {
-  "ledger": {
-    "id": "uuid",
-    "owner_user_id": "uuid",
-    "name": "Pessoal",
-    "currency_code": "BRL",
-    "created_at": "...",
-    "updated_at": "..."
-  },
+  "id": "uuid",
+  "owner_user_id": "uuid",
+  "name": "Pessoal",
+  "currency_code": "BRL",
+  "created_at": "...",
+  "updated_at": "...",
   "role": "owner"
 }
 ```
@@ -140,14 +173,12 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 200
 ```json
 {
-  "ledger": {
-    "id": "uuid",
-    "owner_user_id": "uuid",
-    "name": "Pessoal",
-    "currency_code": "BRL",
-    "created_at": "...",
-    "updated_at": "..."
-  },
+  "id": "uuid",
+  "owner_user_id": "uuid",
+  "name": "Pessoal",
+  "currency_code": "BRL",
+  "created_at": "...",
+  "updated_at": "...",
   "role": "viewer"
 }
 ```
