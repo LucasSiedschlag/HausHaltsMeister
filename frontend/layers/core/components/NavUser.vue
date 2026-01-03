@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@shared/components/ui/sidebar'
-import { ChevronsUpDown, LogOut, Settings } from 'lucide-vue-next'
+import { ChevronsUpDown, LogOut, Settings, UserRound } from 'lucide-vue-next'
 import { useAuth } from '#layers/auth/composables/useAuth'
 
 const props = withDefaults(defineProps<{
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   name: 'HausHaltsMeister',
   email: 'conta@exemplo.com',
-  avatar: '/placeholder.svg'
+  avatar: ''
 })
 
 const { user, logout } = useAuth()
@@ -39,7 +39,9 @@ const handleLogout = async () => {
           <SidebarMenuButton size="lg">
             <Avatar class="h-8 w-8 rounded-lg">
               <AvatarImage :src="user?.avatar_url || props.avatar" :alt="user?.display_name || props.name" />
-              <AvatarFallback class="rounded-lg">HH</AvatarFallback>
+              <AvatarFallback class="rounded-lg bg-primary/10 text-primary">
+                <UserRound class="h-4 w-4" />
+              </AvatarFallback>
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-semibold">{{ user?.display_name || props.name }}</span>
