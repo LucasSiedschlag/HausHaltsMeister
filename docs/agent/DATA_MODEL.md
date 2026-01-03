@@ -13,10 +13,12 @@ users ──┐
         ├─ auth_sessions
         ├─ user_preferences
         └─ ledgers ── ledger_members
+                ├─ audit_log
                 ├─ accounts ── credit_cards ── credit_card_statements
                 │                 └─ installment_plans ── installments
                 ├─ categories
                 ├─ transactions ── entries
+                ├─ idempotency_keys
                 └─ budget_plans ── budget_plan_versions ── budget_plan_lines
 
 card_networks ── credit_cards.network
@@ -39,10 +41,12 @@ oauth_states (standalone, short-lived)
 **Ledger core**
 - `ledgers`: data boundary (owner + currency).
 - `ledger_members`: roles per ledger.
+- `audit_log`: immutable ledger audit trail.
 - `accounts`: internal accounts (cash/investment/credit_card).
 - `categories`: IN/OUT semantics + budget flags.
 - `transactions`: event header.
 - `entries`: transaction lines (amount + account + category + kind).
+- `idempotency_keys`: ledger-scoped idempotency control for journal/bulk writes.
 
 **Budget**
 - `budget_plans`: one plan per ledger.
@@ -91,7 +95,7 @@ oauth_states (standalone, short-lived)
 
 ## Seeds (technical categories)
 
-Seeded per ledger (from `migrations/002_seed_technical_categories.sql`):
+Seeded per ledger (planned; keep aligned with `docs/ledger/` until seeds are reintroduced):
 
 **Cartão**
 - Pagamento Fatura Cartão (OUT, `is_budget_relevant=false`)

@@ -72,6 +72,46 @@ func TestAddMemberRequiresOwner(t *testing.T) {
 	require.Equal(t, ErrAccessDenied, err)
 }
 
+func TestUpdateLedgerRequiresOwner(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.UpdateLedger(context.Background(), "user-1", "ledger-1", "Novo nome")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestDeleteLedgerRequiresOwner(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	err := service.DeleteLedger(context.Background(), "user-1", "ledger-1")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestListMembersRequiresOwner(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.ListMembers(context.Background(), "user-1", "ledger-1")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestUpdateMemberRequiresOwner(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.UpdateMember(context.Background(), "user-1", "ledger-1", "user-2", "editor")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
+func TestRemoveMemberRequiresOwner(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	err := service.RemoveMember(context.Background(), "user-1", "ledger-1", "user-2")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
 func TestGetLedgerReturnsAccessDeniedWhenExists(t *testing.T) {
 	repo := &fakeRepo{exists: true}
 	service := NewService(repo)

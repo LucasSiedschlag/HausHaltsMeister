@@ -315,6 +315,22 @@ Table ledger_members {
   }
 }
 
+Table audit_log {
+  id          uuid [pk]
+  ledger_id   uuid [not null, ref: > ledgers.id]
+  user_id     uuid [not null, ref: > users.id]
+  action      varchar [not null]
+  entity_id   uuid
+  ip          varchar
+  user_agent  varchar
+  created_at  timestamptz [not null]
+  updated_at  timestamptz
+
+  Indexes {
+    (ledger_id, created_at)
+  }
+}
+
 Table accounts {
   id          uuid [pk]
   ledger_id   uuid [not null, ref: > ledgers.id]
@@ -364,6 +380,21 @@ Table transactions {
   Indexes {
     (ledger_id, occurred_at)
     (ledger_id, external_source, external_id) [unique]
+  }
+}
+
+Table idempotency_keys {
+  ledger_id     uuid [not null, ref: > ledgers.id]
+  key           varchar [not null]
+  resource_type varchar [not null]
+  resource_id   uuid [not null]
+  request_hash  varchar [not null]
+  created_at    timestamptz [not null]
+  updated_at    timestamptz
+  expires_at    timestamptz [not null]
+
+  Indexes {
+    (ledger_id, key) [pk]
   }
 }
 

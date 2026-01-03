@@ -40,7 +40,7 @@ This document defines the mechanical standards the agent must follow without ask
 Standard error payload:
 ```json
 {
-  "code": "validation_error",
+  "code": "VALIDATION_ERROR",
   "message": "Human readable message",
   "details": {
     "field": "reason"
@@ -48,7 +48,7 @@ Standard error payload:
 }
 ```
 
-- `code` is stable and machine-readable.
+- `code` is stable and machine-readable (see `docs/agent/ERRORS.md`).
 - `message` is user-facing.
 - `details` is optional and structured.
 

@@ -26,6 +26,8 @@ Apply rate limits and backoff to:
 - `/auth/signup`
 - `/auth/refresh`
 - `/auth/forgot-password`
+- `/ledgers/{ledgerId}/reports/*`
+- `/ledgers/{ledgerId}/transactions:bulk` (quando existir)
 
 Responses must be generic for login failures.
 
@@ -38,10 +40,21 @@ Responses must be generic for login failures.
 ## RBAC by ledger
 
 - Roles: `owner`, `editor`, `viewer`.
+- LedgerGuard enforces membership + role minima on `/ledgers/:ledgerId/*`.
 - Access checks must happen before any data fetch.
+- Policy: transparente (nao-membro = 403, ledger inexistente = 404).
 
 ## Anti-leak rule
 
 - Every query must filter by `ledger_id`.
 - Fetch-by-id must validate `(ledger_id, id)`.
 - Never expose endpoints without ledger context.
+
+## Idempotency
+
+- Journal create uses `Idempotency-Key` (ledger-scoped) to avoid duplicates.
+- Replay with different payload returns 409.
+
+## Audit trail
+
+- Persist audit events in `audit_log` for membership changes, journal mutations, and budget updates.

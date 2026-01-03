@@ -2,6 +2,9 @@ package journal
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -30,6 +33,21 @@ type EntryInput struct {
 	Memo        *string
 }
 
+type IdempotencyParams struct {
+	Key         string
+	RequestHash string
+	ExpiresAt   time.Time
+}
+
+type IdempotencyRecord struct {
+	LedgerID    string
+	Key         string
+	Operation   string
+	RequestHash string
+	ResourceID  string
+	ExpiresAt   time.Time
+}
+
 type CreateTransactionParams struct {
 	LedgerID        string
 	OccurredAt      time.Time
@@ -37,6 +55,7 @@ type CreateTransactionParams struct {
 	Notes           *string
 	CreatedByUserID string
 	Entries         []EntryInput
+	Idempotency     *IdempotencyParams
 }
 
 type UpdateTransactionParams struct {
@@ -67,6 +86,12 @@ type Service struct {
 	now          func() time.Time
 }
 
+const (
+	IdempotencyOperationTransactionCreate = "journal.transaction.create"
+	idempotencyKeyMaxLength               = 200
+	idempotencyTTL                        = 24 * time.Hour
+)
+
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo, defaultLimit: 50, maxLimit: 200, now: time.Now().UTC}
 }
@@ -94,6 +119,23 @@ func (s *Service) CreateTransaction(ctx context.Context, userID, ledgerID string
 	params.LedgerID = ledgerID
 	params.CreatedByUserID = userID
 	params.Entries = validatedEntries
+	if params.Idempotency != nil {
+		key := strings.TrimSpace(params.Idempotency.Key)
+		if key == "" {
+			params.Idempotency = nil
+		} else {
+			if len(key) > idempotencyKeyMaxLength {
+				return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"idempotency_key": "too_long"})
+			}
+			params.Idempotency.Key = key
+			hash, err := buildIdempotencyHash(params.OccurredAt, params.Description, params.Notes, validatedEntries)
+			if err != nil {
+				return Transaction{}, err
+			}
+			params.Idempotency.RequestHash = hash
+			params.Idempotency.ExpiresAt = s.now().Add(idempotencyTTL)
+		}
+	}
 
 	created, err := s.repo.CreateTransaction(ctx, params)
 	if err != nil {
@@ -196,6 +238,27 @@ func (s *Service) DeleteTransaction(ctx context.Context, userID, ledgerID, trans
 		return err
 	}
 	return nil
+}
+
+func buildIdempotencyHash(occurredAt time.Time, description string, notes *string, entries []EntryInput) (string, error) {
+	payload := struct {
+		OccurredAt  string       `json:"occurred_at"`
+		Description string       `json:"description"`
+		Notes       *string      `json:"notes,omitempty"`
+		Entries     []EntryInput `json:"entries"`
+	}{
+		OccurredAt:  occurredAt.UTC().Format(time.RFC3339Nano),
+		Description: strings.TrimSpace(description),
+		Notes:       notes,
+		Entries:     entries,
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func (s *Service) validateEntries(ctx context.Context, ledgerID string, entries []EntryInput) ([]EntryInput, error) {

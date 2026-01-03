@@ -120,6 +120,14 @@ func (f *fakeRepo) LedgerExists(ctx context.Context, ledgerID string) (bool, err
 	return true, nil
 }
 
+func TestCreatePlanRequiresEditor(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.CreatePlan(context.Background(), "user-1", "ledger-1", "Pessoal")
+	require.Equal(t, ErrAccessDenied, err)
+}
+
 func TestCreateVersionValidatesCategory(t *testing.T) {
 	repo := &fakeRepo{
 		role:         "editor",

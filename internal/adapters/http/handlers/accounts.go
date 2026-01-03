@@ -62,9 +62,9 @@ func (h *AccountsHandler) Get(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	accountID := c.Param("accountId")
-	if ledgerID == "" || accountID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"account_id": "required"})
+	accountID, err := httpx.RequireUUIDParam(c, "accountId")
+	if err != nil {
+		return err
 	}
 
 	item, err := h.Service.GetAccount(c.Request().Context(), user.ID, ledgerID, accountID)
@@ -108,9 +108,9 @@ func (h *AccountsHandler) Update(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	accountID := c.Param("accountId")
-	if ledgerID == "" || accountID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"account_id": "required"})
+	accountID, err := httpx.RequireUUIDParam(c, "accountId")
+	if err != nil {
+		return err
 	}
 
 	var req accountRequest
@@ -140,9 +140,9 @@ func (h *AccountsHandler) Delete(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	accountID := c.Param("accountId")
-	if ledgerID == "" || accountID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"account_id": "required"})
+	accountID, err := httpx.RequireUUIDParam(c, "accountId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.DeleteAccount(c.Request().Context(), user.ID, ledgerID, accountID); err != nil {

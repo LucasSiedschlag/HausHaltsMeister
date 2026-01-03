@@ -40,14 +40,14 @@ func TestListAccountBalances(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close(ctx)
 
-	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "user-1", "user@example.com")
+	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "00000000-0000-0000-0000-000000000001", "user@example.com")
 	require.NoError(t, err)
 
 	var ledgerID string
-	err = conn.QueryRow(ctx, `INSERT INTO ledgers (owner_user_id, name, currency_code) VALUES ($1, $2, $3) RETURNING id`, "user-1", "Pessoal", "BRL").Scan(&ledgerID)
+	err = conn.QueryRow(ctx, `INSERT INTO ledgers (owner_user_id, name, currency_code) VALUES ($1, $2, $3) RETURNING id`, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL").Scan(&ledgerID)
 	require.NoError(t, err)
 
-	_, err = conn.Exec(ctx, `INSERT INTO ledger_members (ledger_id, user_id, role) VALUES ($1, $2, 'owner')`, ledgerID, "user-1")
+	_, err = conn.Exec(ctx, `INSERT INTO ledger_members (ledger_id, user_id, role) VALUES ($1, $2, 'owner')`, ledgerID, "00000000-0000-0000-0000-000000000001")
 	require.NoError(t, err)
 
 	var cashAccountID string
@@ -68,19 +68,19 @@ func TestListAccountBalances(t *testing.T) {
 
 	occurredAt := time.Date(2026, 2, 10, 0, 0, 0, 0, time.UTC)
 	var txID string
-	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Salario", "user-1").Scan(&txID)
+	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Salario", "00000000-0000-0000-0000-000000000001").Scan(&txID)
 	require.NoError(t, err)
 	_, err = conn.Exec(ctx, `INSERT INTO entries (transaction_id, ledger_id, account_id, category_id, kind, amount_cents) VALUES ($1, $2, $3, $4, 'normal', $5)`, txID, ledgerID, cashAccountID, catInID, 10000)
 	require.NoError(t, err)
 
 	occurredAt = time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
-	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Mercado", "user-1").Scan(&txID)
+	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Mercado", "00000000-0000-0000-0000-000000000001").Scan(&txID)
 	require.NoError(t, err)
 	_, err = conn.Exec(ctx, `INSERT INTO entries (transaction_id, ledger_id, account_id, category_id, kind, amount_cents) VALUES ($1, $2, $3, $4, 'normal', $5)`, txID, ledgerID, cashAccountID, catOutID, 3000)
 	require.NoError(t, err)
 
 	occurredAt = time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
-	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Compra Cartao", "user-1").Scan(&txID)
+	err = conn.QueryRow(ctx, `INSERT INTO transactions (ledger_id, occurred_at, description, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING id`, ledgerID, occurredAt, "Compra Cartao", "00000000-0000-0000-0000-000000000001").Scan(&txID)
 	require.NoError(t, err)
 	_, err = conn.Exec(ctx, `INSERT INTO entries (transaction_id, ledger_id, account_id, category_id, kind, amount_cents) VALUES ($1, $2, $3, $4, 'normal', $5)`, txID, ledgerID, cardAccountID, catOutID, 2000)
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestListAccountBalances(t *testing.T) {
 	repo := NewRepository(store)
 	service := reports.NewService(repo)
 
-	result, err := service.Balances(ctx, "user-1", ledgerID, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC))
+	result, err := service.Balances(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC))
 	require.NoError(t, err)
 
 	var cashBalance int64

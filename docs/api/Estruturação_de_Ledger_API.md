@@ -1,179 +1,312 @@
-Checklist “zero brecha” (Ledger Security)
+# Checklist zero brecha (Ledger Security)
 
-A) Regras absolutas (não negocie)
-	1.	Fonte de verdade do ledger = ledgerId do PATH
-	•	Em qualquer POST/PATCH, ignore ledgerId do body, mesmo que exista no DTO.
-	2.	Toda query de recurso deve filtrar por ledger_id
-	•	WHERE ledger_id = $1 AND id = $2 (sempre)
-	3.	Nunca autorize por “existe no banco”
-	•	Autorize por: (user_id, ledger_id) membership + role
-	4.	Role/perms só do servidor
-	•	Nunca aceite role no request (exceto endpoints de owner que alteram membership, e ainda assim validando owner).
+## Status atual (resumo rapido)
+- Implementado:
+  - LedgerId do path como fonte de verdade.
+  - Repos sempre filtram `ledger_id`.
+  - Role/membership avaliados no service.
+  - `/ledgers/{ledgerId}/me` para role.
+  - Auth + refresh com rate limit.
+  - LedgerGuard middleware (membership + role minima).
+  - Validacao de IDs de path (UUID).
+  - Idempotency-key para journal (create).
+  - Auditoria basica (`audit_log`).
+  - Testes cross-ledger + matriz de roles (LedgerGuard).
+  - Scan automatizado para `WHERE id =` sem `ledger_id` (rg com allowlist de auth/ledger/budget/access.go).
+- Decisao: politica transparente (403 para nao-membro, 404 para nao existe).
 
-⸻
+## Plano de implementacao (ordem recomendada)
+1. Scan de repos sem `ledger_id`
+   - Concluido: teste com `rg` em go test (exclui auth/ledger/budget/access.go).
 
-B) Middleware/Policy obrigatório (padrão por endpoint)
+---
 
-1) Middleware de autenticação
-	•	Resolve userID da sessão/JWT.
-	•	Injeta no context.
+## A) Regras absolutas (nao negocie)
+1. Fonte de verdade do ledger = ledgerId do PATH
+   - Em qualquer POST/PATCH, ignore ledgerId do body, mesmo que exista no DTO.
+2. Toda query de recurso deve filtrar por ledger_id
+   - `WHERE ledger_id = $1 AND id = $2` (sempre).
+3. Nunca autorize por “existe no banco”
+   - Autorize por: (user_id, ledger_id) membership + role.
+4. Role/perms so do servidor
+   - Nunca aceite role no request (exceto endpoints de owner que alteram membership, e ainda assim validando owner).
 
-2) Middleware de “LedgerGuard”
+---
 
-Aplica em qualquer rota que tenha :ledgerId.
+## B) Middleware/Policy obrigatorio (padrao por endpoint)
+### 1) Middleware de autenticacao
+- Resolve userID da sessao/JWT.
+- Injeta no context.
+
+### 2) Middleware de LedgerGuard
+Aplica em qualquer rota que tenha `:ledgerId`.
 
 Passos do LedgerGuard:
-	1.	Ler ledgerId do path.
-	2.	Buscar membership:
-	•	SELECT role FROM ledger_members WHERE ledger_id=$1 AND user_id=$2 AND removed_at IS NULL
-	3.	Se não existir: 403 (ou 404 se você quiser “não revelar” que o ledger existe).
-	4.	Verificar role mínima exigida pela rota:
-	•	viewer < editor < owner
-	5.	Anexar no context:
-	•	ctx.ledgerId
-	•	ctx.ledgerRole
-	•	ctx.permissions (opcional derivado do role)
+1. Ler ledgerId do path.
+2. Buscar membership:
+   - `SELECT role FROM ledger_members WHERE ledger_id=$1 AND user_id=$2 AND removed_at IS NULL`
+3. Se nao existir: 403 (ou 404 se voce quiser “nao revelar” que o ledger existe).
+4. Verificar role minima exigida pela rota:
+   - `viewer < editor < owner`
+5. Anexar no context:
+   - `ctx.ledgerId`
+   - `ctx.ledgerRole`
+   - `ctx.permissions` (opcional derivado do role)
 
-Boas práticas:
-	•	Use uma função única: RequireLedgerRole(minRole)
-	•	Evita “esquecer” check em handler.
+Boas praticas:
+- Use uma funcao unica: `RequireLedgerRole(minRole)`.
+- Evita “esquecer” check em handler.
 
-⸻
+---
 
-C) Padrão de Service/Repo (para não errar)
+## C) Padrao de Service/Repo (para nao errar)
+### 1) Handler so extrai input e chama service
+- Nada de SQL no handler.
+- Nada de regra de autorizacao no handler (fica no guard/policy).
 
-1) Handler só extrai input e chama service
-	•	Nada de SQL no handler.
-	•	Nada de regra de autorização no handler (fica no guard/policy).
+### 2) Service recebe sempre (ctx, ledgerId, ...)
+Mesmo que o ledger ja esteja no ctx, passe explicitamente pra ficar claro.
 
-2) Service recebe sempre (ctx, ledgerId, ...)
-
-Mesmo que o ledger já esteja no ctx, passe explicitamente pra ficar claro.
-
-3) Repo: funções sempre “scoped”
-
+### 3) Repo: funcoes sempre scoped
 Exemplos de assinaturas (ideia):
-	•	GetCategory(ctx, ledgerId, categoryId)
-	•	ListTransactions(ctx, ledgerId, cursor, limit)
-	•	UpdateAccount(ctx, ledgerId, accountId, patch)
+- `GetCategory(ctx, ledgerId, categoryId)`
+- `ListTransactions(ctx, ledgerId, cursor, limit)`
+- `UpdateAccount(ctx, ledgerId, accountId, patch)`
 
 Proibido:
-	•	GetCategoryByID(categoryId) sem ledgerId.
+- `GetCategoryByID(categoryId)` sem ledgerId.
 
-⸻
+---
 
-D) Padrões SQL que evitam vazamento
-
-1) Read de recurso
-
+## D) Padroes SQL que evitam vazamento
+### 1) Read de recurso
+```sql
 SELECT ...
 FROM categories
 WHERE ledger_id = $1
   AND id = $2
   AND deleted_at IS NULL;
+```
 
-2) Update de recurso (garantindo scoping)
-
+### 2) Update de recurso (garantindo scoping)
+```sql
 UPDATE categories
 SET name = $3, updated_at = now()
 WHERE ledger_id = $1
   AND id = $2
   AND deleted_at IS NULL
 RETURNING ...;
+```
 
-Se não retornou linha: responde 404 (ou 403/404 conforme sua política).
+Se nao retornou linha: responde 404 (ou 403/404 conforme sua politica).
 
-3) Delete (soft delete planejado)
-
+### 3) Delete (soft delete planejado)
+```sql
 UPDATE categories
 SET deleted_at = now()
 WHERE ledger_id = $1
   AND id = $2
   AND deleted_at IS NULL;
+```
 
+---
 
-⸻
-
-E) Padrão de erros (segurança + UX)
-
-Escolha 1: “Não revelar existência” (mais seguro)
-	•	Se o usuário não é membro do ledger: 404 em tudo (ledger e recursos).
-	•	Se é membro mas sem role: 403.
+## E) Padrao de erros (seguranca + UX)
+Escolha 1: “Nao revelar existencia” (mais seguro)
+- Se o usuario nao e membro do ledger: 404 em tudo (ledger e recursos).
+- Se e membro mas sem role: 403.
 
 Escolha 2: “Transparente”
-	•	Não membro: 403.
-	•	Sem permissão: 403.
-	•	Não existe: 404.
+- Nao membro: 403.
+- Sem permissao: 403.
+- Nao existe: 404.
 
-Escolha 1 costuma ser melhor pra evitar enumeração.
+Escolha 1 costuma ser melhor pra evitar enumeracao.
 
-⸻
+---
 
-F) Proteções anti-brecha comuns
+## F) Protecoes anti-brecha comuns
+1. Validacao de IDs
+   - ledgerId, accountId, etc. com formato unico (UUID/ULID).
+   - Rejeitar strings invalidas com 400.
 
-1) Validação de IDs
-	•	ledgerId, accountId, etc. com formato único (UUID/ULID).
-	•	Rejeitar strings inválidas com 400.
+2. Rate limit e lockout
+   - Rate limit por IP + user em rotas sensiveis (login, bulk, reports).
+   - Evita brute force e enumeracao.
 
-2) Rate limit e lockout
-	•	Rate limit por IP + user em rotas sensíveis (login, bulk, reports).
-	•	Evita brute force e enumeração.
+3. Auditoria (muito recomendado em sistema financeiro)
+   - Registrar eventos:
+     - ledger.member.add/remove/role_change
+     - transaction.create/update/delete
+     - budget.plan.update
+   - Guardar: user_id, ledger_id, entity_id, action, created_at, ip/user-agent (se tiver).
 
-3) Auditoria (muito recomendado em sistema financeiro)
-	•	Registrar eventos:
-	•	ledger.member.add/remove/role_change
-	•	transaction.create/update/delete
-	•	budget.plan.update
-	•	Guardar: user_id, ledger_id, entity_id, action, created_at, ip/user-agent (se tiver).
+4. Idempotencia em POST criticos
+   - Para transactions e bulk: Idempotency-Key (header) por ledger.
+   - Evita duplicar transacoes por retry.
 
-4) Idempotência em POST críticos
-	•	Para transactions e bulk: Idempotency-Key (header) por ledger.
-	•	Evita duplicar transações por retry.
+---
 
-⸻
+## G) Testes que garantem que nao tem furo
+1. Testes de autorizacao por role
+   - viewer tenta acao editor -> deve falhar
+   - editor tenta acao owner -> deve falhar
+   - nao-membro -> deve falhar (404 ou 403)
 
-G) Testes que garantem que não tem furo
+2. Testes de cross-ledger
+   - ledger A com transaction X
+   - ledger B com usuario atacante
+   - Acessar `/ledgers/B/transactions/X` -> deve falhar, mesmo com ID valido.
 
-1) Testes de autorização por role
+3. Teste de query sem scope
+   - Suite que procura repos com `WHERE id =` sem `ledger_id`.
+   - Pega regressao.
 
-Para cada endpoint:
-	•	viewer tenta ação editor → deve falhar
-	•	editor tenta ação owner → deve falhar
-	•	não-membro → deve falhar (404 ou 403)
+---
 
-2) Testes de “cross-ledger”
+## H) Como encaixa no seu contrato atual
+Mantem o que voce implementou:
+- Flat por padrao
+- ledgerId nos DTOs (mas ignorado no input)
+- `/ledgers/{ledgerId}/me` para role/perms
+- `expand=ledger` so se precisar
 
-Crie:
-	•	ledger A com transaction X
-	•	ledger B com usuário atacante
-Tentar acessar /ledgers/B/transactions/X:
-	•	deve falhar sempre, mesmo com ID válido.
+E a seguranca fica no guard + repo scoped.
 
-3) Teste de query “sem scope”
-	•	Uma suite que procura repos que fazem WHERE id = sem ledger_id =.
-	•	Isso pega regressão.
+---
 
-⸻
+## I) Matriz de policies por endpoint (roles minimas)
+### Autenticacao + preferencias
+| Metodo | Path | Role |
+|---|---|---|
+| POST | /auth/signup | - |
+| POST | /auth/login | - |
+| POST | /auth/refresh | - |
+| POST | /auth/logout | viewer |
+| GET | /auth/me | viewer |
+| GET | /auth/oauth/{provider}/start | - |
+| GET | /auth/oauth/{provider}/callback | - |
+| POST | /auth/forgot-password | - |
+| POST | /auth/reset-password | - |
+| POST | /auth/verify-email | - |
+| POST | /auth/resend-verification | - |
+| GET | /auth/sessions | viewer |
+| DELETE | /auth/sessions/{sessionId} | viewer |
+| POST | /auth/logout-all | viewer |
+| GET | /auth/providers | viewer |
+| POST | /auth/link/{provider}/start | viewer |
+| POST | /auth/unlink/{provider} | viewer |
+| GET | /me/preferences | viewer |
+| PUT | /me/preferences | viewer |
 
-H) Como encaixa no seu contrato atual
+### Ledgers e membros
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /ledgers | viewer |
+| POST | /ledgers | viewer |
+| GET | /ledgers/{ledgerId} | viewer |
+| PATCH | /ledgers/{ledgerId} | editor |
+| DELETE | /ledgers/{ledgerId} | owner |
+| GET | /ledgers/{ledgerId}/me | viewer |
+| GET | /ledgers/{ledgerId}/members | owner |
+| POST | /ledgers/{ledgerId}/members | owner |
+| PATCH | /ledgers/{ledgerId}/members/{userId} | owner |
+| DELETE | /ledgers/{ledgerId}/members/{userId} | owner |
 
-Mantém o que você implementou:
-	•	Flat por padrão
-	•	ledgerId nos DTOs (mas ignorado no input)
-	•	/ledgers/{ledgerId}/me para role/perms
-	•	expand=ledger só se precisar
+### Accounts
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /ledgers/{ledgerId}/accounts | viewer |
+| GET | /ledgers/{ledgerId}/accounts/{accountId} | viewer |
+| POST | /ledgers/{ledgerId}/accounts | editor |
+| PATCH | /ledgers/{ledgerId}/accounts/{accountId} | editor |
+| DELETE | /ledgers/{ledgerId}/accounts/{accountId} | editor |
 
-E a segurança fica no guard + repo scoped.
+### Categories
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /ledgers/{ledgerId}/categories | viewer |
+| GET | /ledgers/{ledgerId}/categories/{categoryId} | viewer |
+| POST | /ledgers/{ledgerId}/categories | editor |
+| PATCH | /ledgers/{ledgerId}/categories/{categoryId} | editor |
+| DELETE | /ledgers/{ledgerId}/categories/{categoryId} | editor |
 
-⸻
+### Journal
+| Metodo | Path | Role |
+|---|---|---|
+| POST | /ledgers/{ledgerId}/transactions | editor |
+| GET | /ledgers/{ledgerId}/transactions | viewer |
+| GET | /ledgers/{ledgerId}/transactions/{transactionId} | viewer |
+| PATCH | /ledgers/{ledgerId}/transactions/{transactionId} | editor |
+| DELETE | /ledgers/{ledgerId}/transactions/{transactionId} | editor |
+| POST | /ledgers/{ledgerId}/transactions:bulk | editor |
 
-Tranformando isso em tarefas, aqui vai um mini-todo pronto:
+### Budget
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /ledgers/{ledgerId}/budget/plan | viewer |
+| POST | /ledgers/{ledgerId}/budget/plan | editor |
+| PATCH | /ledgers/{ledgerId}/budget/plan | editor |
+| DELETE | /ledgers/{ledgerId}/budget/plan | owner |
+| POST | /ledgers/{ledgerId}/budget/versions | editor |
+| GET | /ledgers/{ledgerId}/budget/versions | viewer |
+| GET | /ledgers/{ledgerId}/budget/versions/{versionId} | viewer |
+| PATCH | /ledgers/{ledgerId}/budget/versions/{versionId} | owner |
+| DELETE | /ledgers/{ledgerId}/budget/versions/{versionId} | owner |
+| POST | /ledgers/{ledgerId}/budget/versions/{versionId}/lines | editor |
+| PATCH | /ledgers/{ledgerId}/budget/versions/{versionId}/lines/{lineId} | editor |
+| DELETE | /ledgers/{ledgerId}/budget/versions/{versionId}/lines/{lineId} | editor |
+| GET | /ledgers/{ledgerId}/budget/monthly | viewer |
+| GET | /ledgers/{ledgerId}/budget/period | viewer |
 
-Tarefas:
-	•	Implementar LedgerGuard (middleware/policy) que resolve membership/role por ledgerId do path e bloqueia por role mínima.
-	•	Garantir que todas as rotas /ledgers/:ledgerId/* usem o guard com role correto (viewer/editor/owner).
-	•	Atualizar repos para que todo acesso a recursos use ledger_id + id (proibir get/update/delete só por id).
-	•	Ignorar ledgerId do body em creates/updates (sempre usar o do path).
-	•	Adicionar testes de cross-ledger + role matrix para endpoints principais.
-	•	Padronizar erro 404 para não-membro (ou 403 conforme escolhido), consistente em toda API.
-	•	Defina uma matriz de roles por endpoint no formato “tabela de policies” pra você colar no docs e implementar 1:1?
+### Investimentos
+| Metodo | Path | Role |
+|---|---|---|
+| POST | /ledgers/{ledgerId}/investments/contributions | editor |
+| POST | /ledgers/{ledgerId}/investments/redemptions | editor |
+| POST | /ledgers/{ledgerId}/investments/earnings | editor |
+| GET | /ledgers/{ledgerId}/investments/summary | viewer |
+
+### Cartoes
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /card-networks | viewer |
+| POST | /card-networks | owner |
+| PATCH | /card-networks/{code} | owner |
+| DELETE | /card-networks/{code} | owner |
+| GET | /ledgers/{ledgerId}/credit-cards | viewer |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | viewer |
+| POST | /ledgers/{ledgerId}/credit-cards | editor |
+| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | editor |
+| DELETE | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | editor |
+| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans | editor |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans | viewer |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | viewer |
+| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | editor |
+| DELETE | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | editor |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments | viewer |
+| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments/{installmentId} | editor |
+| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post | editor |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements | viewer |
+| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId} | viewer |
+| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close | editor |
+| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay | editor |
+| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId} | owner |
+
+### Relatorios
+| Metodo | Path | Role |
+|---|---|---|
+| GET | /ledgers/{ledgerId}/reports/balances | viewer |
+| GET | /ledgers/{ledgerId}/reports/categories | viewer |
+| GET | /ledgers/{ledgerId}/reports/cashflow | viewer |
+
+---
+
+## Tarefas (concluidas)
+- LedgerGuard (middleware/policy) resolve membership/role por ledgerId do path e bloqueia por role minima.
+- Todas as rotas `/ledgers/:ledgerId/*` usam o guard com role correto (viewer/editor/owner).
+- Repos acessam recursos sempre com ledger_id + id (proibido get/update/delete so por id).
+- LedgerId do body ignorado em creates/updates (sempre usar o do path).
+- Testes de cross-ledger + role matrix para endpoints principais.
+- Politica transparente consistente (403 nao-membro, 404 inexistente).
+- Matriz de roles por endpoint documentada (tabela de policies).

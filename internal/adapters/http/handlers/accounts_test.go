@@ -44,12 +44,12 @@ func TestCreateAccountAccessDenied(t *testing.T) {
 	body, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/ledgers/ledger-1/accounts", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/ledgers/11111111-1111-1111-1111-111111111111/accounts", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("ledgerId")
-	c.SetParamValues("ledger-1")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111")
 	c.Set("user", auth.User{ID: "user-1"})
 
 	handler := AccountsHandler{Service: fakeAccountsService{createErr: accounts.ErrAccessDenied}}

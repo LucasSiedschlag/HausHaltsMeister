@@ -44,12 +44,12 @@ func TestUpdateCategoryAccessDenied(t *testing.T) {
 	body, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPatch, "/ledgers/ledger-1/categories/cat-1", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPatch, "/ledgers/11111111-1111-1111-1111-111111111111/categories/22222222-2222-2222-2222-222222222222", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("ledgerId", "categoryId")
-	c.SetParamValues("ledger-1", "cat-1")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
 	c.Set("user", auth.User{ID: "user-1"})
 
 	handler := CategoriesHandler{Service: fakeCategoriesService{updateErr: categories.ErrAccessDenied}}

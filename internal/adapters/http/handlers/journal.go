@@ -9,12 +9,14 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/audit"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
 	"github.com/labstack/echo/v4"
 )
 
 type JournalHandler struct {
 	Service JournalService
+	Audit   audit.Recorder
 }
 
 type JournalService interface {
@@ -46,9 +48,9 @@ func (h *JournalHandler) Create(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	var req transactionRequest
@@ -72,16 +74,31 @@ func (h *JournalHandler) Create(c echo.Context) error {
 		})
 	}
 
+	var idempotency *journal.IdempotencyParams
+	if value := strings.TrimSpace(c.Request().Header.Get("Idempotency-Key")); value != "" {
+		idempotency = &journal.IdempotencyParams{Key: value}
+	}
+
 	created, err := h.Service.CreateTransaction(c.Request().Context(), user.ID, ledgerID, journal.CreateTransactionParams{
 		LedgerID:    ledgerID,
 		OccurredAt:  occurredAt,
 		Description: req.Description,
 		Notes:       req.Notes,
 		Entries:     entries,
+		Idempotency: idempotency,
 	})
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "journal.transaction.create",
+		EntityID:  &created.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 
 	return c.JSON(http.StatusCreated, toTransactionResponse(created))
 }
@@ -91,9 +108,9 @@ func (h *JournalHandler) List(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	params := journal.ListTransactionsParams{}
@@ -112,9 +129,15 @@ func (h *JournalHandler) List(c echo.Context) error {
 		params.To = &parsed
 	}
 	if value := strings.TrimSpace(c.QueryParam("account_id")); value != "" {
+		if !httpx.IsUUID(value) {
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"account_id": "invalid"})
+		}
 		params.AccountID = &value
 	}
 	if value := strings.TrimSpace(c.QueryParam("category_id")); value != "" {
+		if !httpx.IsUUID(value) {
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "invalid"})
+		}
 		params.CategoryID = &value
 	}
 	if value := strings.TrimSpace(c.QueryParam("q")); value != "" {
@@ -131,6 +154,9 @@ func (h *JournalHandler) List(c echo.Context) error {
 	cursorOccurredAt := strings.TrimSpace(c.QueryParam("cursor_occurred_at"))
 	cursorID := strings.TrimSpace(c.QueryParam("cursor_id"))
 	if cursorOccurredAt != "" && cursorID != "" {
+		if !httpx.IsUUID(cursorID) {
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"cursor_id": "invalid"})
+		}
 		parsed, err := httpx.ParseDateTime(cursorOccurredAt)
 		if err != nil {
 			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"cursor_occurred_at": "invalid"})
@@ -161,10 +187,13 @@ func (h *JournalHandler) Get(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	transactionID := c.Param("transactionId")
-	if ledgerID == "" || transactionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"transaction_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
+	}
+	transactionID, err := httpx.RequireUUIDParam(c, "transactionId")
+	if err != nil {
+		return err
 	}
 
 	item, err := h.Service.GetTransaction(c.Request().Context(), user.ID, ledgerID, transactionID)
@@ -179,10 +208,13 @@ func (h *JournalHandler) Update(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	transactionID := c.Param("transactionId")
-	if ledgerID == "" || transactionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"transaction_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
+	}
+	transactionID, err := httpx.RequireUUIDParam(c, "transactionId")
+	if err != nil {
+		return err
 	}
 
 	var req transactionPatchRequest
@@ -227,6 +259,15 @@ func (h *JournalHandler) Update(c echo.Context) error {
 		return httpx.WriteAppError(c, err)
 	}
 
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "journal.transaction.update",
+		EntityID:  &updated.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
+
 	return c.JSON(http.StatusOK, toTransactionResponse(updated))
 }
 
@@ -235,15 +276,27 @@ func (h *JournalHandler) Delete(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	transactionID := c.Param("transactionId")
-	if ledgerID == "" || transactionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"transaction_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
+	}
+	transactionID, err := httpx.RequireUUIDParam(c, "transactionId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.DeleteTransaction(c.Request().Context(), user.ID, ledgerID, transactionID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "journal.transaction.delete",
+		EntityID:  &transactionID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.NoContent(http.StatusNoContent)
 }
 

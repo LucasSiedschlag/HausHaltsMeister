@@ -180,9 +180,9 @@ func (h *AuthHandler) RevokeSession(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Session invalida", nil)
+	sessionID, err := httpx.RequireUUIDParam(c, "sessionId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.RevokeSession(c.Request().Context(), user.ID, sessionID); err != nil {

@@ -35,5 +35,7 @@ var (
 	ErrTransactionNotFound   = NewError("TRANSACTION_NOT_FOUND", "Transacao nao encontrada", nil)
 	ErrTransactionReferenced = NewError("TRANSACTION_REFERENCED", "Transacao referenciada", nil)
 	ErrTransferNotBalanced   = NewError("TRANSFER_NOT_BALANCED", "Transferencia nao balanceada", nil)
+	ErrIdempotencyConflict   = NewError("IDEMPOTENCY_KEY_CONFLICT", "Chave de idempotencia reutilizada com payload diferente", nil)
+	ErrIdempotencyExpired    = NewError("IDEMPOTENCY_KEY_EXPIRED", "Chave de idempotencia expirada", nil)
 	ErrValidation            = NewError("VALIDATION_ERROR", "Validacao falhou", nil)
 )

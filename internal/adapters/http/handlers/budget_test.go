@@ -64,11 +64,11 @@ func (f fakeBudgetService) PeriodSummary(ctx context.Context, userID, ledgerID s
 
 func TestMonthlyRequiresMonth(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/ledgers/ledger-1/budget/monthly", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ledgers/11111111-1111-1111-1111-111111111111/budget/monthly", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("ledgerId")
-	c.SetParamValues("ledger-1")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111")
 	c.Set("user", auth.User{ID: "user-1"})
 
 	handler := BudgetHandler{Service: fakeBudgetService{}}
@@ -80,11 +80,11 @@ func TestMonthlyRequiresMonth(t *testing.T) {
 
 func TestPeriodRequiresRange(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/ledgers/ledger-1/budget/period", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ledgers/11111111-1111-1111-1111-111111111111/budget/period", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("ledgerId")
-	c.SetParamValues("ledger-1")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111")
 	c.Set("user", auth.User{ID: "user-1"})
 
 	handler := BudgetHandler{Service: fakeBudgetService{}}

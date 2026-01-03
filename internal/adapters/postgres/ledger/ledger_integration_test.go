@@ -43,14 +43,14 @@ func TestCreateLedgerCreatesOwnerMember(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close(ctx)
 
-	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "user-1", "user@example.com")
+	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "00000000-0000-0000-0000-000000000001", "user@example.com")
 	require.NoError(t, err)
 
-	created, err := service.CreateLedger(ctx, "user-1", "Pessoal", "BRL")
+	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL")
 	require.NoError(t, err)
 	require.NotEmpty(t, created.ID)
 
-	ledgers, err := service.ListLedgers(ctx, "user-1")
+	ledgers, err := service.ListLedgers(ctx, "00000000-0000-0000-0000-000000000001")
 	require.NoError(t, err)
 	require.Len(t, ledgers, 1)
 	require.Equal(t, created.ID, ledgers[0].Ledger.ID)

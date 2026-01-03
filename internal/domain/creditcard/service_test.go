@@ -20,7 +20,6 @@ type fakeRepo struct {
 	posted            []string
 	sumCharges        int64
 	statement         Statement
-	accountLedger     string
 	createdTxs        int
 }
 
@@ -62,13 +61,6 @@ func (f *fakeRepo) DeleteCreditCard(ctx context.Context, ledgerID, cardAccountID
 
 func (f *fakeRepo) GetAccountType(ctx context.Context, ledgerID, accountID string) (string, error) {
 	return f.accountType, nil
-}
-
-func (f *fakeRepo) GetAccountLedger(ctx context.Context, accountID string) (string, error) {
-	if f.accountLedger != "" {
-		return f.accountLedger, nil
-	}
-	return "ledger-1", nil
 }
 
 func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error) {
@@ -153,7 +145,7 @@ func (f *fakeRepo) CreateStatement(ctx context.Context, statement Statement) (St
 	return statement, nil
 }
 
-func (f *fakeRepo) UpdateStatementTotals(ctx context.Context, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
+func (f *fakeRepo) UpdateStatementTotals(ctx context.Context, ledgerID, cardAccountID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
 	return Statement{ID: statementID, TotalChargesCents: totalCharges, TotalPaymentsCents: totalPayments, Status: status}, nil
 }
 
@@ -161,7 +153,7 @@ func (f *fakeRepo) ListStatements(ctx context.Context, ledgerID, cardAccountID s
 	return nil, nil
 }
 
-func (f *fakeRepo) SetStatementPayment(ctx context.Context, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
+func (f *fakeRepo) SetStatementPayment(ctx context.Context, ledgerID, cardAccountID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
 	return Statement{}, nil
 }
 
@@ -176,6 +168,14 @@ func (f *fakeRepo) SumStatementCharges(ctx context.Context, ledgerID, cardAccoun
 func (f *fakeRepo) CreateTransaction(ctx context.Context, params journal.CreateTransactionParams) (journal.Transaction, error) {
 	f.createdTxs++
 	return journal.Transaction{ID: "tx-1"}, nil
+}
+
+func TestCreateCreditCardRequiresEditor(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.CreateCreditCard(context.Background(), "user-1", "ledger-1", CreditCard{AccountID: "acc-1"})
+	require.Equal(t, ErrAccessDenied, err)
 }
 
 func TestCancelPlanBlocksPostedInstallments(t *testing.T) {

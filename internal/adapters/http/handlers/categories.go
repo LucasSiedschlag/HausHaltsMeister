@@ -76,9 +76,9 @@ func (h *CategoriesHandler) Get(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	categoryID := c.Param("categoryId")
-	if ledgerID == "" || categoryID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+	categoryID, err := httpx.RequireUUIDParam(c, "categoryId")
+	if err != nil {
+		return err
 	}
 
 	item, err := h.Service.GetCategory(c.Request().Context(), user.ID, ledgerID, categoryID)
@@ -137,9 +137,9 @@ func (h *CategoriesHandler) Update(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	categoryID := c.Param("categoryId")
-	if ledgerID == "" || categoryID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+	categoryID, err := httpx.RequireUUIDParam(c, "categoryId")
+	if err != nil {
+		return err
 	}
 
 	var req categoryRequest
@@ -181,9 +181,9 @@ func (h *CategoriesHandler) Delete(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	categoryID := c.Param("categoryId")
-	if ledgerID == "" || categoryID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"category_id": "required"})
+	categoryID, err := httpx.RequireUUIDParam(c, "categoryId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.DeleteCategory(c.Request().Context(), user.ID, ledgerID, categoryID); err != nil {

@@ -110,12 +110,12 @@ func TestPayStatementAlreadyPaid(t *testing.T) {
 	body, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/ledgers/ledger-1/credit-cards/card-1/statements/pay", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/ledgers/11111111-1111-1111-1111-111111111111/credit-cards/33333333-3333-3333-3333-333333333333/statements/pay", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("ledgerId", "cardAccountId")
-	c.SetParamValues("ledger-1", "card-1")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111", "33333333-3333-3333-3333-333333333333")
 	c.Set("user", auth.User{ID: "user-1"})
 
 	handler := CreditCardHandler{Service: fakeCreditCardService{payErr: creditcard.ErrStatementAlreadyPaid}}

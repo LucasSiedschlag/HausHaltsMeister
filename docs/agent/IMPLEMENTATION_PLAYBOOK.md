@@ -15,8 +15,9 @@ This document defines how the agent must work on every feature. It is the defaul
    - Keep `created_at` default and set `updated_at` in the app.
 
 3. **SQLC queries**
-   - Add/modify queries in `db/queries/`.
+   - Add/modify queries in `internal/adapters/postgres/<module>/queries/`.
    - Ensure queries always filter by `ledger_id`.
+   - Run the ledger scope scan test (`TestQueriesScopedByLedgerID`).
 
 4. **Service layer**
    - Implement domain rules and validations first.
@@ -29,6 +30,7 @@ This document defines how the agent must work on every feature. It is the defaul
 6. **Tests**
    - Follow `docs/agent/TEST_STRATEGY.md`.
    - Add handler + service tests; integration test if DB touched.
+   - Add role tests for owner-only endpoints when introduced.
 
 7. **Decisions (ADR)**
    - If a new irreversible decision is made, update `docs/agent/DECISIONS.md`.

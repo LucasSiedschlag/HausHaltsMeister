@@ -18,12 +18,26 @@ type Account struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type AuditLog struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	UserID    pgtype.UUID
+	Action    string
+	EntityID  pgtype.UUID
+	Ip        pgtype.Text
+	UserAgent pgtype.Text
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type AuthIdentity struct {
 	ID             pgtype.UUID
 	UserID         pgtype.UUID
 	Provider       string
 	ProviderUserID string
 	Email          pgtype.Text
+	DisplayName    pgtype.Text
+	AvatarUrl      pgtype.Text
 	EmailVerified  bool
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
@@ -140,6 +154,17 @@ type Entry struct {
 	UpdatedAt     pgtype.Timestamptz
 }
 
+type IdempotencyKey struct {
+	LedgerID     pgtype.UUID
+	Key          string
+	ResourceType string
+	ResourceID   pgtype.UUID
+	RequestHash  string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	ExpiresAt    pgtype.Timestamptz
+}
+
 type Installment struct {
 	ID                  pgtype.UUID
 	LedgerID            pgtype.UUID
@@ -223,4 +248,19 @@ type User struct {
 	IsActive        bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+}
+
+type UserPreference struct {
+	UserID           pgtype.UUID
+	ThemeMode        string
+	ThemePalette     string
+	ThemeTone        string
+	Locale           string
+	CompactMode      string
+	FontScale        string
+	NotifyCardClose  bool
+	NotifyBudgetOver bool
+	NotifyPayables   bool
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 }

@@ -7,12 +7,14 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/audit"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
 )
 
 type LedgerHandler struct {
 	Service LedgerService
+	Audit   audit.Recorder
 }
 
 type LedgerService interface {
@@ -35,17 +37,25 @@ type ledgerResponse = dto.LedgerResponse
 type memberResponse = dto.LedgerMemberResponse
 type ledgerMeResponse = dto.LedgerMeResponse
 
-func (h *LedgerHandler) Register(g *echo.Group) {
+type LedgerGuards struct {
+	Viewer echo.MiddlewareFunc
+	Editor echo.MiddlewareFunc
+	Owner  echo.MiddlewareFunc
+}
+
+func (h *LedgerHandler) Register(g *echo.Group, guards LedgerGuards) {
 	g.GET("", h.ListLedgers)
-	g.GET("/:ledgerId/me", h.Me)
 	g.POST("", h.CreateLedger)
-	g.GET("/:ledgerId", h.GetLedger)
-	g.PATCH("/:ledgerId", h.UpdateLedger)
-	g.DELETE("/:ledgerId", h.DeleteLedger)
-	g.GET("/:ledgerId/members", h.ListMembers)
-	g.POST("/:ledgerId/members", h.AddMember)
-	g.PATCH("/:ledgerId/members/:userId", h.UpdateMember)
-	g.DELETE("/:ledgerId/members/:userId", h.DeleteMember)
+
+	g.GET("/:ledgerId", h.GetLedger, guards.Viewer)
+	g.GET("/:ledgerId/me", h.Me, guards.Viewer)
+	g.PATCH("/:ledgerId", h.UpdateLedger, guards.Editor)
+	g.DELETE("/:ledgerId", h.DeleteLedger, guards.Owner)
+
+	g.GET("/:ledgerId/members", h.ListMembers, guards.Owner)
+	g.POST("/:ledgerId/members", h.AddMember, guards.Owner)
+	g.PATCH("/:ledgerId/members/:userId", h.UpdateMember, guards.Owner)
+	g.DELETE("/:ledgerId/members/:userId", h.DeleteMember, guards.Owner)
 }
 
 func (h *LedgerHandler) ListLedgers(c echo.Context) error {
@@ -80,9 +90,9 @@ func (h *LedgerHandler) Me(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	role, err := h.Service.GetMembership(c.Request().Context(), user.ID, ledgerID)
@@ -128,9 +138,9 @@ func (h *LedgerHandler) GetLedger(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	item, err := h.Service.GetLedger(c.Request().Context(), user.ID, ledgerID)
@@ -155,9 +165,9 @@ func (h *LedgerHandler) UpdateLedger(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	var req ledgerUpdateRequest
@@ -186,9 +196,9 @@ func (h *LedgerHandler) DeleteLedger(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.DeleteLedger(c.Request().Context(), user.ID, ledgerID); err != nil {
@@ -203,9 +213,9 @@ func (h *LedgerHandler) ListMembers(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	members, err := h.Service.ListMembers(c.Request().Context(), user.ID, ledgerID)
@@ -232,9 +242,9 @@ func (h *LedgerHandler) AddMember(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
 	}
 
 	var req memberRequest
@@ -251,6 +261,15 @@ func (h *LedgerHandler) AddMember(c echo.Context) error {
 		return httpx.WriteAppError(c, err)
 	}
 
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "ledger.member.add",
+		EntityID:  &req.UserID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
+
 	return c.JSON(http.StatusCreated, memberResponse{
 		LedgerID:  member.LedgerID,
 		UserID:    member.UserID,
@@ -266,10 +285,13 @@ func (h *LedgerHandler) UpdateMember(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	memberUserID := c.Param("userId")
-	if ledgerID == "" || memberUserID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
+	}
+	memberUserID, err := httpx.RequireUUIDParam(c, "userId")
+	if err != nil {
+		return err
 	}
 
 	var req memberRequest
@@ -281,6 +303,15 @@ func (h *LedgerHandler) UpdateMember(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "ledger.member.role_change",
+		EntityID:  &memberUserID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 
 	return c.JSON(http.StatusOK, memberResponse{
 		LedgerID:  member.LedgerID,
@@ -297,15 +328,27 @@ func (h *LedgerHandler) DeleteMember(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 
-	ledgerID := c.Param("ledgerId")
-	memberUserID := c.Param("userId")
-	if ledgerID == "" || memberUserID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+	ledgerID, err := httpx.RequireUUIDParam(c, "ledgerId")
+	if err != nil {
+		return err
+	}
+	memberUserID, err := httpx.RequireUUIDParam(c, "userId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.RemoveMember(c.Request().Context(), user.ID, ledgerID, memberUserID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "ledger.member.remove",
+		EntityID:  &memberUserID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 
 	return c.NoContent(http.StatusNoContent)
 }

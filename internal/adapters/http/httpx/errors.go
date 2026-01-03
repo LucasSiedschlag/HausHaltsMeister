@@ -49,6 +49,8 @@ func errorStatus(code string) int {
 		return nethttp.StatusUnauthorized
 	case "AUTH_RATE_LIMITED":
 		return nethttp.StatusTooManyRequests
+	case "RATE_LIMITED":
+		return nethttp.StatusTooManyRequests
 	case "AUTH_EMAIL_NOT_VERIFIED":
 		return nethttp.StatusForbidden
 	case "AUTH_OAUTH_STATE_INVALID":
@@ -85,6 +87,10 @@ func errorStatus(code string) int {
 		return nethttp.StatusConflict
 	case "TRANSFER_NOT_BALANCED":
 		return nethttp.StatusUnprocessableEntity
+	case "IDEMPOTENCY_KEY_CONFLICT":
+		return nethttp.StatusConflict
+	case "IDEMPOTENCY_KEY_EXPIRED":
+		return nethttp.StatusConflict
 	case "VALIDATION_ERROR":
 		return nethttp.StatusUnprocessableEntity
 	case "NOT_IMPLEMENTED":

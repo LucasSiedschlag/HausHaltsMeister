@@ -513,6 +513,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 5) Errors
 - 422 `VALIDATION_ERROR`
+- 429 `RATE_LIMITED`
 
 6) Semantics / Notes
 - User vira owner.
@@ -1043,7 +1044,10 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 5) Errors
 - 422 `VALIDATION_ERROR`
+- 429 `RATE_LIMITED`
 - 422 `TRANSFER_NOT_BALANCED`
+- 409 `IDEMPOTENCY_KEY_CONFLICT`
+- 409 `IDEMPOTENCY_KEY_EXPIRED`
 
 6) Semantics / Notes
 - `amount_cents` sempre positivo.
@@ -1054,6 +1058,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 8) Idempotency
 - `Idempotency-Key` evita duplicidade.
+- Replays validos retornam a transacao original.
 
 #### GET /ledgers/{ledgerId}/transactions
 1) Summary / Purpose
@@ -1187,6 +1192,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 5) Errors
 - 422 `VALIDATION_ERROR`
+- 429 `RATE_LIMITED`
 
 6) Semantics / Notes
 - Processamento assinc.

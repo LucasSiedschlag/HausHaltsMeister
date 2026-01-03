@@ -21,6 +21,7 @@ Payload shape:
 | AUTH_USER_INACTIVE | 403 | Usuario inativo tentou operar | `{ "user_id": "uuid" }` |
 | AUTH_REFRESH_REVOKED | 401 | Refresh token revogado/expirado | `{ "session_id": "uuid" }` |
 | AUTH_RATE_LIMITED | 429 | Tentativas excederam limite | `{ "retry_after": "seconds" }` |
+| RATE_LIMITED | 429 | Limite de requisicoes excedido | `{ "retry_after": "seconds" }` |
 | AUTH_EMAIL_NOT_VERIFIED | 403 | Email nao verificado (quando exigido) | `{ "email": "user@example.com" }` |
 | AUTH_OAUTH_STATE_INVALID | 401 | State OAuth invalido/expirado | `{ "state": "..." }` |
 | AUTH_OAUTH_PROVIDER_ERROR | 502 | Provider retornou erro | `{ "provider": "google" }` |
@@ -32,6 +33,8 @@ Payload shape:
 | CATEGORY_NOT_FOUND | 404 | Categoria nao encontrada no ledger | `{ "category_id": "uuid" }` |
 | TRANSACTION_NOT_FOUND | 404 | Transacao nao encontrada no ledger | `{ "transaction_id": "uuid" }` |
 | TRANSACTION_REFERENCED | 409 | Transacao referenciada por parcelas/fatura | `{ "transaction_id": "uuid" }` |
+| IDEMPOTENCY_KEY_CONFLICT | 409 | Chave reutilizada com payload diferente | `{ "idempotency_key": "..." }` |
+| IDEMPOTENCY_KEY_EXPIRED | 409 | Chave expirada (fora da janela) | `{ "idempotency_key": "..." }` |
 | VALIDATION_ERROR | 422 | Validacao de dominio falhou | `{ "field": "reason" }` |
 | CONFLICT_DUPLICATE_EMAIL | 409 | Email ja cadastrado | `{ "email": "user@example.com" }` |
 | CONFLICT_DUPLICATE_NAME | 409 | Nome duplicado (category/account) | `{ "name": "..." }` |

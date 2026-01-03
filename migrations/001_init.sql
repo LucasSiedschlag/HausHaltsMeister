@@ -115,6 +115,20 @@ CREATE TABLE ledger_members (
   UNIQUE (ledger_id, user_id)
 );
 
+CREATE TABLE audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ledger_id uuid NOT NULL REFERENCES ledgers(id),
+  user_id uuid NOT NULL REFERENCES users(id),
+  action varchar NOT NULL,
+  entity_id uuid,
+  ip varchar,
+  user_agent varchar,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz
+);
+
+CREATE INDEX audit_log_ledger_created_at_idx ON audit_log (ledger_id, created_at);
+
 CREATE TABLE accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ledger_id uuid NOT NULL REFERENCES ledgers(id),
@@ -162,6 +176,18 @@ CREATE TABLE transactions (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
   UNIQUE (ledger_id, external_source, external_id)
+);
+
+CREATE TABLE idempotency_keys (
+  ledger_id uuid NOT NULL REFERENCES ledgers(id),
+  key varchar(200) NOT NULL,
+  resource_type varchar NOT NULL,
+  resource_id uuid NOT NULL,
+  request_hash varchar(64) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  expires_at timestamptz NOT NULL,
+  PRIMARY KEY (ledger_id, key)
 );
 
 CREATE TABLE entries (

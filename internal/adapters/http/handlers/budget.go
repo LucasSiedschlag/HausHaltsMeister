@@ -8,12 +8,14 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/audit"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/labstack/echo/v4"
 )
 
 type BudgetHandler struct {
 	Service BudgetService
+	Audit   audit.Recorder
 }
 
 type BudgetService interface {
@@ -99,6 +101,14 @@ func (h *BudgetHandler) CreatePlan(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.plan.create",
+		EntityID:  &plan.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.JSON(http.StatusCreated, toPlanResponse(plan))
 }
 
@@ -120,6 +130,14 @@ func (h *BudgetHandler) UpdatePlan(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.plan.update",
+		EntityID:  &plan.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.JSON(http.StatusOK, toPlanResponse(plan))
 }
 
@@ -159,6 +177,14 @@ func (h *BudgetHandler) CreateVersion(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.version.create",
+		EntityID:  &version.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.JSON(http.StatusCreated, toVersionResponse(version, ledgerID))
 }
 
@@ -207,9 +233,9 @@ func (h *BudgetHandler) GetVersion(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	versionID := c.Param("versionId")
-	if ledgerID == "" || versionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
+	versionID, err := httpx.RequireUUIDParam(c, "versionId")
+	if err != nil {
+		return err
 	}
 
 	version, err := h.Service.GetVersion(c.Request().Context(), user.ID, ledgerID, versionID)
@@ -233,9 +259,9 @@ func (h *BudgetHandler) AddLine(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	versionID := c.Param("versionId")
-	if ledgerID == "" || versionID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"version_id": "required"})
+	versionID, err := httpx.RequireUUIDParam(c, "versionId")
+	if err != nil {
+		return err
 	}
 
 	var req versionLineRequest
@@ -251,6 +277,14 @@ func (h *BudgetHandler) AddLine(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.line.add",
+		EntityID:  &line.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.JSON(http.StatusCreated, toLineResponse(line, ledgerID))
 }
 
@@ -260,9 +294,9 @@ func (h *BudgetHandler) UpdateLine(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	lineID := c.Param("lineId")
-	if ledgerID == "" || lineID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
+	lineID, err := httpx.RequireUUIDParam(c, "lineId")
+	if err != nil {
+		return err
 	}
 
 	var req versionLineRequest
@@ -274,6 +308,14 @@ func (h *BudgetHandler) UpdateLine(c echo.Context) error {
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.line.update",
+		EntityID:  &line.ID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.JSON(http.StatusOK, toLineResponse(line, ledgerID))
 }
 
@@ -283,14 +325,22 @@ func (h *BudgetHandler) DeleteLine(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
 	ledgerID := c.Param("ledgerId")
-	lineID := c.Param("lineId")
-	if ledgerID == "" || lineID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"line_id": "required"})
+	lineID, err := httpx.RequireUUIDParam(c, "lineId")
+	if err != nil {
+		return err
 	}
 
 	if err := h.Service.DeleteLine(c.Request().Context(), user.ID, ledgerID, lineID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
+	recordAudit(c, h.Audit, audit.Event{
+		LedgerID:  ledgerID,
+		UserID:    user.ID,
+		Action:    "budget.line.delete",
+		EntityID:  &lineID,
+		IP:        c.RealIP(),
+		UserAgent: c.Request().UserAgent(),
+	})
 	return c.NoContent(http.StatusNoContent)
 }
 

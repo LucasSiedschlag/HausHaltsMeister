@@ -37,6 +37,7 @@
 - Sessions use refresh tokens stored in `auth_sessions`; access tokens are short-lived JWTs.
 - OAuth uses PKCE with `oauth_states` (state + code_verifier, short TTL, single-use).
 - All feature work must follow `docs/agent/IMPLEMENTATION_PLAYBOOK.md`.
+- Keep the policy matrix in `docs/api/Estruturação_de_Ledger_API.md` updated when roles change.
 
 ## Integrity and Safety
 - Validate ledger ownership for accounts, categories, transactions, and entries.
@@ -44,6 +45,8 @@
 - Keep card posting routines idempotent to avoid duplicate entries.
 - Normalize month fields to the first day (`YYYY-MM-01`) for budget and card cycles.
 - Keep category flag semantics consistent: IN => `is_budget_relevant=false`, OUT => `is_budget_base=false`.
+- Ledger scope scan (`TestQueriesScopedByLedgerID`) must stay green.
+- Reports endpoints must remain rate-limited (and bulk endpoints when implemented).
 
 ## Autonomia e fluxo de trabalho
 

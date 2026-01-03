@@ -2,6 +2,7 @@ package journal
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -168,6 +169,30 @@ func TestCreateTransactionAdjust(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCreateTransactionIdempotencyKeyTooLong(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-out": "out"},
+	}
+	service := NewService(repo)
+	key := strings.Repeat("a", 201)
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:  time.Now().UTC(),
+		Description: "Compra",
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-out"), Kind: "normal", AmountCents: 1000},
+		},
+		Idempotency: &IdempotencyParams{Key: key},
+	})
+	require.Error(t, err)
+	appErr, ok := err.(*Error)
+	require.True(t, ok)
+	require.Equal(t, "VALIDATION_ERROR", appErr.Code())
+	require.Equal(t, "too_long", appErr.Details()["idempotency_key"])
+}
+
 func TestListTransactionsDefaultLimit(t *testing.T) {
 	repo := &fakeRepo{role: "viewer"}
 	service := NewService(repo)
@@ -175,6 +200,14 @@ func TestListTransactionsDefaultLimit(t *testing.T) {
 	_, err := service.ListTransactions(context.Background(), "user-1", "ledger-1", ListTransactionsParams{})
 	require.NoError(t, err)
 	require.Equal(t, 50, repo.lastList.Limit)
+}
+
+func TestCreateTransactionRequiresEditor(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{})
+	require.Equal(t, ErrAccessDenied, err)
 }
 
 func ptr(value string) *string {

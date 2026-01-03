@@ -35,6 +35,15 @@ func (f *fakeRepo) ListCashflow(ctx context.Context, ledgerID string, from, to t
 	return f.cashflow, nil
 }
 
+func TestBalancesRequiresViewer(t *testing.T) {
+	repo := &fakeRepo{role: ""}
+	service := NewService(repo)
+
+	month := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	_, err := service.Balances(context.Background(), "user-1", "ledger-1", month)
+	require.Equal(t, ErrAccessDenied, err)
+}
+
 func TestBalancesRejectsInvalidMonth(t *testing.T) {
 	repo := &fakeRepo{role: "viewer"}
 	service := NewService(repo)

@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/handlers"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/middleware"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	pgaccounts "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/accounts"
+	pgaudit "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/audit"
 	pgauth "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/auth"
 	pgbudget "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/budget"
 	pgcategories "github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres/categories"
@@ -59,6 +61,7 @@ func main() {
 
 	ratelimiter := middleware.NewRateLimiter(5, 10*time.Minute)
 	refreshLimiter := middleware.NewRateLimiter(60, 10*time.Minute)
+	reportsLimiter := middleware.NewRateLimiter(30, time.Minute)
 	metrics := middleware.NewMetrics()
 
 	e := echo.New()
@@ -98,6 +101,7 @@ func main() {
 	defer store.Close()
 
 	authRepo := pgauth.NewRepository(store)
+	auditRepo := pgaudit.NewRepository(store)
 	ledgerRepo := pgledger.NewRepository(store)
 	accountsRepo := pgaccounts.NewRepository(store)
 	categoriesRepo := pgcategories.NewRepository(store)
@@ -134,40 +138,51 @@ func main() {
 	group := e.Group("/auth")
 	authHandler.Register(group)
 
+	ledgerGuardViewer := middleware.RequireLedgerRole(ledgerService, "viewer")
+	ledgerGuardEditor := middleware.RequireLedgerRole(ledgerService, "editor")
+	ledgerGuardOwner := middleware.RequireLedgerRole(ledgerService, "owner")
+
 	ledgerHandler := &handlers.LedgerHandler{
 		Service: ledgerService,
+		Audit:   auditRepo,
 	}
 	ledgerGroup := e.Group("/ledgers", middleware.RequireAuth(authService))
-	ledgerHandler.Register(ledgerGroup)
+	ledgerHandler.Register(ledgerGroup, handlers.LedgerGuards{
+		Viewer: ledgerGuardViewer,
+		Editor: ledgerGuardEditor,
+		Owner:  ledgerGuardOwner,
+	})
 
 	accountsHandler := &handlers.AccountsHandler{
 		Service: accountsService,
 	}
-	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", middleware.RequireAuth(authService))
+	accountsGroup := e.Group("/ledgers/:ledgerId/accounts", middleware.RequireAuth(authService), ledgerGuardViewer)
 	accountsHandler.Register(accountsGroup)
 
 	categoriesHandler := &handlers.CategoriesHandler{
 		Service: categoriesService,
 	}
-	categoriesGroup := e.Group("/ledgers/:ledgerId/categories", middleware.RequireAuth(authService))
+	categoriesGroup := e.Group("/ledgers/:ledgerId/categories", middleware.RequireAuth(authService), ledgerGuardViewer)
 	categoriesHandler.Register(categoriesGroup)
 
 	journalHandler := &handlers.JournalHandler{
 		Service: journalService,
+		Audit:   auditRepo,
 	}
-	journalGroup := e.Group("/ledgers/:ledgerId/transactions", middleware.RequireAuth(authService))
+	journalGroup := e.Group("/ledgers/:ledgerId/transactions", middleware.RequireAuth(authService), ledgerGuardViewer)
 	journalHandler.Register(journalGroup)
 
 	budgetHandler := &handlers.BudgetHandler{
 		Service: budgetService,
+		Audit:   auditRepo,
 	}
-	budgetGroup := e.Group("/ledgers/:ledgerId/budget", middleware.RequireAuth(authService))
+	budgetGroup := e.Group("/ledgers/:ledgerId/budget", middleware.RequireAuth(authService), ledgerGuardViewer)
 	budgetHandler.Register(budgetGroup)
 
 	investmentsHandler := &handlers.InvestmentsHandler{
 		Service: investmentsService,
 	}
-	investmentsGroup := e.Group("/ledgers/:ledgerId/investments", middleware.RequireAuth(authService))
+	investmentsGroup := e.Group("/ledgers/:ledgerId/investments", middleware.RequireAuth(authService), ledgerGuardViewer)
 	investmentsHandler.Register(investmentsGroup)
 
 	creditCardHandler := &handlers.CreditCardHandler{
@@ -175,13 +190,21 @@ func main() {
 	}
 	cardNetworksGroup := e.Group("/card-networks", middleware.RequireAuth(authService))
 	creditCardHandler.RegisterNetworks(cardNetworksGroup)
-	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", middleware.RequireAuth(authService))
+	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", middleware.RequireAuth(authService), ledgerGuardViewer)
 	creditCardHandler.Register(creditCardsGroup)
 
 	reportsHandler := &handlers.ReportsHandler{
 		Service: reportsService,
 	}
-	reportsGroup := e.Group("/ledgers/:ledgerId/reports", middleware.RequireAuth(authService))
+	reportsGroup := e.Group("/ledgers/:ledgerId/reports", middleware.RequireAuth(authService), ledgerGuardViewer,
+		middleware.RequireRateLimit(reportsLimiter, func(c echo.Context) string {
+			user, ok := httpx.GetUser(c)
+			if !ok {
+				return ""
+			}
+			return "reports:" + user.ID + ":" + c.Param("ledgerId")
+		}),
+	)
 	reportsHandler.Register(reportsGroup)
 
 	preferencesHandler := &handlers.PreferencesHandler{

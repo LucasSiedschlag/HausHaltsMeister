@@ -22,7 +22,6 @@ type Repository interface {
 	UpdateCreditCard(ctx context.Context, params CreditCard, updatedAt time.Time) (CreditCard, error)
 	DeleteCreditCard(ctx context.Context, ledgerID, cardAccountID string) error
 	GetAccountType(ctx context.Context, ledgerID, accountID string) (string, error)
-	GetAccountLedger(ctx context.Context, accountID string) (string, error)
 	GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error)
 	LedgerExists(ctx context.Context, ledgerID string) (bool, error)
 	GetCategoryBudgetInfo(ctx context.Context, ledgerID, categoryID string) (string, bool, error)
@@ -44,9 +43,9 @@ type Repository interface {
 	GetStatement(ctx context.Context, ledgerID, cardAccountID, statementID string) (Statement, error)
 	GetStatementByMonth(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (Statement, error)
 	CreateStatement(ctx context.Context, statement Statement) (Statement, error)
-	UpdateStatementTotals(ctx context.Context, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
+	UpdateStatementTotals(ctx context.Context, ledgerID, cardAccountID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
 	ListStatements(ctx context.Context, ledgerID, cardAccountID string, month *time.Time) ([]Statement, error)
-	SetStatementPayment(ctx context.Context, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
+	SetStatementPayment(ctx context.Context, ledgerID, cardAccountID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
 	MarkInstallmentsPaid(ctx context.Context, ledgerID, cardAccountID string, month time.Time, statementID string, updatedAt time.Time) error
 	SumStatementCharges(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (int64, error)
 
@@ -396,7 +395,7 @@ func (s *Service) CloseStatement(ctx context.Context, userID, ledgerID, cardAcco
 		return Statement{}, err
 	}
 
-	updated, err := s.repo.UpdateStatementTotals(ctx, statement.ID, charges, statement.TotalPaymentsCents, "closed", s.now())
+	updated, err := s.repo.UpdateStatementTotals(ctx, statement.LedgerID, statement.CardAccountID, statement.ID, charges, statement.TotalPaymentsCents, "closed", s.now())
 	if err != nil {
 		return Statement{}, err
 	}
@@ -458,7 +457,7 @@ func (s *Service) PayStatement(ctx context.Context, userID, ledgerID, cardAccoun
 		status = "paid"
 	}
 
-	updated, err := s.repo.SetStatementPayment(ctx, statement.ID, paymentTx.ID, newTotalPayments, status, s.now())
+	updated, err := s.repo.SetStatementPayment(ctx, statement.LedgerID, statement.CardAccountID, statement.ID, paymentTx.ID, newTotalPayments, status, s.now())
 	if err != nil {
 		return Statement{}, err
 	}

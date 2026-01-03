@@ -65,6 +65,20 @@ func TestCreateCategoryForcesFlags(t *testing.T) {
 	require.False(t, repo.created.IsBudgetRelevant)
 }
 
+func TestCreateCategoryRequiresEditor(t *testing.T) {
+	repo := &fakeRepo{role: "viewer"}
+	service := NewService(repo)
+
+	_, err := service.CreateCategory(context.Background(), "user-1", "ledger-1", CreateCategoryParams{
+		Name:             "Mercado",
+		Direction:        "out",
+		IsBudgetBase:     false,
+		IsBudgetRelevant: true,
+		IsActive:         true,
+	})
+	require.Equal(t, ErrAccessDenied, err)
+}
+
 func TestCreateCategorySuccess(t *testing.T) {
 	repo := &fakeRepo{role: "editor"}
 	service := NewService(repo)

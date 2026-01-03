@@ -40,14 +40,14 @@ func TestContributionCreatesTransfer(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close(ctx)
 
-	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "user-1", "user@example.com")
+	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "00000000-0000-0000-0000-000000000001", "user@example.com")
 	require.NoError(t, err)
 
 	var ledgerID string
-	err = conn.QueryRow(ctx, `INSERT INTO ledgers (owner_user_id, name, currency_code) VALUES ($1, $2, $3) RETURNING id`, "user-1", "Pessoal", "BRL").Scan(&ledgerID)
+	err = conn.QueryRow(ctx, `INSERT INTO ledgers (owner_user_id, name, currency_code) VALUES ($1, $2, $3) RETURNING id`, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL").Scan(&ledgerID)
 	require.NoError(t, err)
 
-	_, err = conn.Exec(ctx, `INSERT INTO ledger_members (ledger_id, user_id, role) VALUES ($1, $2, 'owner')`, ledgerID, "user-1")
+	_, err = conn.Exec(ctx, `INSERT INTO ledger_members (ledger_id, user_id, role) VALUES ($1, $2, 'owner')`, ledgerID, "00000000-0000-0000-0000-000000000001")
 	require.NoError(t, err)
 
 	var cashAccountID string
@@ -79,7 +79,7 @@ func TestContributionCreatesTransfer(t *testing.T) {
 	repo := NewRepository(store)
 	service := investments.NewService(repo)
 
-	_, err = service.Contribution(ctx, "user-1", ledgerID, 10000, time.Now().UTC(), nil)
+	_, err = service.Contribution(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, 10000, time.Now().UTC(), nil)
 	require.NoError(t, err)
 
 	var entriesCount int

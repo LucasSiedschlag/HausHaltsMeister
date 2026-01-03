@@ -29,9 +29,9 @@ func (q *Queries) AddOwnerMember(ctx context.Context, arg AddOwnerMemberParams) 
 
 const createAuthIdentity = `-- name: CreateAuthIdentity :one
 
-INSERT INTO auth_identities (user_id, provider, provider_user_id, email, email_verified, last_login_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, now(), $6)
-RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
+INSERT INTO auth_identities (user_id, provider, provider_user_id, email, display_name, avatar_url, email_verified, last_login_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8)
+RETURNING id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
 `
 
 type CreateAuthIdentityParams struct {
@@ -39,6 +39,8 @@ type CreateAuthIdentityParams struct {
 	Provider       string
 	ProviderUserID string
 	Email          pgtype.Text
+	DisplayName    pgtype.Text
+	AvatarUrl      pgtype.Text
 	EmailVerified  bool
 	UpdatedAt      pgtype.Timestamptz
 }
@@ -49,6 +51,8 @@ type CreateAuthIdentityRow struct {
 	Provider       string
 	ProviderUserID string
 	Email          string
+	DisplayName    string
+	AvatarUrl      string
 	EmailVerified  bool
 	LastLoginAt    pgtype.Timestamptz
 }
@@ -60,6 +64,8 @@ func (q *Queries) CreateAuthIdentity(ctx context.Context, arg CreateAuthIdentity
 		arg.Provider,
 		arg.ProviderUserID,
 		arg.Email,
+		arg.DisplayName,
+		arg.AvatarUrl,
 		arg.EmailVerified,
 		arg.UpdatedAt,
 	)
@@ -70,6 +76,8 @@ func (q *Queries) CreateAuthIdentity(ctx context.Context, arg CreateAuthIdentity
 		&i.Provider,
 		&i.ProviderUserID,
 		&i.Email,
+		&i.DisplayName,
+		&i.AvatarUrl,
 		&i.EmailVerified,
 		&i.LastLoginAt,
 	)
@@ -267,7 +275,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getAuthIdentityByProvider = `-- name: GetAuthIdentityByProvider :one
-SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), email_verified, last_login_at
+SELECT id, user_id, provider, provider_user_id, COALESCE(email, ''), COALESCE(display_name, ''), COALESCE(avatar_url, ''), email_verified, last_login_at
 FROM auth_identities
 WHERE provider = $1 AND provider_user_id = $2
 `
@@ -283,6 +291,8 @@ type GetAuthIdentityByProviderRow struct {
 	Provider       string
 	ProviderUserID string
 	Email          string
+	DisplayName    string
+	AvatarUrl      string
 	EmailVerified  bool
 	LastLoginAt    pgtype.Timestamptz
 }
@@ -296,6 +306,8 @@ func (q *Queries) GetAuthIdentityByProvider(ctx context.Context, arg GetAuthIden
 		&i.Provider,
 		&i.ProviderUserID,
 		&i.Email,
+		&i.DisplayName,
+		&i.AvatarUrl,
 		&i.EmailVerified,
 		&i.LastLoginAt,
 	)

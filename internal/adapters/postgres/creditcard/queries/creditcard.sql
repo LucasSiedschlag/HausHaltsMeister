@@ -46,14 +46,16 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING account_id, issuer_name, network, nickname, last4, credit_limit_cents, closing_day, due_day, created_at, updated_at;
 
 -- name: UpdateCreditCard :one
-UPDATE credit_cards
-SET issuer_name = $2, network = $3, nickname = $4, last4 = $5, credit_limit_cents = $6, closing_day = $7, due_day = $8, updated_at = $9
-WHERE account_id = $1
-RETURNING account_id, issuer_name, network, nickname, last4, credit_limit_cents, closing_day, due_day, created_at, updated_at;
+UPDATE credit_cards c
+SET issuer_name = $3, network = $4, nickname = $5, last4 = $6, credit_limit_cents = $7, closing_day = $8, due_day = $9, updated_at = $10
+FROM accounts a
+WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2
+RETURNING c.account_id, c.issuer_name, c.network, c.nickname, c.last4, c.credit_limit_cents, c.closing_day, c.due_day, c.created_at, c.updated_at;
 
 -- name: DeleteCreditCard :exec
-DELETE FROM credit_cards
-WHERE account_id = $1;
+DELETE FROM credit_cards c
+USING accounts a
+WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2;
 
 -- Accounts lookup
 
@@ -61,11 +63,6 @@ WHERE account_id = $1;
 SELECT type
 FROM accounts
 WHERE ledger_id = $1 AND id = $2;
-
--- name: GetAccountLedger :one
-SELECT ledger_id
-FROM accounts
-WHERE id = $1;
 
 -- Categories lookup
 
@@ -175,8 +172,8 @@ RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_dat
 
 -- name: UpdateStatementTotals :one
 UPDATE credit_card_statements
-SET total_charges_cents = $2, total_payments_cents = $3, status = $4, updated_at = $5
-WHERE id = $1
+SET total_charges_cents = $4, total_payments_cents = $5, status = $6, updated_at = $7
+WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
 RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at;
 
 -- name: ListStatements :many
@@ -188,8 +185,8 @@ ORDER BY statement_month DESC;
 
 -- name: SetStatementPayment :one
 UPDATE credit_card_statements
-SET payment_transaction_id = $2, total_payments_cents = $3, status = $4, updated_at = $5
-WHERE id = $1
+SET payment_transaction_id = $4, total_payments_cents = $5, status = $6, updated_at = $7
+WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
 RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at;
 
 -- name: MarkInstallmentsPaid :exec

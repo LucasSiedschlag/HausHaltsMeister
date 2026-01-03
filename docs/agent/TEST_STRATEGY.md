@@ -45,6 +45,10 @@ This document defines the testing policy and required coverage for critical flow
 
 5. **Ledger access denial**
    - Requests to another ledger return 403/404.
+6. **Ledger scope scan**
+   - `TestQueriesScopedByLedgerID` must pass (no `WHERE id =` without `ledger_id`).
+7. **Role matrix (owner)**
+   - Owner-only service methods must have explicit tests for non-owner denial.
 
 ---
 

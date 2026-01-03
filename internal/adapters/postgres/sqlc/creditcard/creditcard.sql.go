@@ -222,12 +222,18 @@ func (q *Queries) DeleteCardNetwork(ctx context.Context, code string) error {
 }
 
 const deleteCreditCard = `-- name: DeleteCreditCard :exec
-DELETE FROM credit_cards
-WHERE account_id = $1
+DELETE FROM credit_cards c
+USING accounts a
+WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2
 `
 
-func (q *Queries) DeleteCreditCard(ctx context.Context, accountID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteCreditCard, accountID)
+type DeleteCreditCardParams struct {
+	LedgerID  pgtype.UUID
+	AccountID pgtype.UUID
+}
+
+func (q *Queries) DeleteCreditCard(ctx context.Context, arg DeleteCreditCardParams) error {
+	_, err := q.db.Exec(ctx, deleteCreditCard, arg.LedgerID, arg.AccountID)
 	return err
 }
 
@@ -263,19 +269,6 @@ func (q *Queries) FindCategoryByName(ctx context.Context, arg FindCategoryByName
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getAccountLedger = `-- name: GetAccountLedger :one
-SELECT ledger_id
-FROM accounts
-WHERE id = $1
-`
-
-func (q *Queries) GetAccountLedger(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, getAccountLedger, id)
-	var ledger_id pgtype.UUID
-	err := row.Scan(&ledger_id)
-	return ledger_id, err
 }
 
 const getAccountType = `-- name: GetAccountType :one
@@ -871,12 +864,14 @@ func (q *Queries) MarkInstallmentsPaid(ctx context.Context, arg MarkInstallments
 
 const setStatementPayment = `-- name: SetStatementPayment :one
 UPDATE credit_card_statements
-SET payment_transaction_id = $2, total_payments_cents = $3, status = $4, updated_at = $5
-WHERE id = $1
+SET payment_transaction_id = $4, total_payments_cents = $5, status = $6, updated_at = $7
+WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
 RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 `
 
 type SetStatementPaymentParams struct {
+	LedgerID             pgtype.UUID
+	CardAccountID        pgtype.UUID
 	ID                   pgtype.UUID
 	PaymentTransactionID pgtype.UUID
 	TotalPaymentsCents   int64
@@ -886,6 +881,8 @@ type SetStatementPaymentParams struct {
 
 func (q *Queries) SetStatementPayment(ctx context.Context, arg SetStatementPaymentParams) (CreditCardStatement, error) {
 	row := q.db.QueryRow(ctx, setStatementPayment,
+		arg.LedgerID,
+		arg.CardAccountID,
 		arg.ID,
 		arg.PaymentTransactionID,
 		arg.TotalPaymentsCents,
@@ -959,13 +956,15 @@ func (q *Queries) UpdateCardNetwork(ctx context.Context, arg UpdateCardNetworkPa
 }
 
 const updateCreditCard = `-- name: UpdateCreditCard :one
-UPDATE credit_cards
-SET issuer_name = $2, network = $3, nickname = $4, last4 = $5, credit_limit_cents = $6, closing_day = $7, due_day = $8, updated_at = $9
-WHERE account_id = $1
-RETURNING account_id, issuer_name, network, nickname, last4, credit_limit_cents, closing_day, due_day, created_at, updated_at
+UPDATE credit_cards c
+SET issuer_name = $3, network = $4, nickname = $5, last4 = $6, credit_limit_cents = $7, closing_day = $8, due_day = $9, updated_at = $10
+FROM accounts a
+WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2
+RETURNING c.account_id, c.issuer_name, c.network, c.nickname, c.last4, c.credit_limit_cents, c.closing_day, c.due_day, c.created_at, c.updated_at
 `
 
 type UpdateCreditCardParams struct {
+	LedgerID         pgtype.UUID
 	AccountID        pgtype.UUID
 	IssuerName       pgtype.Text
 	Network          string
@@ -979,6 +978,7 @@ type UpdateCreditCardParams struct {
 
 func (q *Queries) UpdateCreditCard(ctx context.Context, arg UpdateCreditCardParams) (CreditCard, error) {
 	row := q.db.QueryRow(ctx, updateCreditCard,
+		arg.LedgerID,
 		arg.AccountID,
 		arg.IssuerName,
 		arg.Network,
@@ -1068,12 +1068,14 @@ func (q *Queries) UpdatePlanStatus(ctx context.Context, arg UpdatePlanStatusPara
 
 const updateStatementTotals = `-- name: UpdateStatementTotals :one
 UPDATE credit_card_statements
-SET total_charges_cents = $2, total_payments_cents = $3, status = $4, updated_at = $5
-WHERE id = $1
+SET total_charges_cents = $4, total_payments_cents = $5, status = $6, updated_at = $7
+WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
 RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 `
 
 type UpdateStatementTotalsParams struct {
+	LedgerID           pgtype.UUID
+	CardAccountID      pgtype.UUID
 	ID                 pgtype.UUID
 	TotalChargesCents  int64
 	TotalPaymentsCents int64
@@ -1083,6 +1085,8 @@ type UpdateStatementTotalsParams struct {
 
 func (q *Queries) UpdateStatementTotals(ctx context.Context, arg UpdateStatementTotalsParams) (CreditCardStatement, error) {
 	row := q.db.QueryRow(ctx, updateStatementTotals,
+		arg.LedgerID,
+		arg.CardAccountID,
 		arg.ID,
 		arg.TotalChargesCents,
 		arg.TotalPaymentsCents,

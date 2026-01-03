@@ -9,12 +9,20 @@ import (
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/journal"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
 	pool *pgxpool.Pool
+}
+
+type dbQuerier interface {
+	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...interface{}) pgx.Row
+	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
 }
 
 func NewRepository(store *postgres.Store) *Repository {
@@ -25,12 +33,59 @@ func (r *Repository) CreateTransaction(ctx context.Context, params journal.Creat
 	var created journal.Transaction
 	entries := make([]journal.Entry, 0, len(params.Entries))
 
+	if params.Idempotency != nil && params.Idempotency.Key != "" {
+		record, err := r.getIdempotencyKey(ctx, r.pool, params.LedgerID, params.Idempotency.Key, journal.IdempotencyOperationTransactionCreate)
+		if err == nil {
+			return r.handleIdempotencyHit(ctx, r.pool, record, params.Idempotency.RequestHash)
+		}
+		if err != nil && !errors.Is(err, journal.ErrNotFound) {
+			return journal.Transaction{}, err
+		}
+	}
+
 	err := postgres.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id)
-			VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
-		`, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID)
+		transactionID := ""
+		if params.Idempotency != nil && params.Idempotency.Key != "" {
+			transactionID = uuid.NewString()
+			_, err := tx.Exec(ctx, `
+				INSERT INTO idempotency_keys (ledger_id, key, resource_type, resource_id, request_hash, expires_at)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, params.LedgerID, params.Idempotency.Key, journal.IdempotencyOperationTransactionCreate, transactionID, params.Idempotency.RequestHash, params.Idempotency.ExpiresAt)
+			if err != nil {
+				if postgres.IsUniqueViolation(err) {
+					record, err := r.getIdempotencyKey(ctx, tx, params.LedgerID, params.Idempotency.Key, journal.IdempotencyOperationTransactionCreate)
+					if err != nil {
+						return err
+					}
+					item, err := r.handleIdempotencyHit(ctx, tx, record, params.Idempotency.RequestHash)
+					if err != nil {
+						return err
+					}
+					created = item
+					return nil
+				}
+				return err
+			}
+		}
+
+		if created.ID != "" {
+			return nil
+		}
+
+		var row pgx.Row
+		if transactionID != "" {
+			row = tx.QueryRow(ctx, `
+				INSERT INTO transactions (id, ledger_id, occurred_at, description, notes, created_by_user_id)
+				VALUES ($1, $2, $3, $4, $5, $6)
+				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+			`, transactionID, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID)
+		} else {
+			row = tx.QueryRow(ctx, `
+				INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id)
+				VALUES ($1, $2, $3, $4, $5)
+				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+			`, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID)
+		}
 		if err := scanTransaction(row, &created); err != nil {
 			return err
 		}
@@ -52,8 +107,41 @@ func (r *Repository) CreateTransaction(ctx context.Context, params journal.Creat
 	if err != nil {
 		return journal.Transaction{}, err
 	}
-	created.Entries = entries
+	if len(created.Entries) == 0 {
+		created.Entries = entries
+	}
 	return created, nil
+}
+
+func (r *Repository) getIdempotencyKey(ctx context.Context, q dbQuerier, ledgerID, key, operation string) (journal.IdempotencyRecord, error) {
+	row := q.QueryRow(ctx, `
+		SELECT ledger_id, key, resource_type, request_hash, resource_id, expires_at
+		FROM idempotency_keys
+		WHERE ledger_id = $1 AND key = $2 AND resource_type = $3
+	`, ledgerID, key, operation)
+
+	var record journal.IdempotencyRecord
+	if err := row.Scan(&record.LedgerID, &record.Key, &record.Operation, &record.RequestHash, &record.ResourceID, &record.ExpiresAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return journal.IdempotencyRecord{}, journal.ErrNotFound
+		}
+		return journal.IdempotencyRecord{}, err
+	}
+	return record, nil
+}
+
+func (r *Repository) handleIdempotencyHit(ctx context.Context, q dbQuerier, record journal.IdempotencyRecord, requestHash string) (journal.Transaction, error) {
+	if time.Now().UTC().After(record.ExpiresAt) {
+		return journal.Transaction{}, journal.ErrIdempotencyExpired
+	}
+	if record.RequestHash != requestHash {
+		return journal.Transaction{}, journal.ErrIdempotencyConflict
+	}
+	item, err := r.getTransactionWithEntries(ctx, q, record.LedgerID, record.ResourceID)
+	if errors.Is(err, journal.ErrNotFound) {
+		return journal.Transaction{}, journal.ErrTransactionNotFound
+	}
+	return item, err
 }
 
 func (r *Repository) ListTransactions(ctx context.Context, params journal.ListTransactionsParams) (journal.ListResult, error) {
@@ -193,7 +281,11 @@ func (r *Repository) getTransactionsWithEntries(ctx context.Context, ids []strin
 }
 
 func (r *Repository) GetTransaction(ctx context.Context, ledgerID, transactionID string) (journal.Transaction, error) {
-	rows, err := r.pool.Query(ctx, `
+	return r.getTransactionWithEntries(ctx, r.pool, ledgerID, transactionID)
+}
+
+func (r *Repository) getTransactionWithEntries(ctx context.Context, q dbQuerier, ledgerID, transactionID string) (journal.Transaction, error) {
+	rows, err := q.Query(ctx, `
 		SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.created_at, t.updated_at,
 			e.id, e.ledger_id, e.transaction_id, e.account_id, e.category_id, e.kind, e.amount_cents, e.memo, e.created_at, e.updated_at
 		FROM transactions t
