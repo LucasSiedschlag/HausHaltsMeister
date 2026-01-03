@@ -44,11 +44,17 @@ This document defines the testing policy and required coverage for critical flow
    - Using a revoked refresh token must fail.
 
 5. **Ledger access denial**
-   - Requests to another ledger return 403/404.
+  - Requests to another ledger return 403/404.
 6. **Ledger scope scan**
-   - `TestQueriesScopedByLedgerID` must pass (no `WHERE id =` without `ledger_id`).
+  - `TestQueriesScopedByLedgerID` must pass (no `WHERE id =` without `ledger_id`).
 7. **Role matrix (owner)**
-   - Owner-only service methods must have explicit tests for non-owner denial.
+  - Owner-only service methods must have explicit tests for non-owner denial.
+8. **Ledger context + UI**
+   - `useLedgerContext` must load ledgers, set the active ledger, and expose `hasRole` for UI guards.
+   - Frontend navigation (header/sidebar) should honor the role badge and disable editor-only actions when `hasRole('editor')` is false.
+9. **Rate limit handling**
+   - `useApiClient` must surface `RATE_LIMITED`/`AUTH_RATE_LIMITED` responses so UI helpers (e.g., toasts) can show retry guidance.
+   - Tests should assert that `RATE_LIMITED` errors do not crash the client and display the normalized payload.
 
 ---
 

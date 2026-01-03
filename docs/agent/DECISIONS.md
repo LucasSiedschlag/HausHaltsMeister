@@ -80,3 +80,14 @@ Allow edits but protect auditability and card integrity.
 
 **Future option**
 Move to append-only policy with adjustments instead of edits.
+
+## 7) UI surfaces ledger context and role hints
+
+**Decision**
+`useLedgerContext` (and its `useLedger` wrapper) is the canonical source for the active ledger, role, and errors on the frontend.
+
+**Implications**
+- Header and sidebar code must read from `useLedgerContext`, display the current role badge, and surface any `ledger.error`.
+- Editor-level actions (transactions, card posting, ledger writes) must disable when `hasRole('editor')` is false and explain the restriction to the user.
+- Ledger selectors should show the live role badge and call `ensureLedger`/`setActiveLedger` to hydrate the context before rendering ledger-aware screens.
+- Frontend code must never bypass `useLedgerContext`; all ledger data for navigation, guards, and UI hints must flow through it.

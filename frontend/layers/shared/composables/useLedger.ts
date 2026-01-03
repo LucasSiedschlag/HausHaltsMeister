@@ -1,19 +1,7 @@
+import { computed } from 'vue'
+import { useApiClient } from '#layers/shared/composables/useApiClient'
+import { useLedgerContext, type LedgerSummary } from '#layers/shared/composables/useLedgerContext'
 import { useAuth } from '#layers/auth/composables/useAuth'
-
-export type LedgerRole = 'owner' | 'editor' | 'viewer'
-
-export type Ledger = {
-  id: string
-  owner_user_id: string
-  name: string
-  currency_code: string
-  created_at: string
-  updated_at: string | null
-}
-
-export type LedgerMembership = Ledger & {
-  role?: LedgerRole
-}
 
 type LedgerCreatePayload = {
   name: string
@@ -21,23 +9,30 @@ type LedgerCreatePayload = {
 }
 
 export const useLedger = () => {
-  const ledgerCookie = useCookie<string | null>('hhm_ledger_id', { sameSite: 'lax' })
-  const ledgers = useState<LedgerMembership[]>('ledgers', () => [])
-  const isLoading = useState<boolean>('ledgers_loading', () => false)
   const api = useApiClient()
+  const ledgerContext = useLedgerContext()
+  const ledgerCookie = useCookie<string | null>('hhm_ledger_id', { sameSite: 'lax' })
   const { accessToken, refresh } = useAuth()
 
+  const selectLedger = async (ledgerId: string | null) => {
+    if (!ledgerId) {
+      ledgerContext.activeLedgerId.value = null
+      ledgerCookie.value = null
+      return
+    }
+    await ledgerContext.setActiveLedger(ledgerId)
+    ledgerCookie.value = ledgerId
+  }
+
   const currentLedgerId = computed({
-    get: () => ledgerCookie.value,
+    get: () => ledgerContext.activeLedgerId.value,
     set: (value: string | null) => {
-      ledgerCookie.value = value
+      void selectLedger(value)
     }
   })
-
-  const currentLedger = computed(() => {
-    if (!currentLedgerId.value) return null
-    return ledgers.value.find((item) => item.id === currentLedgerId.value) || null
-  })
+  const currentLedger = computed(() => ledgerContext.activeLedger.value)
+  const ledgers = ledgerContext.ledgers
+  const isLoading = ledgerContext.loading
 
   const ensureAccessToken = async () => {
     if (accessToken.value) return true
@@ -51,39 +46,25 @@ export const useLedger = () => {
 
   const fetchLedgers = async () => {
     if (!(await ensureAccessToken())) return []
-    isLoading.value = true
-    try {
-      const payload = await api<LedgerMembership[]>('/ledgers', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken.value}`
-        }
-      })
-      ledgers.value = payload
-      return payload
-    } catch {
-      return ledgers.value
-    } finally {
-      isLoading.value = false
+    const payload = await ledgerContext.loadLedgers()
+    if (!ledgerContext.activeLedgerId.value && ledgerCookie.value) {
+      await ledgerContext.setActiveLedger(ledgerCookie.value)
     }
-  }
-
-  const selectLedger = (ledgerId: string | null) => {
-    currentLedgerId.value = ledgerId
+    return payload
   }
 
   const createLedger = async (payload: LedgerCreatePayload) => {
     if (!(await ensureAccessToken())) return null
-    const created = await api<LedgerMembership>('/ledgers', {
+    const created = await api<LedgerSummary>('/ledgers', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken.value}`
       },
       body: payload
     })
-    const createdEntry = created.role ? created : { ...created, role: 'owner' as LedgerRole }
-    ledgers.value = [createdEntry, ...ledgers.value]
-    currentLedgerId.value = createdEntry.id
+    ledgerContext.ledgers.value = [created, ...ledgerContext.ledgers.value]
+    await ledgerContext.setActiveLedger(created.id)
+    ledgerCookie.value = created.id
     return created
   }
 

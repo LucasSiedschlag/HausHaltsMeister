@@ -114,7 +114,8 @@
         "light": "Light",
         "dark": "Dark",
         "system": "System"
-      }
+      },
+      "account": "Account"
     },
     "locale": "Language",
     "locales": {
@@ -241,6 +242,16 @@
       "select": "Select",
       "active": "Active"
     },
+    "roles": {
+      "owner": "Owner",
+      "editor": "Editor",
+      "viewer": "Viewer",
+      "unknown": "No role"
+    },
+    "roleBadge": "Role: {role}",
+    "roleRestrictions": {
+      "transactions": "Only editors and owners can create transactions."
+    },
     "create": {
       "title": "Create ledger",
       "description": "Create a ledger to get started.",
@@ -272,10 +283,16 @@
       "ledgerMain": "Primary ledger",
       "reports": "Reports"
     },
-    "secondary": {
-      "categories": "Categories",
-      "settings": "Settings",
-      "feedback": "Feedback"
+  "secondary": {
+    "categories": "Categories",
+    "settings": "Settings",
+    "feedback": "Feedback"
+  }
+  },
+  "siteHeader": {
+    "actions": {
+      "export": "Export",
+      "newTransaction": "New transaction"
     }
   }
 }

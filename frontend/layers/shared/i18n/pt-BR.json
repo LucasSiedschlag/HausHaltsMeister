@@ -114,7 +114,8 @@
         "light": "Claro",
         "dark": "Escuro",
         "system": "Sistema"
-      }
+      },
+      "account": "Conta"
     },
     "locale": "Idioma",
     "locales": {
@@ -241,6 +242,16 @@
       "select": "Selecionar",
       "active": "Ativo"
     },
+    "roles": {
+      "owner": "Proprietário",
+      "editor": "Editor",
+      "viewer": "Visualizador",
+      "unknown": "Sem função"
+    },
+    "roleBadge": "Função: {role}",
+    "roleRestrictions": {
+      "transactions": "Apenas editores e proprietários podem criar transações."
+    },
     "create": {
       "title": "Criar ledger",
       "description": "Crie um ledger para começar.",
@@ -276,6 +287,12 @@
       "categories": "Categorias",
       "settings": "Configurações",
       "feedback": "Feedback"
+    }
+  },
+  "siteHeader": {
+    "actions": {
+      "export": "Exportar",
+      "newTransaction": "Nova transação"
     }
   }
 }

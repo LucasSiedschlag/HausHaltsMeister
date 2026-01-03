@@ -36,7 +36,11 @@ This document defines how the agent must work on every feature. It is the defaul
    - If a new irreversible decision is made, update `docs/agent/DECISIONS.md`.
 
 8. **Seeds**
-   - Update seeds if a new technical category or catalog entry is required.
+  - Update seeds if a new technical category or catalog entry is required.
+9. **Frontend / UI**
+   - Use `useLedgerContext` for the active ledger/role and keep the `hhm_ledger_id` cookie in sync via `useLedger`.
+   - Surface the role badge and ledger errors in the header/sidebar, and disable editor-only actions (e.g., “Nova transação”) for viewers.
+   - Normalize API errors through `useApiClient` so RATE_LIMITED responses can power user-facing messages.
 
 ---
 

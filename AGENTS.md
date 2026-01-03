@@ -12,6 +12,16 @@
 - **Budget**: percentage-based, calculated from monthly income base, versioned by `effective_from_month`.
 - **Credit card**: spending enters the budget only when installments are posted; payments are technical transfers.
 
+## Frontend ledger context
+- `useLedgerContext` is the single source of truth for the active ledger and role; `useLedger` simply wraps it and keeps the `hhm_ledger_id` cookie synchronized.
+- The header/sidebar must show the active role badge, surface ledger errors (`ledger.error`), and display the ledger name/role near the navigation.
+- Actions that change ledger state (e.g., “Nova transação”) must disable for `viewer` roles and explain the restriction via tooltip.
+- The ledger selector must show the role badge, and all ledger-specific screens run `ensure-ledger` before rendering.
+
+## Frontend error handling
+- Always use `useApiClient` so errors arrive normalized as `{ code, message, details }`.
+- Rate-limit scenarios must expose `RATE_LIMITED` or `AUTH_RATE_LIMITED` so the UI can show a retry timer/message.
+
 ## Project Layout (current baseline)
 - `docs/ledger/`: domain model, rules, and use cases.
 - `cmd/`: backend entrypoint (when code is reintroduced).

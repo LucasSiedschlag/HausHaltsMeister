@@ -20,9 +20,16 @@ import NavProjects from './NavProjects.vue'
 import NavSecondary from './NavSecondary.vue'
 import NavUser from './NavUser.vue'
 import { useLedger } from '@shared/composables/useLedger'
+import { useLedgerContext } from '@shared/composables/useLedgerContext'
 
 const { t } = useI18n()
+const ledgerContext = useLedgerContext()
 const { currentLedger, currentLedgerId, ledgers, fetchLedgers } = useLedger()
+const ledgerRoleLabel = computed(() => {
+  const active = ledgerContext.activeRole.value
+  return active ? t(`ledgers.roles.${active}`) : t('ledgers.roles.unknown')
+})
+const activeLedger = computed(() => ledgerContext.activeLedger.value)
 
 const route = useRoute()
 
@@ -92,7 +99,7 @@ const navSecondary = computed(() =>
 
 <template>
   <Sidebar collapsible="icon">
-    <SidebarHeader>
+  <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
@@ -100,15 +107,23 @@ const navSecondary = computed(() =>
               <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-semibold">
                 HH
               </div>
-              <div class="grid text-left text-sm leading-tight">
-                <span class="font-semibold">HausHaltsMeister</span>
-                <span class="text-xs text-muted-foreground">Ledger Finance</span>
-              </div>
-            </NuxtLink>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarHeader>
+            <div class="grid text-left text-sm leading-tight">
+              <span class="font-semibold">HausHaltsMeister</span>
+              <span class="text-xs text-muted-foreground">Ledger Finance</span>
+            </div>
+          </NuxtLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      <SidebarMenuItem v-if="activeLedger">
+        <div class="mt-2 text-xs text-muted-foreground">
+          <p class="truncate">{{ t('ledgers.roleBadge', { role: ledgerRoleLabel }) }}</p>
+          <p class="truncate font-semibold text-[11px] text-foreground">
+            {{ activeLedger?.name }}
+          </p>
+        </div>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarHeader>
 
     <SidebarContent>
       <NavMain :items="navMain" />

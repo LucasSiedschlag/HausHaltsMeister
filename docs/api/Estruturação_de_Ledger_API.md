@@ -197,6 +197,12 @@ E a seguranca fica no guard + repo scoped.
 | POST | /auth/link/{provider}/start | viewer |
 | POST | /auth/unlink/{provider} | viewer |
 | GET | /me/preferences | viewer |
+
+## J) Frontend ledger context UX
+- The frontend uses `useLedgerContext` as the canonical store for the active ledger, role, and errors.
+- The header, sidebar, and ledger selector show the active role badge (owner/editor/viewer) and the ledger name.
+- Editor-only actions (new transactions, posting cards, ledger writes) must be disabled when `hasRole('editor')` is false and show a tooltip referencing `ledgers.roleRestrictions.transactions`.
+- `useApiClient` normalizes errors into `{ code, message, details }`, so `RATE_LIMITED`/`AUTH_RATE_LIMITED` responses can power retry messaging when the UI gets rate-limited.
 | PUT | /me/preferences | viewer |
 
 ### Ledgers e membros

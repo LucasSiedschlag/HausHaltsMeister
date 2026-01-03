@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar'
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@shared/components/ui/sidebar'
 import { ChevronsUpDown, LogOut, Settings, UserRound } from 'lucide-vue-next'
 import { useAuth } from '#layers/auth/composables/useAuth'
+import { useLedgerContext } from '@shared/composables/useLedgerContext'
 
 const props = withDefaults(defineProps<{
   name?: string
@@ -24,6 +26,12 @@ const props = withDefaults(defineProps<{
 
 const { user, logout } = useAuth()
 const router = useRouter()
+const { t } = useI18n()
+const ledgerContext = useLedgerContext()
+const userRoleLabel = computed(() => {
+  const role = ledgerContext.activeRole.value
+  return role ? t(`ledgers.roles.${role}`) : t('ledgers.roles.unknown')
+})
 
 const handleLogout = async () => {
   await logout()
@@ -51,7 +59,10 @@ const handleLogout = async () => {
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-56" align="end" side="right">
-          <DropdownMenuLabel>Conta</DropdownMenuLabel>
+          <DropdownMenuLabel class="flex flex-col gap-1">
+            <span>{{ t('settings.profile.account') }}</span>
+            <span class="text-xs text-muted-foreground">{{ userRoleLabel }}</span>
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem as-child>
             <NuxtLink to="/settings" class="flex w-full items-center">

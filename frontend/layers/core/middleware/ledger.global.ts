@@ -12,7 +12,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  const { currentLedgerId, ledgers, fetchLedgers, selectLedger } = useLedger()
+  const { currentLedgerId, fetchLedgers, selectLedger } = useLedger()
 
   if (currentLedgerId.value) return
 
@@ -20,7 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!currentLedgerId.value && fetched.length === 1) {
     const onlyLedger = fetched[0]
     if (onlyLedger) {
-      selectLedger(onlyLedger.id)
+      await selectLedger(onlyLedger.id)
       return
     }
   }

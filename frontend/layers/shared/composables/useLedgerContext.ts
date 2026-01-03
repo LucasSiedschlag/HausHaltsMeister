@@ -1,18 +1,22 @@
 import { computed } from 'vue'
-import type { ApiError } from '#layers/shared/types/api-error'
 import { isApiError } from '#layers/shared/utils/api-error'
 import { useApiClient } from '#layers/shared/composables/useApiClient'
+import { hasRoleRank } from '#layers/shared/utils/ledger-roles'
+import type { LedgerRole } from '#layers/shared/utils/ledger-roles'
 
 export type LedgerSummary = {
   id: string
   name: string
   currency_code: string
   owner_user_id?: string
+  created_at?: string
+  updated_at?: string | null
+  role?: LedgerRole
 }
 
 export type LedgerRoleInfo = {
   ledger_id: string
-  role: 'viewer' | 'editor' | 'owner'
+  role: LedgerRole
 }
 
 export const useLedgerContext = () => {
@@ -92,21 +96,7 @@ export const useLedgerContext = () => {
     error.value = 'Erro inesperado'
   }
 
-  const hasRole = (role: 'viewer' | 'editor' | 'owner') =>
-    activeRole.value ? roleRank(activeRole.value) >= roleRank(role) : false
-
-  const roleRank = (role: string) => {
-    switch (role) {
-      case 'owner':
-        return 3
-      case 'editor':
-        return 2
-      case 'viewer':
-        return 1
-      default:
-        return 0
-    }
-  }
+  const hasRole = (role: LedgerRole) => hasRoleRank(activeRole.value as LedgerRole | null, role)
 
   return {
     ledgers,

@@ -1,5 +1,4 @@
 import { useAnalytics } from '@shared/composables/useAnalytics'
-import type { ApiError } from '#layers/shared/types/api-error'
 import { isApiError } from '#layers/shared/utils/api-error'
 
 type AuthUser = {
