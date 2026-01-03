@@ -193,9 +193,14 @@ const handleOAuth = (provider: 'google' | 'github') => {
         </form>
         <div class="bg-muted relative hidden overflow-hidden md:block">
           <img
-            src="/placeholder.svg"
-            alt="Image"
-            class="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+            src="/hhm_login_background_light.png"
+            alt="Background"
+            class="absolute inset-0 h-full w-full object-cover dark:hidden"
+          />
+          <img
+            src="/hhm_login_background_dark.png"
+            alt="Background"
+            class="absolute inset-0 h-full w-full object-cover hidden dark:block"
           />
         </div>
       </CardContent>
