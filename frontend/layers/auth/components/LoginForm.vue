@@ -84,7 +84,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
                 id="email"
                 v-model="email"
                 type="email"
-                :placeholder="t('auth.login.emailPlaceholder')"
+                :placeholder="t('auth.login.emailPlaceholder', { at: '@' })"
                 :class="getInputClass({ touched: touched.email, hasError: Boolean(errors.email[0]) })"
                 @blur="touchField('email')"
               />

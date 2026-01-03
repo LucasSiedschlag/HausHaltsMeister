@@ -58,7 +58,7 @@ const onSubmit = async () => {
             v-model="email"
             type="email"
             autocomplete="email"
-            :placeholder="t('auth.forgot.emailPlaceholder')"
+            :placeholder="t('auth.forgot.emailPlaceholder', { at: '@' })"
             :class="getInputClass({ touched: touched.email, hasError: Boolean(errors.email[0]) })"
             @blur="touchField('email')"
           />

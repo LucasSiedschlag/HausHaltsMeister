@@ -57,6 +57,10 @@ A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 - Tokens e CSS global ficam em `layers/shared/assets`.
 - `components.json` aponta para o layer `shared`.
 
+## Padroes obrigatorios
+
+Consulte `docs/frontend/CONVENTIONS.md` para os padroes de i18n, tema, validacao e arquitetura.
+
 ## Validacao inline
 
 - Validadores padrao ficam em `layers/shared/validators` e usam Zod.
@@ -64,6 +68,7 @@ A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 - Use `getInputClass` para manter o estilo de foco (outline solido + ring com opacidade 0,2).
 - Cada campo exibe apenas o primeiro erro (ordem definida no schema).
 - Erros de backend permanecem separados do erro de validacao local.
+- Placeholders com `@` devem usar interpolacao (ex.: `exemplo{at}dominio.com`).
 
 ## Eventos de analytics
 

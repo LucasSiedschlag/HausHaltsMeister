@@ -365,7 +365,13 @@ watch(activeTab, async (value) => {
             </div>
             <div class="grid gap-2">
               <Label for="email">{{ t('settings.profile.email') }}</Label>
-              <Input id="email" v-model="form.email" type="email" :placeholder="t('settings.profile.emailPlaceholder')" disabled />
+              <Input
+                id="email"
+                v-model="form.email"
+                type="email"
+                :placeholder="t('settings.profile.emailPlaceholder', { at: '@' })"
+                disabled
+              />
             </div>
             <div class="grid gap-2">
               <Label>{{ t('settings.locale') }}</Label>

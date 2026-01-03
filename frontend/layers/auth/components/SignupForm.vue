@@ -105,7 +105,7 @@ const handleOAuth = (provider: 'google' | 'github') => {
                 v-model="email"
                 type="email"
                 autocomplete="email"
-                :placeholder="t('auth.signup.emailPlaceholder')"
+                :placeholder="t('auth.signup.emailPlaceholder', { at: '@' })"
                 :class="inputClass('email')"
                 @blur="touchField('email')"
               />
