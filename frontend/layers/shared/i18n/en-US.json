@@ -468,6 +468,9 @@
       "memo": "Memo",
       "actions": "Actions"
     },
+    "header": {
+      "newTransaction": "New transaction"
+    },
     "form": {
       "createTitle": "New transaction",
       "createDescription": "Register entries and validate balance.",

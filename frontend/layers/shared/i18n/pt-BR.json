@@ -468,6 +468,9 @@
       "memo": "Memo",
       "actions": "Ações"
     },
+    "header": {
+      "newTransaction": "Nova transação"
+    },
     "form": {
       "createTitle": "Nova transação",
       "createDescription": "Registre os registros e valide o saldo.",

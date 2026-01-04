@@ -10,10 +10,9 @@ import { useJournalUi } from '#layers/journal/composables/useJournalUi'
 import { useJournalPeriod } from '#layers/journal/composables/useJournalPeriod'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import LedgerSwitcher from './LedgerSwitcher.vue'
-import SearchForm from './SearchForm.vue'
 import { cn } from '@shared/utils'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const ledgerContext = useLedgerContext()
 const journalUi = useJournalUi()
 const journalPeriod = useJournalPeriod()
@@ -77,7 +76,7 @@ const handleNewTransaction = async () => {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
+  <header class="sticky top-0 z-30 flex h-16 items-center justify-center gap-4 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
     <SidebarTrigger class="lg:hidden" />
     <Separator orientation="vertical" class="h-6 lg:hidden" />
     <LedgerSwitcher />
@@ -127,14 +126,10 @@ const handleNewTransaction = async () => {
         </Button>
       </div>
     </div>
-    <div class="flex-1">
-      <SearchForm />
-    </div>
     <div class="flex items-center gap-2">
-      <Button variant="outline">Exportar</Button>
-      <Button :disabled="!canEdit" @click="handleNewTransaction">
-        Nova transação
-      </Button>
+        <Button :disabled="!canEdit" @click="handleNewTransaction">
+          {{ t('journal.header.newTransaction') }}
+        </Button>
     </div>
   </header>
 </template>
