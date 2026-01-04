@@ -3,6 +3,7 @@ import { isApiError } from '#layers/shared/utils/api-error'
 import { useApiClient } from '#layers/shared/composables/useApiClient'
 import { hasRoleRank } from '#layers/shared/utils/ledger-roles'
 import type { LedgerRole } from '#layers/shared/utils/ledger-roles'
+import { useAuth } from '#layers/auth/composables/useAuth'
 
 export type LedgerSummary = {
   id: string
@@ -26,6 +27,8 @@ export const useLedgerContext = () => {
   const loading = useState<boolean>('ledger_context_loading', () => false)
   const error = useState<string | null>('ledger_context_error', () => null)
   const api = useApiClient()
+  const pendingLoad = useState<Promise<LedgerSummary[]> | null>('ledger_context_pending', () => null)
+  const { accessToken, refresh } = useAuth()
 
   const activeLedger = computed(() => {
     const id = activeLedgerId.value
@@ -33,29 +36,63 @@ export const useLedgerContext = () => {
     return ledgers.value.find((ledger) => ledger.id === id) ?? null
   })
 
+  const ensureAccessToken = async () => {
+    if (accessToken.value) return true
+    try {
+      await refresh()
+      return Boolean(accessToken.value)
+    } catch {
+      return false
+    }
+  }
+
   const loadLedgers = async () => {
     if (ledgers.value.length > 0) {
       return ledgers.value
     }
+    if (pendingLoad.value) {
+      return pendingLoad.value
+    }
+    if (!(await ensureAccessToken())) {
+      return []
+    }
     loading.value = true
     error.value = null
-    try {
-      const payload = await api<LedgerSummary[]>('/ledgers', { method: 'GET' })
-      ledgers.value = payload
-      return payload
-    } catch (err) {
-      handleLedgerError(err)
-      return []
-    } finally {
-      loading.value = false
-    }
+    const request = (async () => {
+      try {
+        const payload = await api<LedgerSummary[]>('/ledgers', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken.value}`
+          }
+        })
+        ledgers.value = payload
+        return payload
+      } catch (err) {
+        handleLedgerError(err)
+        return []
+      } finally {
+        loading.value = false
+        pendingLoad.value = null
+      }
+    })()
+    pendingLoad.value = request
+    return request
   }
 
   const setActiveLedger = async (ledgerId: string) => {
+    if (!(await ensureAccessToken())) {
+      return
+    }
     loading.value = true
     error.value = null
     try {
-      const payload = await api<LedgerRoleInfo>(`/ledgers/${ledgerId}/me`, { method: 'GET' })
+      const payload = await api<LedgerRoleInfo>(`/ledgers/${ledgerId}/me`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken.value}`
+        }
+      })
       activeLedgerId.value = ledgerId
       activeRole.value = payload.role
     } catch (err) {

@@ -67,6 +67,24 @@ export const nameSchema = (label = 'Nome') =>
     }
   })
 
+export const accountTypeSchema = (label = 'Tipo') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (!['cash', 'investment', 'credit_card'].includes(value)) {
+      add('invalid', messages.invalidOption(label))
+    }
+  })
+
+export const categoryDirectionSchema = (label = 'Direção') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (!['in', 'out'].includes(value)) {
+      add('invalid', messages.invalidOption(label))
+    }
+  })
+
 export const issuesFromSchema = (schema: z.ZodTypeAny, value: unknown): ValidationError[] => {
   const result = schema.safeParse(value)
   if (result.success) return []

@@ -22,7 +22,7 @@ const loadLedgers = async () => {
 }
 
 const handleSelect = async (ledgerId: string) => {
-  await selectLedger(ledgerId)
+  selectLedger(ledgerId)
   await router.push('/')
 }
 

@@ -26,6 +26,7 @@ Este documento consolida as decisões e padrões aplicados no frontend para evit
 - Usar `useApiClient` (em `shared`) para todas as chamadas.
 - Tokens: access token em header `Authorization`, refresh via cookie HttpOnly.
 - Para SSR, repasse cookies via `useRequestHeaders(['cookie'])` quando usar `fetch`.
+- Para POSTs idempotentes (ex.: journal), gere `Idempotency-Key` com `createIdempotencyKey()` e passe em `useApiClient({ idempotencyKey })`.
 
 ## Preferências do usuário
 
@@ -56,6 +57,9 @@ Este documento consolida as decisões e padrões aplicados no frontend para evit
 - Paleta/tom via `data-theme-palette` e `data-theme-tone` no `<html>`.
 - `color-mode` usa cookie; respeitar `theme_mode`.
 - Componentes shadcn adicionados via `npx shadcn-vue@latest add ...`.
+- Confirmacoes destrutivas devem usar `layers/shared/components/ConfirmDialog.vue` (centralizado).
+- Evite popups customizados; se repetir, criar componente em `layers/shared/components`.
+- Listagens CRUD devem usar `layers/shared/components/CrudTableCard.vue`.
 
 ## Formulários e validação
 
@@ -63,6 +67,7 @@ Este documento consolida as decisões e padrões aplicados no frontend para evit
 - Use `useInlineValidation` + `getInputClass` para estilo padrão.
 - Mostrar **apenas o primeiro erro** por campo.
 - Campos obrigatórios com `*` no label.
+- Formularios CRUD devem usar `Sheet` (shadcn) com botoes lado a lado no rodape.
 
 ## Notificações (Notivue)
 

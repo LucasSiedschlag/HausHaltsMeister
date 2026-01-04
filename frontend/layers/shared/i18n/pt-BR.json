@@ -114,8 +114,7 @@
         "light": "Claro",
         "dark": "Escuro",
         "system": "Sistema"
-      },
-      "account": "Conta"
+      }
     },
     "locale": "Idioma",
     "locales": {
@@ -248,10 +247,6 @@
       "viewer": "Visualizador",
       "unknown": "Sem função"
     },
-    "roleBadge": "Função: {role}",
-    "roleRestrictions": {
-      "transactions": "Apenas editores e proprietários podem criar transações."
-    },
     "create": {
       "title": "Criar ledger",
       "description": "Crie um ledger para começar.",
@@ -263,6 +258,155 @@
       "submitting": "Criando...",
       "nameRequired": "Informe um nome.",
       "error": "Não foi possível criar o ledger."
+    }
+  },
+  "accounts": {
+    "title": "Contas",
+    "description": "Gerencie contas de caixa, investimento e cartão.",
+    "loading": "Carregando contas...",
+    "empty": "Nenhuma conta encontrada.",
+    "readOnlyHint": "Você possui acesso apenas de leitura.",
+    "filters": {
+      "status": "Status",
+      "placeholder": "Filtrar",
+      "all": "Todas",
+      "active": "Ativas",
+      "inactive": "Inativas"
+    },
+    "list": {
+      "title": "Contas do ledger",
+      "description": "Organize suas fontes de saldo."
+    },
+    "table": {
+      "name": "Conta",
+      "type": "Tipo",
+      "status": "Status",
+      "actions": "Ações"
+    },
+    "types": {
+      "cash": "Caixa",
+      "investment": "Investimento",
+      "credit_card": "Cartão"
+    },
+    "status": {
+      "active": "Ativa",
+      "inactive": "Inativa"
+    },
+    "actions": {
+      "new": "Nova conta",
+      "edit": "Editar",
+      "deactivate": "Desativar",
+      "activate": "Reativar"
+    },
+    "form": {
+      "createTitle": "Criar conta",
+      "createDescription": "Defina o tipo e o status inicial.",
+      "editTitle": "Editar conta",
+      "editDescription": "Atualize o nome ou o status.",
+      "nameLabel": "Nome da conta",
+      "typeLabel": "Tipo de conta",
+      "typePlaceholder": "Selecione",
+      "activeLabel": "Conta ativa",
+      "activeHint": "Pode ser usada em lançamentos.",
+      "cancel": "Cancelar",
+      "submit": "Salvar",
+      "saving": "Salvando..."
+    },
+    "messages": {
+      "created": "Conta criada.",
+      "updated": "Conta atualizada.",
+      "activated": "Conta reativada.",
+      "deactivated": "Conta desativada.",
+      "duplicateName": "Já existe uma conta com esse nome.",
+      "error": "Não foi possível salvar a conta."
+    },
+    "confirm": {
+      "deactivateTitle": "Desativar conta?",
+      "deactivateMessage": "A conta \"{name}\" ficará indisponível para novos lançamentos.",
+      "confirmAction": "Desativar",
+      "cancelAction": "Cancelar"
+    }
+  },
+  "categories": {
+    "title": "Categorias",
+    "description": "Organize entradas e saídas por hierarquia.",
+    "loading": "Carregando categorias...",
+    "empty": "Nenhuma categoria encontrada.",
+    "readOnlyHint": "Você possui acesso apenas de leitura.",
+    "filters": {
+      "direction": "Direção",
+      "status": "Status",
+      "placeholder": "Filtrar",
+      "all": "Todas",
+      "active": "Ativas",
+      "inactive": "Inativas",
+      "allDirections": "Todas as direções"
+    },
+    "list": {
+      "title": "Categorias do ledger",
+      "description": "Use grupos para consolidar o orçamento."
+    },
+    "table": {
+      "name": "Categoria",
+      "direction": "Direção",
+      "flags": "Orçamento",
+      "status": "Status",
+      "actions": "Ações"
+    },
+    "directions": {
+      "in": "Entrada",
+      "out": "Saída"
+    },
+    "flags": {
+      "budgetBase": "Base de renda",
+      "budgetRelevant": "Conta no orçamento",
+      "none": "Sem flags"
+    },
+    "status": {
+      "active": "Ativa",
+      "inactive": "Inativa"
+    },
+    "actions": {
+      "new": "Nova categoria",
+      "edit": "Editar",
+      "deactivate": "Desativar",
+      "activate": "Reativar"
+    },
+    "form": {
+      "createTitle": "Criar categoria",
+      "createDescription": "Defina direção e agrupamento.",
+      "editTitle": "Editar categoria",
+      "editDescription": "Atualize nome e flags.",
+      "nameLabel": "Nome da categoria",
+      "directionLabel": "Direção",
+      "directionPlaceholder": "Selecione",
+      "parentLabel": "Categoria pai",
+      "parentPlaceholder": "Selecione",
+      "parentNone": "Sem categoria pai",
+      "budgetBaseLabel": "Base de renda",
+      "budgetBaseHint": "Usada para cálculo da renda base.",
+      "budgetRelevantLabel": "Relevante para orçamento",
+      "budgetRelevantHint": "Conta no consumo do orçamento.",
+      "budgetBaseDisabledHint": "Saídas não podem ser base de renda.",
+      "budgetRelevantDisabledHint": "Entradas não consomem orçamento.",
+      "cancel": "Cancelar",
+      "submit": "Salvar",
+      "saving": "Salvando..."
+    },
+    "messages": {
+      "created": "Categoria criada.",
+      "updated": "Categoria atualizada.",
+      "activated": "Categoria reativada.",
+      "deactivated": "Categoria desativada.",
+      "duplicateName": "Já existe uma categoria com esse nome.",
+      "inUse": "Essa categoria já foi usada.",
+      "error": "Não foi possível salvar a categoria."
+    },
+    "confirm": {
+      "deactivateTitle": "Desativar categoria?",
+      "deactivateMessage": "A categoria \"{name}\" ficará indisponível para novos lançamentos.",
+      "confirmAction": "Desativar",
+      "cancelAction": "Cancelar"
     }
   },
   "sidebar": {
@@ -287,12 +431,14 @@
       "categories": "Categorias",
       "settings": "Configurações",
       "feedback": "Feedback"
-    }
-  },
-  "siteHeader": {
-    "actions": {
-      "export": "Exportar",
-      "newTransaction": "Nova transação"
+    },
+    "footer": {
+      "roleLabel": "Permissão: {role}",
+      "roleHint": {
+        "owner": "Controle total do ledger.",
+        "editor": "Pode criar e editar dados.",
+        "viewer": "Somente leitura."
+      }
     }
   }
 }

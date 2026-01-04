@@ -113,6 +113,13 @@ Passos:
 2. Tela de lista com filtros por status.
 3. Form de criacao/edicao.
 
+Saidas esperadas:
+- Lista de contas com filtro ativo/inativo.
+- Criacao, edicao e desativacao via drawer.
+- Guards de role (viewer apenas leitura).
+
+Status: concluida.
+
 ---
 
 ## Etapa 4 — Categories
@@ -124,6 +131,13 @@ Passos:
 1. CRUD de categorias.
 2. Respeitar regras `direction` e flags de budget.
 3. Exibir hierarquia (parent_id) com indentacao.
+
+Saidas esperadas:
+- Lista hierarquica com filtros por direcao e status.
+- Criacao e edicao com flags de orcamento.
+- Desativacao com confirmacao centralizada.
+
+Status: concluida.
 
 ---
 

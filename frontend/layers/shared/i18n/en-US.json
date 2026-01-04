@@ -114,8 +114,7 @@
         "light": "Light",
         "dark": "Dark",
         "system": "System"
-      },
-      "account": "Account"
+      }
     },
     "locale": "Language",
     "locales": {
@@ -248,10 +247,6 @@
       "viewer": "Viewer",
       "unknown": "No role"
     },
-    "roleBadge": "Role: {role}",
-    "roleRestrictions": {
-      "transactions": "Only editors and owners can create transactions."
-    },
     "create": {
       "title": "Create ledger",
       "description": "Create a ledger to get started.",
@@ -263,6 +258,155 @@
       "submitting": "Creating...",
       "nameRequired": "Enter a name.",
       "error": "Unable to create the ledger."
+    }
+  },
+  "accounts": {
+    "title": "Accounts",
+    "description": "Manage cash, investment, and card accounts.",
+    "loading": "Loading accounts...",
+    "empty": "No accounts found.",
+    "readOnlyHint": "You have read-only access.",
+    "filters": {
+      "status": "Status",
+      "placeholder": "Filter",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "list": {
+      "title": "Ledger accounts",
+      "description": "Organize where your balances live."
+    },
+    "table": {
+      "name": "Account",
+      "type": "Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "types": {
+      "cash": "Cash",
+      "investment": "Investment",
+      "credit_card": "Credit card"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "new": "New account",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate"
+    },
+    "form": {
+      "createTitle": "Create account",
+      "createDescription": "Define the type and initial status.",
+      "editTitle": "Edit account",
+      "editDescription": "Update the name or status.",
+      "nameLabel": "Account name",
+      "typeLabel": "Account type",
+      "typePlaceholder": "Select",
+      "activeLabel": "Account active",
+      "activeHint": "Available for transactions.",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "created": "Account created.",
+      "updated": "Account updated.",
+      "activated": "Account reactivated.",
+      "deactivated": "Account deactivated.",
+      "duplicateName": "An account with this name already exists.",
+      "error": "Could not save the account."
+    },
+    "confirm": {
+      "deactivateTitle": "Deactivate account?",
+      "deactivateMessage": "The account \"{name}\" will be unavailable for new transactions.",
+      "confirmAction": "Deactivate",
+      "cancelAction": "Cancel"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "description": "Organize inflows and outflows with hierarchy.",
+    "loading": "Loading categories...",
+    "empty": "No categories found.",
+    "readOnlyHint": "You have read-only access.",
+    "filters": {
+      "direction": "Direction",
+      "status": "Status",
+      "placeholder": "Filter",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "allDirections": "All directions"
+    },
+    "list": {
+      "title": "Ledger categories",
+      "description": "Group categories to consolidate budgets."
+    },
+    "table": {
+      "name": "Category",
+      "direction": "Direction",
+      "flags": "Budget",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "directions": {
+      "in": "Inflow",
+      "out": "Outflow"
+    },
+    "flags": {
+      "budgetBase": "Income base",
+      "budgetRelevant": "Budget relevant",
+      "none": "No flags"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "new": "New category",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Reactivate"
+    },
+    "form": {
+      "createTitle": "Create category",
+      "createDescription": "Define direction and grouping.",
+      "editTitle": "Edit category",
+      "editDescription": "Update name and flags.",
+      "nameLabel": "Category name",
+      "directionLabel": "Direction",
+      "directionPlaceholder": "Select",
+      "parentLabel": "Parent category",
+      "parentPlaceholder": "Select",
+      "parentNone": "No parent category",
+      "budgetBaseLabel": "Income base",
+      "budgetBaseHint": "Used to calculate the income base.",
+      "budgetRelevantLabel": "Budget relevant",
+      "budgetRelevantHint": "Counts toward budget consumption.",
+      "budgetBaseDisabledHint": "Outflows cannot be income base.",
+      "budgetRelevantDisabledHint": "Inflows do not consume budget.",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "created": "Category created.",
+      "updated": "Category updated.",
+      "activated": "Category reactivated.",
+      "deactivated": "Category deactivated.",
+      "duplicateName": "A category with this name already exists.",
+      "inUse": "This category has already been used.",
+      "error": "Could not save the category."
+    },
+    "confirm": {
+      "deactivateTitle": "Deactivate category?",
+      "deactivateMessage": "The category \"{name}\" will be unavailable for new transactions.",
+      "confirmAction": "Deactivate",
+      "cancelAction": "Cancel"
     }
   },
   "sidebar": {
@@ -283,16 +427,18 @@
       "ledgerMain": "Primary ledger",
       "reports": "Reports"
     },
-  "secondary": {
-    "categories": "Categories",
-    "settings": "Settings",
-    "feedback": "Feedback"
-  }
-  },
-  "siteHeader": {
-    "actions": {
-      "export": "Export",
-      "newTransaction": "New transaction"
+    "secondary": {
+      "categories": "Categories",
+      "settings": "Settings",
+      "feedback": "Feedback"
+    },
+    "footer": {
+      "roleLabel": "Access: {role}",
+      "roleHint": {
+        "owner": "Full control of the ledger.",
+        "editor": "Can create and edit data.",
+        "viewer": "Read-only access."
+      }
     }
   }
 }
