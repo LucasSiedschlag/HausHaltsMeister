@@ -67,6 +67,28 @@ export const nameSchema = (label = 'Nome') =>
     }
   })
 
+export const descriptionSchema = (label = 'Descricao') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (value.trim().length < 2) {
+      add('min_length', messages.minLength(label, 2))
+      return
+    }
+    if (value.trim().length > 120) {
+      add('max_length', messages.maxLength(label, 120))
+    }
+  })
+
+export const dateSchema = (label = 'Data') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) {
+      add('invalid_date', messages.invalidDate(label))
+    }
+  })
+
 export const accountTypeSchema = (label = 'Tipo') =>
   z.string().superRefine((value, ctx) => {
     const add: AddIssue = (code, message) => issue(ctx, code, message)

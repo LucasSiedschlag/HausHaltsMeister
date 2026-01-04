@@ -409,6 +409,121 @@
       "cancelAction": "Cancel"
     }
   },
+  "journal": {
+    "title": "Journal",
+    "description": "Compact view of ledger transactions and entries.",
+    "loading": "Loading transactions...",
+    "empty": "No transactions found.",
+    "filters": {
+      "query": "Search",
+      "queryPlaceholder": "Description or notes",
+      "from": "From",
+      "to": "To",
+      "account": "Account",
+      "category": "Category",
+      "limit": "Limit",
+      "limitPlaceholder": "Select",
+      "allAccounts": "All accounts",
+      "allCategories": "All categories",
+      "clear": "Clear selection",
+      "selectedCount": "{count} selected",
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "sort": {
+      "dateDesc": "Date (newest)",
+      "dateAsc": "Date (oldest)",
+      "accountAsc": "Account (A-Z)",
+      "categoryAsc": "Category (A-Z)",
+      "kindAsc": "Type (A-Z)",
+      "amountDesc": "Amount (highest)",
+      "amountAsc": "Amount (lowest)"
+    },
+    "list": {
+      "title": "Ledger transactions",
+      "description": "Inspect entries and validate journal flow."
+    },
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "entries": "Entries",
+      "actions": "Actions",
+      "moreEntries": "more entries"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "loadMore": "Load more",
+      "details": "Details"
+    },
+    "columns": {
+      "title": "Columns",
+      "toggle": "Columns",
+      "date": "Date",
+      "description": "Description",
+      "account": "Account",
+      "category": "Category",
+      "kind": "Type",
+      "amount": "Amount",
+      "memo": "Memo",
+      "actions": "Actions"
+    },
+    "form": {
+      "createTitle": "New transaction",
+      "createDescription": "Register entries and validate balance.",
+      "editTitle": "Edit transaction",
+      "editDescription": "Adjust transaction data and entries.",
+      "occurredAtLabel": "Transaction date",
+      "datePlaceholder": "Select date",
+      "descriptionLabel": "Description",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Internal notes",
+      "entriesTitle": "Entries",
+      "entriesDescription": "Add accounts, categories, and values.",
+      "addEntry": "Add entry",
+      "entryAccount": "Account",
+      "entryAccountPlaceholder": "Select an account",
+      "entryCategory": "Category",
+      "entryCategoryPlaceholder": "Select a category",
+      "entryCategoryNone": "No category",
+      "entryKind": "Type",
+      "entryKindPlaceholder": "Select",
+      "entryAmount": "Amount",
+      "entryMemo": "Memo",
+      "entryMemoPlaceholder": "Entry notes",
+      "removeEntry": "Remove entry",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "saving": "Saving...",
+      "entryErrors": {
+        "account": "Select an account.",
+        "kind": "Select a type.",
+        "amount": "Enter a valid amount."
+      }
+    },
+    "messages": {
+      "created": "Transaction created.",
+      "updated": "Transaction updated.",
+      "deleted": "Transaction deleted.",
+      "unbalanced": "The transfer is not balanced.",
+      "referenced": "Transaction linked to installments or statements.",
+      "error": "Could not save the transaction."
+    },
+    "confirm": {
+      "deleteTitle": "Delete transaction?",
+      "deleteMessage": "The transaction \"{name}\" will be removed from the journal.",
+      "confirmAction": "Delete",
+      "cancelAction": "Cancel"
+    },
+    "kinds": {
+      "normal": "Normal",
+      "transfer": "Transfer",
+      "adjust": "Adjust"
+    },
+    "entry": {
+      "noCategory": "No category"
+    }
+  },
   "sidebar": {
     "groups": {
       "main": "Main",

@@ -86,6 +86,11 @@ Standard query parameters:
 - `category_id`
 - `limit`
 
+UI conventions for filters:
+- Multi-select dropdowns must stay open on selection (`@select.prevent` on items).
+- Auto-apply filters on selection changes; debounce only the free-text search.
+- When multiple items are selected, filter on the client; only send `account_id` / `category_id` if exactly one value is selected.
+
 For card-specific endpoints:
 - `month` (YYYY-MM-01)
 - `status`

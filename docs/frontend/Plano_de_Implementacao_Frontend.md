@@ -152,6 +152,13 @@ Passos:
 3. Criacao e edicao de transacoes.
 4. Bloquear delete/edicao se referenciada.
 
+Saidas esperadas:
+- Lista compacta com filtros completos e paginação por cursor.
+- Sheet para criar/editar com entries em blocos reutilizaveis.
+- Confirmacao centralizada para exclusao.
+
+Status: concluida.
+
 ---
 
 ## Etapa 6 — Budget

@@ -409,6 +409,121 @@
       "cancelAction": "Cancelar"
     }
   },
+  "journal": {
+    "title": "Journal",
+    "description": "Visão compacta das transações e registros do ledger.",
+    "loading": "Carregando transações...",
+    "empty": "Nenhuma transação encontrada.",
+    "filters": {
+      "query": "Busca",
+      "queryPlaceholder": "Descrição ou notas",
+      "from": "De",
+      "to": "Até",
+      "account": "Conta",
+      "category": "Categoria",
+      "limit": "Limite",
+      "limitPlaceholder": "Selecione",
+      "allAccounts": "Todas as contas",
+      "allCategories": "Todas as categorias",
+      "clear": "Limpar seleção",
+      "selectedCount": "{count} selecionadas",
+      "apply": "Aplicar",
+      "reset": "Limpar"
+    },
+    "sort": {
+      "dateDesc": "Data (mais recentes)",
+      "dateAsc": "Data (mais antigas)",
+      "accountAsc": "Conta (A-Z)",
+      "categoryAsc": "Categoria (A-Z)",
+      "kindAsc": "Tipo (A-Z)",
+      "amountDesc": "Valor (maiores)",
+      "amountAsc": "Valor (menores)"
+    },
+    "list": {
+      "title": "Transações do ledger",
+      "description": "Detalhe os registros e valide o fluxo do journal."
+    },
+    "table": {
+      "date": "Data",
+      "description": "Descrição",
+      "entries": "Registros",
+      "actions": "Ações",
+      "moreEntries": "registros adicionais"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Excluir",
+      "loadMore": "Carregar mais",
+      "details": "Detalhes"
+    },
+    "columns": {
+      "title": "Colunas",
+      "toggle": "Colunas",
+      "date": "Data",
+      "description": "Descrição",
+      "account": "Conta",
+      "category": "Categoria",
+      "kind": "Tipo",
+      "amount": "Valor",
+      "memo": "Memo",
+      "actions": "Ações"
+    },
+    "form": {
+      "createTitle": "Nova transação",
+      "createDescription": "Registre os registros e valide o saldo.",
+      "editTitle": "Editar transação",
+      "editDescription": "Ajuste dados e registros da transação.",
+      "occurredAtLabel": "Data da transação",
+      "datePlaceholder": "Selecionar data",
+      "descriptionLabel": "Descrição",
+      "notesLabel": "Notas",
+      "notesPlaceholder": "Observações internas",
+      "entriesTitle": "Registros",
+      "entriesDescription": "Adicione contas, categorias e valores.",
+      "addEntry": "Adicionar registro",
+      "entryAccount": "Conta",
+      "entryAccountPlaceholder": "Selecione uma conta",
+      "entryCategory": "Categoria",
+      "entryCategoryPlaceholder": "Selecione uma categoria",
+      "entryCategoryNone": "Sem categoria",
+      "entryKind": "Tipo",
+      "entryKindPlaceholder": "Selecione",
+      "entryAmount": "Valor",
+      "entryMemo": "Memo",
+      "entryMemoPlaceholder": "Detalhe do registro",
+      "removeEntry": "Remover registro",
+      "cancel": "Cancelar",
+      "submit": "Salvar",
+      "saving": "Salvando...",
+      "entryErrors": {
+        "account": "Selecione uma conta.",
+        "kind": "Selecione um tipo.",
+        "amount": "Informe um valor válido."
+      }
+    },
+    "messages": {
+      "created": "Transação criada.",
+      "updated": "Transação atualizada.",
+      "deleted": "Transação removida.",
+      "unbalanced": "A transferência não está balanceada.",
+      "referenced": "Transação vinculada a parcelas ou faturas.",
+      "error": "Não foi possível salvar a transação."
+    },
+    "confirm": {
+      "deleteTitle": "Excluir transação?",
+      "deleteMessage": "A transação \"{name}\" será removida do journal.",
+      "confirmAction": "Excluir",
+      "cancelAction": "Cancelar"
+    },
+    "kinds": {
+      "normal": "Normal",
+      "transfer": "Transferência",
+      "adjust": "Ajuste"
+    },
+    "entry": {
+      "noCategory": "Sem categoria"
+    }
+  },
   "sidebar": {
     "groups": {
       "main": "Principal",
