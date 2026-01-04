@@ -40,7 +40,7 @@ oauth_states (standalone, short-lived)
 
 **Ledger core**
 - `ledgers`: data boundary (owner + currency).
-- `ledger_members`: roles per ledger.
+- `ledger_members`: roles per ledger (soft removal via `removed_at`).
 - `audit_log`: immutable ledger audit trail.
 - `accounts`: internal accounts (cash/investment/credit_card).
 - `categories`: IN/OUT semantics + budget flags.

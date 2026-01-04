@@ -23,7 +23,7 @@ func GetLedgerRole(ctx context.Context, pool *pgxpool.Pool, ledgerID, userID str
 	row := pool.QueryRow(ctx, `
 		SELECT CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 		FROM ledgers l
-		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 		WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1)
 	`, userID, ledgerID)
 	if err := row.Scan(&role); err != nil {

@@ -14,6 +14,11 @@ import (
 const addMember = `-- name: AddMember :one
 INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
 VALUES ($1, $2, $3, $4)
+ON CONFLICT (ledger_id, user_id) DO UPDATE
+SET role = EXCLUDED.role,
+  removed_at = NULL,
+  updated_at = EXCLUDED.updated_at
+WHERE ledger_members.removed_at IS NOT NULL
 RETURNING ledger_id, user_id, role, created_at, updated_at
 `
 
@@ -24,14 +29,22 @@ type AddMemberParams struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) (LedgerMember, error) {
+type AddMemberRow struct {
+	LedgerID  pgtype.UUID
+	UserID    pgtype.UUID
+	Role      string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) (AddMemberRow, error) {
 	row := q.db.QueryRow(ctx, addMember,
 		arg.LedgerID,
 		arg.UserID,
 		arg.Role,
 		arg.UpdatedAt,
 	)
-	var i LedgerMember
+	var i AddMemberRow
 	err := row.Scan(
 		&i.LedgerID,
 		&i.UserID,
@@ -102,7 +115,7 @@ const getLedgerForUser = `-- name: GetLedgerForUser :one
 SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
   CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1)
 `
 
@@ -139,7 +152,7 @@ func (q *Queries) GetLedgerForUser(ctx context.Context, arg GetLedgerForUserPara
 const getLedgerRole = `-- name: GetLedgerRole :one
 SELECT CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1)
 `
 
@@ -171,7 +184,7 @@ const listLedgersForUser = `-- name: ListLedgersForUser :many
 SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
   CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.owner_user_id = $1 OR lm.user_id = $1
 ORDER BY l.created_at DESC
 `
@@ -219,20 +232,28 @@ const listMembers = `-- name: ListMembers :many
 
 SELECT ledger_id, user_id, role, created_at, updated_at
 FROM ledger_members
-WHERE ledger_id = $1
+WHERE ledger_id = $1 AND removed_at IS NULL
 ORDER BY created_at
 `
 
+type ListMembersRow struct {
+	LedgerID  pgtype.UUID
+	UserID    pgtype.UUID
+	Role      string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 // Members
-func (q *Queries) ListMembers(ctx context.Context, ledgerID pgtype.UUID) ([]LedgerMember, error) {
+func (q *Queries) ListMembers(ctx context.Context, ledgerID pgtype.UUID) ([]ListMembersRow, error) {
 	rows, err := q.db.Query(ctx, listMembers, ledgerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LedgerMember
+	var items []ListMembersRow
 	for rows.Next() {
-		var i LedgerMember
+		var i ListMembersRow
 		if err := rows.Scan(
 			&i.LedgerID,
 			&i.UserID,
@@ -251,8 +272,9 @@ func (q *Queries) ListMembers(ctx context.Context, ledgerID pgtype.UUID) ([]Ledg
 }
 
 const removeMember = `-- name: RemoveMember :exec
-DELETE FROM ledger_members
-WHERE ledger_id = $1 AND user_id = $2
+UPDATE ledger_members
+SET removed_at = now(), updated_at = now()
+WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
 `
 
 type RemoveMemberParams struct {
@@ -295,7 +317,7 @@ func (q *Queries) UpdateLedger(ctx context.Context, arg UpdateLedgerParams) (Led
 const updateMemberRole = `-- name: UpdateMemberRole :one
 UPDATE ledger_members
 SET role = $3, updated_at = $4
-WHERE ledger_id = $1 AND user_id = $2
+WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
 RETURNING ledger_id, user_id, role, created_at, updated_at
 `
 
@@ -306,14 +328,22 @@ type UpdateMemberRoleParams struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (LedgerMember, error) {
+type UpdateMemberRoleRow struct {
+	LedgerID  pgtype.UUID
+	UserID    pgtype.UUID
+	Role      string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (UpdateMemberRoleRow, error) {
 	row := q.db.QueryRow(ctx, updateMemberRole,
 		arg.LedgerID,
 		arg.UserID,
 		arg.Role,
 		arg.UpdatedAt,
 	)
-	var i LedgerMember
+	var i UpdateMemberRoleRow
 	err := row.Scan(
 		&i.LedgerID,
 		&i.UserID,

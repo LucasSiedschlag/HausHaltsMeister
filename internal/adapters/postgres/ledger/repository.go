@@ -24,7 +24,7 @@ func (r *Repository) ListLedgersForUser(ctx context.Context, userID string) ([]l
 		SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
 			CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 		FROM ledgers l
-		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 		WHERE l.owner_user_id = $1 OR lm.user_id = $1
 		ORDER BY l.created_at DESC
 	`, userID)
@@ -82,7 +82,7 @@ func (r *Repository) GetLedgerForUser(ctx context.Context, ledgerID, userID stri
 		SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
 			CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 		FROM ledgers l
-		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 		WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1)
 	`, userID, ledgerID)
 	if err := scanLedgerWithRole(row, &result); err != nil {
@@ -132,7 +132,7 @@ func (r *Repository) GetLedgerRole(ctx context.Context, ledgerID, userID string)
 	row := r.pool.QueryRow(ctx, `
 		SELECT CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 		FROM ledgers l
-		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+		LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 		WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1)
 	`, userID, ledgerID)
 	if err := row.Scan(&role); err != nil {
@@ -148,7 +148,7 @@ func (r *Repository) ListMembers(ctx context.Context, ledgerID string) ([]ledger
 	rows, err := r.pool.Query(ctx, `
 		SELECT ledger_id, user_id, role, created_at, updated_at
 		FROM ledger_members
-		WHERE ledger_id = $1
+		WHERE ledger_id = $1 AND removed_at IS NULL
 		ORDER BY created_at
 	`, ledgerID)
 	if err != nil {
@@ -172,10 +172,15 @@ func (r *Repository) AddMember(ctx context.Context, ledgerID, userID, role strin
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
 		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (ledger_id, user_id) DO UPDATE
+		SET role = EXCLUDED.role,
+			removed_at = NULL,
+			updated_at = EXCLUDED.updated_at
+		WHERE ledger_members.removed_at IS NOT NULL
 		RETURNING ledger_id, user_id, role, created_at, updated_at
 	`, ledgerID, userID, role, updatedAt)
 	if err := row.Scan(&member.LedgerID, &member.UserID, &member.Role, &member.CreatedAt, &member.UpdatedAt); err != nil {
-		if postgres.IsUniqueViolation(err) {
+		if errors.Is(err, pgx.ErrNoRows) || postgres.IsUniqueViolation(err) {
 			return ledger.Member{}, ledger.ErrMemberExists
 		}
 		return ledger.Member{}, err
@@ -188,7 +193,7 @@ func (r *Repository) UpdateMemberRole(ctx context.Context, ledgerID, userID, rol
 	row := r.pool.QueryRow(ctx, `
 		UPDATE ledger_members
 		SET role = $3, updated_at = $4
-		WHERE ledger_id = $1 AND user_id = $2
+		WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
 		RETURNING ledger_id, user_id, role, created_at, updated_at
 	`, ledgerID, userID, role, updatedAt)
 	if err := row.Scan(&member.LedgerID, &member.UserID, &member.Role, &member.CreatedAt, &member.UpdatedAt); err != nil {
@@ -201,7 +206,11 @@ func (r *Repository) UpdateMemberRole(ctx context.Context, ledgerID, userID, rol
 }
 
 func (r *Repository) RemoveMember(ctx context.Context, ledgerID, userID string) error {
-	cmd, err := r.pool.Exec(ctx, `DELETE FROM ledger_members WHERE ledger_id = $1 AND user_id = $2`, ledgerID, userID)
+	cmd, err := r.pool.Exec(ctx, `
+		UPDATE ledger_members
+		SET removed_at = now(), updated_at = now()
+		WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
+	`, ledgerID, userID)
 	if err != nil {
 		return err
 	}

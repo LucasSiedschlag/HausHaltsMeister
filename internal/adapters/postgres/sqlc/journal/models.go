@@ -212,6 +212,7 @@ type LedgerMember struct {
 	Role      string
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+	RemovedAt pgtype.Timestamptz
 }
 
 type OauthState struct {

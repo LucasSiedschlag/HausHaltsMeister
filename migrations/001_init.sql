@@ -110,6 +110,7 @@ CREATE TABLE ledger_members (
   role varchar NOT NULL DEFAULT 'viewer',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
+  removed_at timestamptz,
   -- Validation: ledger role allowed values.
   CONSTRAINT ledger_members_role_check CHECK (role IN ('owner', 'editor', 'viewer')),
   UNIQUE (ledger_id, user_id)

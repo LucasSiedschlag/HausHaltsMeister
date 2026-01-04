@@ -688,6 +688,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 
 6) Semantics / Notes
 - Nao remover ultimo owner.
+- Nao remove historico (soft remove via `removed_at`).
 
 7) Pagination
 - n/a.

@@ -4,7 +4,7 @@
 SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
   CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.owner_user_id = $1 OR lm.user_id = $1
 ORDER BY l.created_at DESC;
 
@@ -17,7 +17,7 @@ RETURNING id, owner_user_id, name, currency_code, created_at, updated_at;
 SELECT l.id, l.owner_user_id, l.name, l.currency_code, l.created_at, l.updated_at,
   CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1);
 
 -- name: GetLedgerByID :one
@@ -41,7 +41,7 @@ SELECT EXISTS (SELECT 1 FROM ledgers WHERE id = $1) AS exists;
 -- name: GetLedgerRole :one
 SELECT CASE WHEN l.owner_user_id = $1 THEN 'owner' ELSE lm.role END AS role
 FROM ledgers l
-LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1
+LEFT JOIN ledger_members lm ON lm.ledger_id = l.id AND lm.user_id = $1 AND lm.removed_at IS NULL
 WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1);
 
 -- Members
@@ -49,20 +49,26 @@ WHERE l.id = $2 AND (l.owner_user_id = $1 OR lm.user_id = $1);
 -- name: ListMembers :many
 SELECT ledger_id, user_id, role, created_at, updated_at
 FROM ledger_members
-WHERE ledger_id = $1
+WHERE ledger_id = $1 AND removed_at IS NULL
 ORDER BY created_at;
 
 -- name: AddMember :one
 INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
 VALUES ($1, $2, $3, $4)
+ON CONFLICT (ledger_id, user_id) DO UPDATE
+SET role = EXCLUDED.role,
+  removed_at = NULL,
+  updated_at = EXCLUDED.updated_at
+WHERE ledger_members.removed_at IS NOT NULL
 RETURNING ledger_id, user_id, role, created_at, updated_at;
 
 -- name: UpdateMemberRole :one
 UPDATE ledger_members
 SET role = $3, updated_at = $4
-WHERE ledger_id = $1 AND user_id = $2
+WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
 RETURNING ledger_id, user_id, role, created_at, updated_at;
 
 -- name: RemoveMember :exec
-DELETE FROM ledger_members
-WHERE ledger_id = $1 AND user_id = $2;
+UPDATE ledger_members
+SET removed_at = now(), updated_at = now()
+WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL;

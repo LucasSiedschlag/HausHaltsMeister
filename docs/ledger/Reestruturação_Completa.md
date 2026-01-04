@@ -309,6 +309,7 @@ Table ledger_members {
   role        ledger_role [not null, default: viewer]
   created_at  timestamptz [not null]
   updated_at  timestamptz
+  removed_at  timestamptz
 
   Indexes {
     (ledger_id, user_id) [unique]

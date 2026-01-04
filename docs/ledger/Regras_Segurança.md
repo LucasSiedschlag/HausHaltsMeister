@@ -145,11 +145,11 @@ Nunca criar dois usuários diferentes para a mesma conta externa.
 Usuário tem acesso ao ledger se:
 
 - `ledgers.owner_user_id == user_id` OR
-- existe `ledger_members` com (ledger_id, user_id)
+- existe `ledger_members` com (ledger_id, user_id) e `removed_at IS NULL`
 
 Pseudo:
 
-- `access = is_owner(user_id, ledger_id) OR is_member(user_id, ledger_id)`
+- `access = is_owner(user_id, ledger_id) OR is_member_active(user_id, ledger_id)`
 
 ### 2.2. Regras por role
 

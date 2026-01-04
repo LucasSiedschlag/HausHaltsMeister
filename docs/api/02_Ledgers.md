@@ -247,7 +247,7 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
-- Nao remove historico.
+- Nao remove historico (soft remove via `removed_at`).
 
 7) Pagination
 - n/a.
