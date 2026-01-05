@@ -28,7 +28,7 @@ export const useLedgerContext = () => {
   const error = useState<string | null>('ledger_context_error', () => null)
   const api = useApiClient()
   const pendingLoad = useState<Promise<LedgerSummary[]> | null>('ledger_context_pending', () => null)
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
 
   const activeLedger = computed(() => {
     const id = activeLedgerId.value
@@ -37,16 +37,15 @@ export const useLedgerContext = () => {
   })
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const loadLedgers = async () => {
+    // Never load ledgers during SSR - only on client
+    if (import.meta.server) {
+      return []
+    }
+
     if (ledgers.value.length > 0) {
       return ledgers.value
     }
@@ -81,6 +80,11 @@ export const useLedgerContext = () => {
   }
 
   const setActiveLedger = async (ledgerId: string) => {
+    // Never load ledger data during SSR - only on client
+    if (import.meta.server) {
+      return
+    }
+
     if (!(await ensureAccessToken())) {
       return
     }
@@ -95,6 +99,10 @@ export const useLedgerContext = () => {
       })
       activeLedgerId.value = ledgerId
       activeRole.value = payload.role
+
+      // Save to cookie for persistence across page refreshes
+      const ledgerCookie = useCookie<string | null>('hhm_ledger_id', { sameSite: 'lax' })
+      ledgerCookie.value = ledgerId
     } catch (err) {
       handleLedgerError(err)
     } finally {
@@ -103,25 +111,44 @@ export const useLedgerContext = () => {
   }
 
   const ensureLedger = async (ledgerId?: string) => {
+    // Never ensure ledger during SSR - only on client
+    if (import.meta.server) {
+      return
+    }
+
     const list = await loadLedgers()
+
     if (list.length === 0) {
       error.value = 'Nenhum ledger disponivel'
       return
     }
 
     if (ledgerId) {
-      if (activeLedgerId.value === ledgerId) return
+      if (activeLedgerId.value === ledgerId && activeRole.value) {
+        return
+      }
       await setActiveLedger(ledgerId)
       return
     }
 
-    if (activeLedger.value) return
+    // Only skip if we have both ledger AND role
+    if (activeLedger.value && activeRole.value) {
+      return
+    }
+
+    // Try to restore from cookie first
+    const ledgerCookie = useCookie<string | null>('hhm_ledger_id', { sameSite: 'lax' })
+    if (ledgerCookie.value && list.some((l) => l.id === ledgerCookie.value)) {
+      await setActiveLedger(ledgerCookie.value)
+      return
+    }
 
     const candidate = list[0]
     if (!candidate) {
       error.value = 'Nenhum ledger disponivel'
       return
     }
+
     await setActiveLedger(candidate.id)
   }
 

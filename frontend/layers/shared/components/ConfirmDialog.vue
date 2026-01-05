@@ -10,7 +10,7 @@ import {
   AlertDialogTitle
 } from '@shared/components/ui/alert-dialog'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
   title: string
   description?: string

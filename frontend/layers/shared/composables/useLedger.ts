@@ -12,7 +12,7 @@ export const useLedger = () => {
   const api = useApiClient()
   const ledgerContext = useLedgerContext()
   const ledgerCookie = useCookie<string | null>('hhm_ledger_id', { sameSite: 'lax' })
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
 
   const selectLedger = async (ledgerId: string | null) => {
     if (!ledgerId) {
@@ -35,13 +35,7 @@ export const useLedger = () => {
   const isLoading = ledgerContext.loading
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const fetchLedgers = async () => {

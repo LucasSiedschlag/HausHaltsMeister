@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar'
 import {
   DropdownMenu,
@@ -25,6 +26,10 @@ const props = withDefaults(defineProps<{
 const { user, logout } = useAuth()
 const router = useRouter()
 
+const displayName = computed(() => user.value?.display_name || props.name)
+const displayEmail = computed(() => user.value?.email || props.email)
+const displayAvatar = computed(() => user.value?.avatar_url || props.avatar)
+
 const handleLogout = async () => {
   await logout()
   await router.push('/auth/login')
@@ -38,14 +43,14 @@ const handleLogout = async () => {
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton size="lg">
             <Avatar class="h-8 w-8 rounded-lg">
-              <AvatarImage :src="user?.avatar_url || props.avatar" :alt="user?.display_name || props.name" />
+              <AvatarImage :src="displayAvatar" :alt="displayName" />
               <AvatarFallback class="rounded-lg bg-primary/10 text-primary">
                 <UserRound class="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">{{ user?.display_name || props.name }}</span>
-              <span class="truncate text-xs text-muted-foreground">{{ user?.email || props.email }}</span>
+              <span class="truncate font-semibold">{{ displayName }}</span>
+              <span class="truncate text-xs text-muted-foreground">{{ displayEmail }}</span>
             </div>
             <ChevronsUpDown class="ml-auto size-4 text-muted-foreground" />
           </SidebarMenuButton>

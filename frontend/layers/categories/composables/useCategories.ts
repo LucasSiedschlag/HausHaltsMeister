@@ -36,20 +36,14 @@ type CategoryUpdatePayload = {
 export const useCategories = () => {
   const api = useApiClient()
   const { currentLedgerId } = useLedger()
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
 
   const categories = useState<Category[]>('categories_list', () => [])
   const loading = useState<boolean>('categories_loading', () => false)
   const error = useState<string | null>('categories_error', () => null)
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const fetchCategories = async (filters?: { direction?: CategoryDirection | 'all'; active?: boolean | 'all' }) => {
@@ -76,8 +70,8 @@ export const useCategories = () => {
       })
       categories.value = payload
       return payload
-    } catch (err: any) {
-      error.value = err?.message || 'Erro ao carregar categorias'
+    } catch (err) {
+      error.value = (err as Error)?.message || 'Erro ao carregar categorias'
       return []
     } finally {
       loading.value = false

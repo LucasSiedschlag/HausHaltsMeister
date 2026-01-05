@@ -39,6 +39,8 @@
     "prettier": "^3.4.1",
     "shadcn-nuxt": "^2.4.3",
     "tailwindcss-animate": "^1.0.7",
-    "vue-eslint-parser": "^9.4.3"
+    "typescript": "^5.9.3",
+    "vue-eslint-parser": "^9.4.3",
+    "vue-tsc": "^3.2.1"
   }
 }

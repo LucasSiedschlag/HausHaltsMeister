@@ -1,5 +1,6 @@
 import { useAnalytics } from '@shared/composables/useAnalytics'
 import { isApiError } from '#layers/shared/utils/api-error'
+import { useDebounceFn } from '@vueuse/core'
 
 type AuthUser = {
   id: string
@@ -37,10 +38,13 @@ export const useAuth = () => {
   const expiryWatcherSet = useState<boolean>('auth_expiry_watcher', () => false)
   const expiryInterval = useState<number | null>('auth_expiry_interval', () => null)
   const sessionExpired = useState<boolean>('auth_session_expired', () => false)
+  const refreshPromise = useState<Promise<AuthResponse> | null>('auth_refresh_inflight', () => null)
+  const refreshCooldownUntil = useState<number>('auth_refresh_cooldown_until', () => 0)
+  const lastRefreshPayload = useState<AuthResponse | null>('auth_refresh_payload', () => null)
+  const activityWatcherSet = useState<boolean>('auth_activity_watcher', () => false)
   const api = useApiClient()
   const { track } = useAnalytics()
   const preferencesNeeded = useState<boolean>('preferences_needed', () => false)
-  const router = useRouter()
 
   const clearExpiryTimer = () => {
     if (expiryTimer.value !== null && process.client) {
@@ -60,6 +64,17 @@ export const useAuth = () => {
       document.removeEventListener('visibilitychange', checkExpiry)
     }
     expiryWatcherSet.value = false
+  }
+
+  const clearActivityWatcher = () => {
+    if (!process.client) return
+    if (!activityWatcherSet.value) return
+    window.removeEventListener('click', handleActivity)
+    window.removeEventListener('keydown', handleActivity)
+    window.removeEventListener('mousemove', handleActivity)
+    window.removeEventListener('scroll', handleActivity)
+    window.removeEventListener('touchstart', handleActivity)
+    activityWatcherSet.value = false
   }
 
   const parseAccessTokenExp = (token: string) => {
@@ -86,6 +101,7 @@ export const useAuth = () => {
   const acknowledgeSessionExpired = async () => {
     sessionExpired.value = false
     if (process.client) {
+      const router = useRouter()
       await router.push('/auth/login')
     }
   }
@@ -123,11 +139,44 @@ export const useAuth = () => {
     checkExpiry()
   }
 
+  const refreshThresholdMs = 2 * 60 * 1000
+  const shouldRefreshSoon = () => {
+    if (!accessToken.value) return false
+    const exp = parseAccessTokenExp(accessToken.value)
+    if (!exp) return false
+    return exp * 1000 - Date.now() <= refreshThresholdMs
+  }
+
+  const refreshOnActivity = useDebounceFn(async () => {
+    if (!process.client || sessionExpired.value) return
+    if (!shouldRefreshSoon()) return
+    try {
+      await refresh()
+    } catch {
+      // Avoid throwing on passive refresh.
+    }
+  }, 1200)
+
+  const handleActivity = () => {
+    void refreshOnActivity()
+  }
+
+  const ensureActivityWatcher = () => {
+    if (!process.client || activityWatcherSet.value) return
+    activityWatcherSet.value = true
+    window.addEventListener('click', handleActivity, { passive: true })
+    window.addEventListener('keydown', handleActivity, { passive: true })
+    window.addEventListener('mousemove', handleActivity, { passive: true })
+    window.addEventListener('scroll', handleActivity, { passive: true })
+    window.addEventListener('touchstart', handleActivity, { passive: true })
+  }
+
   const setSession = (payload: AuthResponse) => {
     accessToken.value = payload.access_token
     user.value = payload.user
     scheduleExpiry(payload.access_token)
     ensureExpiryWatcher()
+    ensureActivityWatcher()
     preferencesNeeded.value = true
   }
 
@@ -152,15 +201,30 @@ export const useAuth = () => {
   }
 
   const refresh = async () => {
-    const payload = await api<AuthResponse>('/auth/refresh', { method: 'POST' })
-    setSession(payload)
-    track('auth.refresh', {})
-    return payload
+    if (refreshPromise.value) {
+      return refreshPromise.value
+    }
+    if (refreshCooldownUntil.value > Date.now() && lastRefreshPayload.value) {
+      return lastRefreshPayload.value
+    }
+    const task = api<AuthResponse>('/auth/refresh', { method: 'POST' })
+      .then((payload) => {
+        setSession(payload)
+        lastRefreshPayload.value = payload
+        refreshCooldownUntil.value = Date.now() + 2000
+        track('auth.refresh', {})
+        return payload
+      })
+      .finally(() => {
+        refreshPromise.value = null
+      })
+    refreshPromise.value = task
+    return task
   }
 
   const startOAuth = (provider: 'google' | 'github') => {
     const config = useRuntimeConfig()
-    if (process.server) return
+    if (import.meta.server) return
     const redirectURI = `${window.location.origin}/auth/oauth/callback`
     track('auth.oauth.start', { provider })
     const oauthBase = config.public.oauthBase || config.public.apiBase
@@ -187,6 +251,9 @@ export const useAuth = () => {
     user.value = null
     clearExpiryTimer()
     clearExpiryWatcher()
+    clearActivityWatcher()
+    refreshCooldownUntil.value = 0
+    lastRefreshPayload.value = null
   }
 
   const clearSession = () => {
@@ -194,6 +261,9 @@ export const useAuth = () => {
     user.value = null
     clearExpiryTimer()
     clearExpiryWatcher()
+    clearActivityWatcher()
+    refreshCooldownUntil.value = 0
+    lastRefreshPayload.value = null
   }
 
   const listSessions = async () => {

@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import type { NavigationGuard } from 'vue-router'
-
-definePageMeta({
-  middleware: ['ensure-ledger'] as unknown as NavigationGuard[]
-})
-
 import { SidebarInset, SidebarProvider } from '@shared/components/ui/sidebar'
 import AppSidebar from '../components/AppSidebar.vue'
 import SiteHeader from '../components/SiteHeader.vue'

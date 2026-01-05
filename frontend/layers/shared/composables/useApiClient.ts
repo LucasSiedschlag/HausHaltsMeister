@@ -5,11 +5,30 @@ type ApiRequestOptions = Parameters<ReturnType<typeof $fetch.create>>[1] & {
 }
 
 export const useApiClient = () => {
-  const headers = process.server ? useRequestHeaders(['cookie']) : undefined
+  const config = useRuntimeConfig()
+  const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+  const baseHeaders = headers ? new Headers(headers) : undefined
   const client = $fetch.create({
-    baseURL: '/api',
+    baseURL: import.meta.server ? config.apiBase : config.public.apiBase,
     headers,
-    credentials: 'include'
+    credentials: 'include',
+    onResponse({ response }) {
+      if (!import.meta.server) return
+      const event = useRequestEvent()
+      if (!event) return
+      const responseHeaders = response.headers as Headers | Record<string, string | string[] | undefined>
+      let cookies: string[] | string | null | undefined
+      if ('getSetCookie' in responseHeaders && typeof responseHeaders.getSetCookie === 'function') {
+        cookies = responseHeaders.getSetCookie()
+      } else if ('get' in responseHeaders && typeof responseHeaders.get === 'function') {
+        cookies = responseHeaders.get('set-cookie')
+      } else if (!('get' in responseHeaders)) {
+        cookies = responseHeaders['set-cookie']
+      }
+      if (cookies) {
+        appendResponseHeader(event, 'set-cookie', cookies)
+      }
+    }
   })
 
   return <T>(path: string, options?: ApiRequestOptions): Promise<T> => {
@@ -20,7 +39,13 @@ export const useApiClient = () => {
     }
 
     const { idempotencyKey, headers, ...rest } = options
-    const mergedHeaders = new Headers(headers ?? {})
+    const mergedHeaders = baseHeaders ? new Headers(baseHeaders) : new Headers()
+    if (headers) {
+      const provided = new Headers(headers as HeadersInit)
+      provided.forEach((value, key) => {
+        mergedHeaders.set(key, value)
+      })
+    }
     if (idempotencyKey) {
       mergedHeaders.set('Idempotency-Key', idempotencyKey)
     }

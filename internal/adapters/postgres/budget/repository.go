@@ -9,6 +9,7 @@ import (
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/postgres"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/budget"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -130,6 +131,10 @@ func (r *Repository) CreateVersionWithLines(ctx context.Context, ledgerID, planI
 			RETURNING id, plan_id, effective_from_month, created_by_user_id, created_at, updated_at
 		`, planID, effectiveFrom, userID)
 		if err := row.Scan(&version.ID, &version.PlanID, &version.EffectiveFromMonth, &version.CreatedByUserID, &version.CreatedAt, &version.UpdatedAt); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return budget.ErrVersionConflict
+			}
 			return err
 		}
 

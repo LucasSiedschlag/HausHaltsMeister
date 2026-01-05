@@ -127,9 +127,9 @@ const handleNewTransaction = async () => {
       </div>
     </div>
     <div class="flex items-center gap-2">
-        <Button :disabled="!canEdit" @click="handleNewTransaction">
-          {{ t('journal.header.newTransaction') }}
-        </Button>
+      <Button :disabled="!canEdit" @click="handleNewTransaction">
+        {{ t('journal.header.newTransaction') }}
+      </Button>
     </div>
   </header>
 </template>

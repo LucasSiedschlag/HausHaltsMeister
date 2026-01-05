@@ -12,16 +12,16 @@ import (
 )
 
 type Config struct {
-	DatabaseURL          string
-	HTTPAddr             string
-	JWTSecret            string
-	AccessTokenTTL       time.Duration
-	RefreshTokenTTL      time.Duration
+	DatabaseURL            string
+	HTTPAddr               string
+	JWTSecret              string
+	AccessTokenTTL         time.Duration
+	RefreshTokenTTL        time.Duration
 	RefreshTokenSessionTTL time.Duration
-	RefreshCookieName    string
-	RefreshCookieDomain  string
-	RefreshCookieSecure  bool
-	RefreshCookieSameSite string
+	RefreshCookieName      string
+	RefreshCookieDomain    string
+	RefreshCookieSecure    bool
+	RefreshCookieSameSite  string
 	OAuthRedirectAllowlist []string
 
 	GoogleClientID     string
@@ -48,16 +48,16 @@ func Load() Config {
 
 	env := getEnv("ENV", "development")
 	return Config{
-		DatabaseURL:           databaseURL,
-		HTTPAddr:              httpAddr,
-		JWTSecret:             getEnv("JWT_SECRET", "change-me"),
-		AccessTokenTTL:        time.Duration(getEnvInt("ACCESS_TOKEN_TTL_SECONDS", 900)) * time.Second,
-		RefreshTokenTTL:       time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 30)) * 24 * time.Hour,
+		DatabaseURL:            databaseURL,
+		HTTPAddr:               httpAddr,
+		JWTSecret:              getEnv("JWT_SECRET", "change-me"),
+		AccessTokenTTL:         time.Duration(getEnvInt("ACCESS_TOKEN_TTL_SECONDS", 900)) * time.Second,
+		RefreshTokenTTL:        time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 30)) * 24 * time.Hour,
 		RefreshTokenSessionTTL: time.Duration(getEnvInt("REFRESH_TOKEN_SESSION_TTL_DAYS", 7)) * 24 * time.Hour,
-		RefreshCookieName:     getEnv("REFRESH_COOKIE_NAME", "hhm_refresh"),
-		RefreshCookieDomain:   getEnv("REFRESH_COOKIE_DOMAIN", ""),
-		RefreshCookieSecure:   getEnvBool("REFRESH_COOKIE_SECURE", true),
-		RefreshCookieSameSite: getEnv("REFRESH_COOKIE_SAMESITE", "Lax"),
+		RefreshCookieName:      getEnv("REFRESH_COOKIE_NAME", "hhm_refresh"),
+		RefreshCookieDomain:    getEnv("REFRESH_COOKIE_DOMAIN", ""),
+		RefreshCookieSecure:    getEnvBool("REFRESH_COOKIE_SECURE", false),
+		RefreshCookieSameSite:  getEnv("REFRESH_COOKIE_SAMESITE", "Lax"),
 		OAuthRedirectAllowlist: splitCSV(getEnv(allowlistKey(env), getEnv("OAUTH_REDIRECT_ALLOWLIST", "http://localhost:3000"))),
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),

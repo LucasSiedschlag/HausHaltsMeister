@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SignupForm from '../../components/SignupForm.vue'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, ssr: false })
 </script>
 
 <template>

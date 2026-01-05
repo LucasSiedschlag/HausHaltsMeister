@@ -1,15 +1,25 @@
 <script setup lang="ts">
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, ssr: false })
 
-const { refresh } = useAuth()
+const { accessToken, user, refresh } = useAuth()
 const error = ref('')
 const { t } = useI18n()
 
 onMounted(async () => {
   try {
-    await refresh()
-    await navigateTo('/')
+    // OAuth flow sets the refresh cookie on the backend
+    // We just need to call refresh() to get a new access token
+    if (!accessToken.value) {
+      await refresh()
+    }
+
+    // Verify we have a valid session
+    if (accessToken.value && user.value) {
+      await navigateTo('/', { replace: true })
+    } else {
+      error.value = t('auth.oauth.error')
+    }
   } catch {
     error.value = t('auth.oauth.error')
   }

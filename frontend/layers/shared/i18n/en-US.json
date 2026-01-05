@@ -2,7 +2,29 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
-    "loading": "Loading"
+    "loading": "Loading",
+    "errors": {
+      "VALIDATION_ERROR": "Data validation error.",
+      "BUDGET_PLAN_NOT_FOUND": "Budget plan not found.",
+      "BUDGET_VERSION_NOT_FOUND": "Budget version not found.",
+      "BUDGET_LINE_NOT_FOUND": "Budget line not found.",
+      "BUDGET_VERSION_CONFLICT": "A budget version for this month already exists.",
+      "CATEGORY_NOT_FOUND": "Category not found.",
+      "ACCOUNT_NOT_FOUND": "Account not found.",
+      "TRANSACTION_NOT_FOUND": "Transaction not found.",
+      "TRANSFER_NOT_BALANCED": "Transfer must be balanced.",
+      "MEMBER_ALREADY_EXISTS": "Member already exists in this ledger.",
+      "LEDGER_NOT_FOUND": "Ledger not found.",
+      "SERVICE_UNAVAILABLE": "Service temporarily unavailable.",
+      "GATEWAY_TIMEOUT": "Service timed out.",
+      "NOT_IMPLEMENTED": "Feature not yet available.",
+      "CONFLICT_DUPLICATE_NAME": "A record with this name already exists.",
+      "CONFLICT_DUPLICATE_EMAIL": "This email is already in use.",
+      "LEDGER_ACCESS_DENIED": "You do not have permission to access this ledger.",
+      "AUTH_INVALID_CREDENTIALS": "Invalid email or password.",
+      "AUTH_User_INACTIVE": "User inactive.",
+      "default": "An unexpected error occurred."
+    }
   },
   "auth": {
     "login": {
@@ -12,17 +34,17 @@
       "emailPlaceholder": "example{at}domain.com",
       "passwordLabel": "Password",
       "forgotPassword": "Forgot password?",
-      "remember": "Keep me signed in",
+      "remember": "Remember me",
       "submit": "Sign in",
       "submitting": "Signing in...",
       "oauthSeparator": "Or continue with",
       "oauthGoogle": "Google",
       "oauthGithub": "GitHub",
-      "noAccount": "Don’t have an account?",
-      "signupLink": "Create account",
+      "noAccount": "No account?",
+      "signupLink": "Sign up",
       "termsPrefix": "By continuing, you agree to our",
       "termsMiddle": "and",
-      "termsLink": "Terms of Service",
+      "termsLink": "Terms of Use",
       "privacyLink": "Privacy Policy",
       "errors": {
         "invalidCredentials": "Invalid credentials.",
@@ -32,15 +54,15 @@
     },
     "signup": {
       "title": "Create account",
-      "subtitle": "Set up your HausHaltsMeister ledger in minutes",
+      "subtitle": "Create your HausHaltsMeister ledger in minutes",
       "nameLabel": "Name",
       "emailLabel": "Email",
       "emailPlaceholder": "example{at}domain.com",
       "passwordLabel": "Password",
-      "passwordHint": "Minimum 8 characters.",
+      "passwordHint": "Minimum of 8 characters.",
       "passwordRequirementsTitle": "Password requirements",
       "passwordRequirementsIntro": "We recommend:",
-      "passwordRequirementMin": "At least 8 characters",
+      "passwordRequirementMin": "Minimum of 8 characters",
       "passwordRequirementUpper": "At least 1 uppercase letter",
       "passwordRequirementNumber": "At least 1 number",
       "submit": "Create account",
@@ -52,7 +74,7 @@
       "loginLink": "Sign in",
       "termsPrefix": "By continuing, you agree to our",
       "termsMiddle": "and",
-      "termsLink": "Terms of Service",
+      "termsLink": "Terms of Use",
       "privacyLink": "Privacy Policy",
       "errors": {
         "invalidEmail": "Invalid email.",
@@ -61,12 +83,12 @@
     },
     "forgot": {
       "title": "Reset password",
-      "subtitle": "We’ll send a link to your email",
+      "subtitle": "We will send a link to your email",
       "emailLabel": "Email",
       "emailPlaceholder": "example{at}domain.com",
       "submit": "Send",
       "submitting": "Sending...",
-      "success": "If the email exists, we’ll send instructions.",
+      "success": "If the email exists, we will send instructions.",
       "remembered": "Remembered your password?",
       "backToLogin": "Back to login",
       "errors": {
@@ -74,28 +96,28 @@
       }
     },
     "oauth": {
-      "finishing": "Finishing sign-in...",
-      "error": "We couldn't complete the login. Please try again.",
+      "finishing": "Finishing login...",
+      "error": "Could not complete login. Please try again.",
       "backToLogin": "Back to login"
     }
   },
   "settings": {
     "title": "Settings",
-    "description": "Personal preferences, security, and ledger settings.",
+    "description": "Personal preferences, security, and ledger adjustments.",
     "tabs": {
       "account": "Account",
       "security": "Security",
       "ledger": "Ledger",
       "notifications": "Notifications",
       "privacy": "Privacy",
-      "visual": "Appearance"
+      "visual": "Visuals"
     },
     "sections": {
       "security": "Security",
       "accounts": "Accounts",
       "notifications": "Notifications",
       "privacy": "Privacy",
-      "visual": "Appearance"
+      "visual": "Visuals"
     },
     "common": {
       "selectPlaceholder": "Select",
@@ -125,11 +147,11 @@
       "title": "Ledger preferences",
       "description": "Default settings for your ledger.",
       "currency": "Base currency",
-      "timezone": "Time zone",
+      "timezone": "Timezone",
       "timezoneOptions": {
         "saoPaulo": "America/Sao Paulo"
       },
-      "defaultAccount": "Default primary account"
+      "defaultAccount": "Default main account"
     },
     "accounts": {
       "description": "Preferences for accounts and cards.",
@@ -145,8 +167,8 @@
     },
     "changePolicy": {
       "title": "Change policy",
-      "description": "Default rule for deletes and edits.",
-      "requiredAdjustments": "Adjustments required",
+      "description": "Default rule for deletions and edits.",
+      "requiredAdjustments": "Required adjustments",
       "requiredAdjustmentsHint": "Changes via adjustment entries."
     },
     "security": {
@@ -157,16 +179,16 @@
       "twoFactor": "Two-factor authentication",
       "endSessions": "End sessions",
       "endAllTitle": "End all sessions?",
-      "endAllDescription": "This signs out all devices, including this one.",
+      "endAllDescription": "This logs out all devices, including this one.",
       "endAllConfirm": "End",
       "updatePassword": "Update password",
       "sessionsTitle": "Sessions",
       "sessionsDescription": "Recently connected devices.",
       "sessionsLoading": "Loading sessions...",
       "sessionsEmpty": "No active sessions.",
-      "sessionsLoadError": "Unable to load sessions.",
+      "sessionsLoadError": "Could not load sessions.",
       "sessionCurrent": "Current",
-      "sessionStart": "Started",
+      "sessionStart": "Start",
       "sessionDefault": "Session",
       "sessionSignOut": "Sign out"
     },
@@ -174,20 +196,20 @@
       "description": "Essential ledger alerts.",
       "cardCloseTitle": "Card closing",
       "cardCloseDesc": "Notify 3 days before closing.",
-      "budgetOverTitle": "Budget over limit",
-      "budgetOverDesc": "Alerts when exceeding the limit.",
-      "payablesTitle": "Payables reminders",
+      "budgetOverTitle": "Budget overrun",
+      "budgetOverDesc": "Alerts when limit is exceeded.",
+      "payablesTitle": "Accounts payable reminders",
       "payablesDesc": "Notify 1 day before."
     },
     "privacy": {
-      "description": "Control data visibility.",
+      "description": "Data visibility control.",
       "exportTitle": "Export my data",
       "importTitle": "Import my data",
       "exportAction": "Export",
       "importAction": "Import"
     },
     "visual": {
-      "description": "Appearance preferences.",
+      "description": "Visualization preferences.",
       "density": "Density",
       "densityOptions": {
         "comfortable": "Comfortable",
@@ -202,7 +224,7 @@
       },
       "palette": "Palette",
       "paletteOptions": {
-        "default": "Default blue",
+        "default": "Default Blue",
         "red": "Red",
         "rose": "Rose",
         "orange": "Orange",
@@ -220,8 +242,8 @@
     },
     "messages": {
       "updated": "Preferences updated.",
-      "sessionError": "Unable to save. Please sign in again.",
-      "saveError": "Unable to save. Please try again."
+      "sessionError": "Could not save. Please sign in again.",
+      "saveError": "Could not save. Please try again."
     }
   },
   "ledgers": {
@@ -237,7 +259,7 @@
     "list": {
       "title": "Your ledgers",
       "description": "Choose which ledger to use.",
-      "role": "Role",
+      "role": "Permission",
       "select": "Select",
       "active": "Active"
     },
@@ -251,13 +273,13 @@
       "title": "Create ledger",
       "description": "Create a ledger to get started.",
       "nameLabel": "Ledger name",
-      "namePlaceholder": "e.g. Personal",
+      "namePlaceholder": "Ex: Personal",
       "currencyLabel": "Base currency",
       "currencyPlaceholder": "Select",
       "submit": "Create ledger",
       "submitting": "Creating...",
       "nameRequired": "Enter a name.",
-      "error": "Unable to create the ledger."
+      "error": "Could not create the ledger."
     }
   },
   "accounts": {
@@ -275,7 +297,7 @@
     },
     "list": {
       "title": "Ledger accounts",
-      "description": "Organize where your balances live."
+      "description": "Organize your balance sources."
     },
     "table": {
       "name": "Account",
@@ -286,7 +308,7 @@
     "types": {
       "cash": "Cash",
       "investment": "Investment",
-      "credit_card": "Credit card"
+      "credit_card": "Credit Card"
     },
     "status": {
       "active": "Active",
@@ -296,7 +318,7 @@
       "new": "New account",
       "edit": "Edit",
       "deactivate": "Deactivate",
-      "activate": "Activate"
+      "activate": "Reactivate"
     },
     "form": {
       "createTitle": "Create account",
@@ -306,8 +328,8 @@
       "nameLabel": "Account name",
       "typeLabel": "Account type",
       "typePlaceholder": "Select",
-      "activeLabel": "Account active",
-      "activeHint": "Available for transactions.",
+      "activeLabel": "Active account",
+      "activeHint": "Can be used in entries.",
       "cancel": "Cancel",
       "submit": "Save",
       "saving": "Saving..."
@@ -322,14 +344,14 @@
     },
     "confirm": {
       "deactivateTitle": "Deactivate account?",
-      "deactivateMessage": "The account \"{name}\" will be unavailable for new transactions.",
+      "deactivateMessage": "The account \"{name}\" will be unavailable for new entries.",
       "confirmAction": "Deactivate",
       "cancelAction": "Cancel"
     }
   },
   "categories": {
     "title": "Categories",
-    "description": "Organize inflows and outflows with hierarchy.",
+    "description": "Organize inflows and outflows by hierarchy.",
     "loading": "Loading categories...",
     "empty": "No categories found.",
     "readOnlyHint": "You have read-only access.",
@@ -344,7 +366,7 @@
     },
     "list": {
       "title": "Ledger categories",
-      "description": "Group categories to consolidate budgets."
+      "description": "Use groups to consolidate the budget."
     },
     "table": {
       "name": "Category",
@@ -384,9 +406,9 @@
       "parentPlaceholder": "Select",
       "parentNone": "No parent category",
       "budgetBaseLabel": "Income base",
-      "budgetBaseHint": "Used to calculate the income base.",
+      "budgetBaseHint": "Used for base income calculation.",
       "budgetRelevantLabel": "Budget relevant",
-      "budgetRelevantHint": "Counts toward budget consumption.",
+      "budgetRelevantHint": "Counts towards budget consumption.",
       "budgetBaseDisabledHint": "Outflows cannot be income base.",
       "budgetRelevantDisabledHint": "Inflows do not consume budget.",
       "cancel": "Cancel",
@@ -399,19 +421,19 @@
       "activated": "Category reactivated.",
       "deactivated": "Category deactivated.",
       "duplicateName": "A category with this name already exists.",
-      "inUse": "This category has already been used.",
+      "inUse": "This category is already in use.",
       "error": "Could not save the category."
     },
     "confirm": {
       "deactivateTitle": "Deactivate category?",
-      "deactivateMessage": "The category \"{name}\" will be unavailable for new transactions.",
+      "deactivateMessage": "The category \"{name}\" will be unavailable for new entries.",
       "confirmAction": "Deactivate",
       "cancelAction": "Cancel"
     }
   },
   "journal": {
     "title": "Journal",
-    "description": "Compact view of ledger transactions and entries.",
+    "description": "Compact view of transactions and ledger entries.",
     "loading": "Loading transactions...",
     "empty": "No transactions found.",
     "filters": {
@@ -428,20 +450,20 @@
       "clear": "Clear selection",
       "selectedCount": "{count} selected",
       "apply": "Apply",
-      "reset": "Reset"
+      "reset": "Clear"
     },
     "sort": {
       "dateDesc": "Date (newest)",
       "dateAsc": "Date (oldest)",
       "accountAsc": "Account (A-Z)",
       "categoryAsc": "Category (A-Z)",
-      "kindAsc": "Type (A-Z)",
+      "kindAsc": "Kind (A-Z)",
       "amountDesc": "Amount (highest)",
       "amountAsc": "Amount (lowest)"
     },
     "list": {
       "title": "Ledger transactions",
-      "description": "Inspect entries and validate journal flow."
+      "description": "Detail entries and validate journal flow."
     },
     "table": {
       "date": "Date",
@@ -463,7 +485,7 @@
       "description": "Description",
       "account": "Account",
       "category": "Category",
-      "kind": "Type",
+      "kind": "Kind",
       "amount": "Amount",
       "memo": "Memo",
       "actions": "Actions"
@@ -480,27 +502,27 @@
       "datePlaceholder": "Select date",
       "descriptionLabel": "Description",
       "notesLabel": "Notes",
-      "notesPlaceholder": "Internal notes",
+      "notesPlaceholder": "Internal observations",
       "entriesTitle": "Entries",
-      "entriesDescription": "Add accounts, categories, and values.",
+      "entriesDescription": "Add accounts, categories, and amounts.",
       "addEntry": "Add entry",
       "entryAccount": "Account",
       "entryAccountPlaceholder": "Select an account",
       "entryCategory": "Category",
       "entryCategoryPlaceholder": "Select a category",
       "entryCategoryNone": "No category",
-      "entryKind": "Type",
+      "entryKind": "Kind",
       "entryKindPlaceholder": "Select",
       "entryAmount": "Amount",
       "entryMemo": "Memo",
-      "entryMemoPlaceholder": "Entry notes",
+      "entryMemoPlaceholder": "Entry detail",
       "removeEntry": "Remove entry",
       "cancel": "Cancel",
       "submit": "Save",
       "saving": "Saving...",
       "entryErrors": {
         "account": "Select an account.",
-        "kind": "Select a type.",
+        "kind": "Select a kind.",
         "amount": "Enter a valid amount."
       }
     },
@@ -509,7 +531,7 @@
       "updated": "Transaction updated.",
       "deleted": "Transaction deleted.",
       "unbalanced": "The transfer is not balanced.",
-      "referenced": "Transaction linked to installments or statements.",
+      "referenced": "Transaction linked to installments or invoices.",
       "error": "Could not save the transaction."
     },
     "confirm": {
@@ -527,6 +549,64 @@
       "noCategory": "No category"
     }
   },
+  "budget": {
+    "title": "Budgets",
+    "description": "Plan your finances by setting limits by category based on income.",
+    "loading": "Loading budgets...",
+    "empty": "No budgets found.",
+    "actions": {
+      "newVersion": "New version",
+      "edit": "Edit plan",
+      "delete": "Delete version"
+    },
+    "versions": {
+      "title": "Budget versions",
+      "description": "Planning history.",
+      "month": "Month of reference",
+      "baseIncome": "Base income",
+      "status": {
+        "label": "Status",
+        "active": "Active",
+        "draft": "Draft"
+      }
+    },
+    "columns": {
+      "actions": "Actions",
+      "category": "Category",
+      "percent": "Percent",
+      "amountEstimated": "Estimated"
+    },
+    "form": {
+      "createTitle": "Create budget version",
+      "createDescription": "Define the start month and initial allocation per category.",
+      "effectiveMonth": "Start month",
+      "initialAllocation": "Initial Allocation",
+      "initialAllocationHint": "Define at least one category with percentage > 0.",
+      "noCategories": "No relevant expense categories (Outflow) found.",
+      "saving": "Creating...",
+      "create": "Create version"
+    },
+    "messages": {
+      "versionCreated": "Budget version created.",
+      "versionDeleted": "Version removed.",
+      "linesRequired": "You must define at least one category with percentage > 0.",
+      "error": "Could not perform the operation.",
+      "conflict": "A version for this month already exists."
+    },
+    "confirm": {
+      "deleteVersion": "Are you sure you want to delete this version?"
+    },
+    "editor": {
+      "title": "Budget editor",
+      "subtitle": "Editing version for {month}",
+      "totalPercent": "Total allocated",
+      "totalBudgeted": "Total budgeted",
+      "categoriesTitle": "Distribution by category",
+      "categoriesDescription": "Define the base income percentage for each category.",
+      "save": "Save changes"
+    },
+    "emptyCategories": "No budget-relevant categories found."
+  },
   "sidebar": {
     "groups": {
       "main": "Main",
@@ -534,7 +614,7 @@
       "secondary": "Administration"
     },
     "main": {
-      "dashboard": "Dashboard",
+      "dashboard": "Overview",
       "transactions": "Transactions",
       "accounts": "Accounts",
       "cards": "Cards",
@@ -542,7 +622,7 @@
       "investments": "Investments"
     },
     "projects": {
-      "ledgerMain": "Primary ledger",
+      "ledgerMain": "Main ledger",
       "reports": "Reports"
     },
     "secondary": {
@@ -551,11 +631,11 @@
       "feedback": "Feedback"
     },
     "footer": {
-      "roleLabel": "Access: {role}",
+      "roleLabel": "Permission: {role}",
       "roleHint": {
-        "owner": "Full control of the ledger.",
+        "owner": "Full ledger control.",
         "editor": "Can create and edit data.",
-        "viewer": "Read-only access."
+        "viewer": "Read-only."
       }
     }
   }

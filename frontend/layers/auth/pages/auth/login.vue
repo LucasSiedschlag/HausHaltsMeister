@@ -5,7 +5,7 @@ export const description = "A login page with form and image."
 <script setup lang="ts">
 import LoginForm from '../../components/LoginForm.vue'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, ssr: false })
 </script>
 
 <template>

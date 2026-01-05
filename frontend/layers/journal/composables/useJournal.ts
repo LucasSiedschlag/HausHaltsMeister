@@ -71,7 +71,7 @@ export type JournalFilters = {
 export const useJournal = () => {
   const api = useApiClient()
   const { currentLedgerId } = useLedger()
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
 
   const transactions = useState<Transaction[]>('journal_transactions', () => [])
   const nextCursor = useState<TransactionCursor | null>('journal_next_cursor', () => null)
@@ -80,13 +80,7 @@ export const useJournal = () => {
   const error = useState<string | null>('journal_error', () => null)
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const buildQuery = (filters?: JournalFilters) => {
@@ -127,8 +121,8 @@ export const useJournal = () => {
       nextCursor.value = payload.next_cursor ?? null
       lastPageSize.value = payload.items.length
       return payload
-    } catch (err: any) {
-      error.value = err?.message || 'Erro ao carregar transacoes'
+    } catch (err) {
+      error.value = (err as Error)?.message || 'Erro ao carregar transacoes'
       return null
     } finally {
       loading.value = false

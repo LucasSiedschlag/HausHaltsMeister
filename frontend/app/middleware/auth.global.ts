@@ -1,6 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const publicRoutes = ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/oauth/callback']
 
+  // Handle locale detection on public routes
   if (publicRoutes.includes(to.path)) {
     const { accessToken } = useAuth()
     if (!accessToken.value) {
@@ -35,15 +36,22 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  const { accessToken, refresh } = useAuth()
-  if (!accessToken.value) {
-    try {
-      await refresh()
-    } catch {
+  // Protected routes: check auth
+  // On SSR: just check if token exists (will be refreshed client-side if needed)
+  // On client: refresh will be handled by the auth-bootstrap plugin
+  const { accessToken } = useAuth()
+
+  if (import.meta.server) {
+    // On SSR, just check if we have a refresh cookie
+    // Don't try to refresh here - let the client handle it
+    const cookies = useRequestHeaders(['cookie'])
+    const hasRefreshCookie = cookies.cookie?.includes('hhm_refresh')
+    if (!hasRefreshCookie) {
       return navigateTo('/auth/login')
     }
+    return
   }
-  if (!accessToken.value) {
-    return navigateTo('/auth/login')
-  }
+
+  // On client: plugin will handle refresh before navigation
+  // Middleware just needs to exist for SSR check above
 })

@@ -2,7 +2,29 @@
   "common": {
     "save": "Salvar",
     "cancel": "Cancelar",
-    "loading": "Carregando"
+    "loading": "Carregando",
+    "errors": {
+      "VALIDATION_ERROR": "Erro na validação dos dados.",
+      "BUDGET_PLAN_NOT_FOUND": "Plano de orçamento não encontrado.",
+      "BUDGET_VERSION_NOT_FOUND": "Versão de orçamento não encontrada.",
+      "BUDGET_LINE_NOT_FOUND": "Item do orçamento não encontrado.",
+      "BUDGET_VERSION_CONFLICT": "Já existe uma versão de orçamento para este mês.",
+      "CATEGORY_NOT_FOUND": "Categoria não encontrada.",
+      "ACCOUNT_NOT_FOUND": "Conta não encontrada.",
+      "TRANSACTION_NOT_FOUND": "Transação não encontrada.",
+      "TRANSFER_NOT_BALANCED": "A transferência deve ter valor zero.",
+      "MEMBER_ALREADY_EXISTS": "Este membro já faz parte do ledger.",
+      "LEDGER_NOT_FOUND": "Ledger não encontrado.",
+      "SERVICE_UNAVAILABLE": "Serviço temporariamente indisponível.",
+      "GATEWAY_TIMEOUT": "O serviço demorou muito para responder.",
+      "NOT_IMPLEMENTED": "Funcionalidade ainda não disponível.",
+      "CONFLICT_DUPLICATE_NAME": "Já existe um registro com este nome.",
+      "CONFLICT_DUPLICATE_EMAIL": "Este e-mail já está em uso.",
+      "LEDGER_ACCESS_DENIED": "Você não tem permissão para acessar este ledger.",
+      "AUTH_INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
+      "AUTH_User_INACTIVE": "Usuário inativo.",
+      "default": "Ocorreu um erro inesperado."
+    }
   },
   "auth": {
     "login": {
@@ -526,6 +548,64 @@
     "entry": {
       "noCategory": "Sem categoria"
     }
+  },
+  "budget": {
+    "title": "Orçamentos",
+    "description": "Planeje suas finanças definindo limites por categoria baseados na renda.",
+    "loading": "Carregando orçamentos...",
+    "empty": "Nenhum orçamento encontrado.",
+    "actions": {
+      "newVersion": "Nova versão",
+      "edit": "Editar plano",
+      "delete": "Excluir versão"
+    },
+    "versions": {
+      "title": "Versões do orçamento",
+      "description": "Histórico de planejamentos.",
+      "month": "Mês de referência",
+      "baseIncome": "Renda base",
+      "status": {
+        "label": "Status",
+        "active": "Ativo",
+        "draft": "Rascunho"
+      }
+    },
+    "columns": {
+      "actions": "Ações",
+      "category": "Categoria",
+      "percent": "Percentual",
+      "amountEstimated": "Estimado"
+    },
+    "form": {
+      "createTitle": "Criar versão de orçamento",
+      "createDescription": "Defina o mês de início e a alocação inicial por categoria.",
+      "effectiveMonth": "Mês de início",
+      "initialAllocation": "Alocação Inicial",
+      "initialAllocationHint": "Defina pelo menos uma categoria com percentual maior que 0.",
+      "noCategories": "Nenhuma categoria de despesa relevante (Saída) encontrada.",
+      "saving": "Criando...",
+      "create": "Criar versão"
+    },
+    "messages": {
+      "versionCreated": "Versão de orçamento criada.",
+      "versionDeleted": "Versão removida.",
+      "linesRequired": "É necessário definir pelo menos uma categoria com percentual > 0.",
+      "error": "Não foi possível realizar a operação.",
+      "conflict": "Já existe uma versão para este mês."
+    },
+    "confirm": {
+      "deleteVersion": "Tem certeza que deseja excluir esta versão?"
+    },
+    "editor": {
+      "title": "Editor de orçamento",
+      "subtitle": "Editando versão de {month}",
+      "totalPercent": "Total alocado",
+      "totalBudgeted": "Total orçado",
+      "categoriesTitle": "Distribuição por categoria",
+      "categoriesDescription": "Defina a porcentagem da renda base para cada categoria.",
+      "save": "Salvar alterações"
+    },
+    "emptyCategories": "Nenhuma categoria relevante para orçamento encontrada."
   },
   "sidebar": {
     "groups": {

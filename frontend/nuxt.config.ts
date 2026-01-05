@@ -21,6 +21,7 @@ export default defineNuxtConfig({
     './layers/categories',
     './layers/journal',
     './layers/budget',
+    './layers/core',
     './layers/investments',
     './layers/creditcard',
     './layers/reports'
@@ -33,6 +34,7 @@ export default defineNuxtConfig({
     'notivue/animations.css'
   ],
   runtimeConfig: {
+    apiBase,
     public: {
       apiBase: '/api',
       oauthBase: process.env.NUXT_PUBLIC_OAUTH_BASE_URL || '',
@@ -43,6 +45,17 @@ export default defineNuxtConfig({
     routeRules: {
       '/api/**': {
         proxy: `${apiBase}/**`
+      },
+      // Disable SSR for auth forms - eliminates hydration issues
+      // Keep /auth/oauth/callback with SSR to properly read cookies
+      '/auth/login': {
+        ssr: false
+      },
+      '/auth/signup': {
+        ssr: false
+      },
+      '/auth/forgot-password': {
+        ssr: false
       }
     }
   },

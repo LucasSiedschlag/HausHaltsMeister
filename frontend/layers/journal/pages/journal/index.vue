@@ -18,10 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@shared/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@shared/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { ArrowUpDown, CalendarIcon, ChevronDown, MoreHorizontal, Plus, Trash2 } from 'lucide-vue-next'
+import { CalendarIcon, ChevronDown, MoreHorizontal, Plus, Trash2 } from 'lucide-vue-next'
 import { push } from 'notivue'
 import CrudTableCard from '@shared/components/CrudTableCard.vue'
 import SortableColumnHeader from '@shared/components/SortableColumnHeader.vue'
+
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
@@ -630,7 +631,8 @@ watch(
       openCreate()
       journalUi.createOpen.value = false
     }
-  }
+  },
+  { immediate: true }
 )
 </script>
 
@@ -638,9 +640,9 @@ watch(
   <div class="grid gap-4">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold">{{ t('journal.title') }}</h1>
         <p class="text-sm text-muted-foreground">{{ t('journal.description') }}</p>
       </div>
+
     </div>
 
     <CrudTableCard

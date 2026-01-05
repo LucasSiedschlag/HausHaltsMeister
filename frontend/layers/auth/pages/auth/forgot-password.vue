@@ -5,7 +5,7 @@ import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { emailSchema, useInlineValidation, getInputClass } from '@shared/validators'
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, ssr: false })
 
 const { t } = useI18n()
 

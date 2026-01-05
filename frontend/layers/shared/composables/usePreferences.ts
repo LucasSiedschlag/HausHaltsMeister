@@ -57,23 +57,18 @@ export const usePreferences = () => {
   const isLoading = useState<boolean>('preferences_loading', () => false)
   const isSaving = useState<boolean>('preferences_saving', () => false)
   const preferencesNeeded = useState<boolean>('preferences_needed', () => false)
-  const route = useRoute()
   const api = useApiClient()
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
   const colorMode = useColorMode()
   const { locale, setLocale } = useI18n()
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const applyPreferences = (prefs: UserPreferences) => {
+    // Get route inside function to avoid issues with middleware context
+    const route = useRoute()
     const localeMatch = route.path.match(/^\/([^/]+)(?:\/|$)/)
     const routeLocale =
       localeMatch && (localeMatch[1] === 'pt-BR' || localeMatch[1] === 'en-US')

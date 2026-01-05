@@ -1,21 +1,35 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, h, ref, watch } from 'vue'
+import {
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+  type VisibilityState,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  useVueTable,
+  FlexRender
+} from '@tanstack/vue-table'
 import { Button } from '@shared/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@shared/components/ui/dropdown-menu'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@shared/components/ui/sheet'
 import { Switch } from '@shared/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip'
-import { CornerDownRight, MoreHorizontal, Plus } from 'lucide-vue-next'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@shared/components/ui/table'
+import { CornerDownRight, MoreHorizontal, Plus, ChevronDown } from 'lucide-vue-next'
 import { push } from 'notivue'
 import CrudTableCard from '@shared/components/CrudTableCard.vue'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
+import SortableColumnHeader from '@shared/components/SortableColumnHeader.vue'
 import { useCategories, type Category, type CategoryDirection } from '#layers/categories/composables/useCategories'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
 import { categoryDirectionSchema, nameSchema, useInlineValidation, getInputClass } from '@shared/validators'
 import { isApiError } from '@shared/utils/api-error'
+import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 const ledgerContext = useLedgerContext()
@@ -31,8 +45,164 @@ const {
   deactivateCategory
 } = useCategories()
 
-const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
-const directionFilter = ref<'all' | CategoryDirection>('all')
+// --- Data Preparation (Hierarchy) ---
+
+type CategoryRow = Category & { depth: number }
+
+const buildHierarchy = (items: Category[]) => {
+  const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name))
+  const byParent = new Map<string | null, Category[]>()
+  for (const item of sorted) {
+    const key = item.parent_id ?? null
+    const list = byParent.get(key) ?? []
+    list.push(item)
+    byParent.set(key, list)
+  }
+
+  const walk = (parentKey: string | null, depth: number, acc: CategoryRow[]) => {
+    const children = byParent.get(parentKey) ?? []
+    for (const child of children) {
+      acc.push({ ...child, depth })
+      walk(child.id, depth + 1, acc)
+    }
+  }
+
+  const output: CategoryRow[] = []
+  walk(null, 0, output)
+  return output
+}
+
+const flattenedCategories = computed<CategoryRow[]>(() => buildHierarchy(categories.value))
+
+// --- TanStack Table Configuration ---
+
+const sorting = ref<SortingState>([])
+const columnFilters = ref<ColumnFiltersState>([])
+const globalFilter = ref('')
+const columnVisibility = ref<VisibilityState>({})
+
+const directionLabel = (value: string) =>
+  value === 'in' ? t('categories.directions.in') : t('categories.directions.out')
+
+const statusLabel = (value: boolean) =>
+  value ? t('categories.status.active') : t('categories.status.inactive')
+
+const columns: ColumnDef<CategoryRow>[] = [
+  {
+    accessorKey: 'name',
+    header: ({ column }) =>
+      h(SortableColumnHeader, {
+        label: t('categories.table.name'),
+        onToggle: () => column.toggleSorting(column.getIsSorted() === 'asc')
+      }),
+    cell: ({ row }) => {
+       const depth = row.original.depth
+       return h('div', { class: 'flex items-center gap-2', style: { paddingLeft: `${depth * 12}px` } }, [
+          depth > 0 ? h(CornerDownRight, { class: 'h-3.5 w-3.5 text-muted-foreground' }) : null,
+          h('div', {}, [
+             h('div', { class: 'font-medium text-foreground' }, row.original.name),
+           //  h('div', { class: 'text-xs text-muted-foreground' }, row.original.id) // ID is noisy, hiding
+          ])
+       ])
+    }
+  },
+  {
+    accessorKey: 'direction',
+    header: ({ column }) =>
+      h(SortableColumnHeader, {
+        label: t('categories.table.direction'),
+        onToggle: () => column.toggleSorting(column.getIsSorted() === 'asc')
+      }),
+    cell: ({ row }) => h('span', { class: 'text-muted-foreground' }, directionLabel(row.original.direction))
+  },
+  {
+    id: 'flags',
+    header: t('categories.table.flags'),
+    cell: ({ row }) => {
+       const children = []
+       if (row.original.is_budget_base) {
+         children.push(h('span', { class: 'inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-xs text-primary mr-1' }, t('categories.flags.budgetBase')))
+       }
+       if (row.original.is_budget_relevant) {
+         children.push(h('span', { class: 'inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-300 mr-1' }, t('categories.flags.budgetRelevant')))
+       }
+       if (children.length === 0) {
+          children.push(h('span', { class: 'text-xs text-muted-foreground' }, t('categories.flags.none')))
+       }
+       return h('div', { class: 'flex flex-wrap' }, children)
+    }
+  },
+  {
+    accessorKey: 'is_active',
+    header: ({ column }) =>
+      h(SortableColumnHeader, {
+        label: t('categories.table.status'),
+        onToggle: () => column.toggleSorting(column.getIsSorted() === 'asc')
+      }),
+    cell: ({ row }) => h('span', {
+       class: `inline-flex items-center rounded-full border px-2 py-1 text-xs ${row.original.is_active
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+          : 'border-muted-foreground/30 bg-muted/50 text-muted-foreground'}`
+    }, statusLabel(row.original.is_active))
+  },
+  {
+    id: 'actions',
+    enableHiding: false,
+    header: () => h('div', { class: 'text-right' }, t('categories.table.actions')),
+    cell: ({ row }) => {
+      const category = row.original
+      return h(DropdownMenu, {}, { default: () => [
+         h(DropdownMenuTrigger, { asChild: true }, { default: () => 
+            h(Button, { variant: 'ghost', size: 'icon', disabled: !canEdit.value }, { default: () => h(MoreHorizontal, { class: 'h-4 w-4' }) })
+         }),
+         h(DropdownMenuContent, { align: 'end' }, { default: () => [
+            h(DropdownMenuItem, { onClick: () => openEdit(category) }, { default: () => t('categories.actions.edit') }),
+            h(DropdownMenuItem, { onClick: () => handleToggleActive(category) }, { 
+                default: () => category.is_active ? t('categories.actions.deactivate') : t('categories.actions.activate') 
+            })
+         ]})
+      ]})
+    }
+  }
+]
+
+const table = useVueTable({
+  get data() { return flattenedCategories.value },
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  state: {
+    get sorting() { return sorting.value },
+    get columnFilters() { return columnFilters.value },
+    get globalFilter() { return globalFilter.value },
+    get columnVisibility() { return columnVisibility.value },
+  },
+  onSortingChange: updater => {
+      if (typeof updater === 'function') sorting.value = updater(sorting.value)
+      else sorting.value = updater
+  },
+  onColumnFiltersChange: updater => {
+      if (typeof updater === 'function') columnFilters.value = updater(columnFilters.value)
+      else columnFilters.value = updater
+  },
+  onGlobalFilterChange: updater => {
+      if (typeof updater === 'function') globalFilter.value = updater(globalFilter.value)
+      else globalFilter.value = updater
+  },
+  onColumnVisibilityChange: updater => {
+       if (typeof updater === 'function') columnVisibility.value = updater(columnVisibility.value)
+       else columnVisibility.value = updater
+  },
+  globalFilterFn: (row, columnId, filterValue) => {
+      const search = filterValue.toLowerCase()
+      const name = row.original.name.toLowerCase()
+      return name.includes(search)
+  }
+})
+
+
+// --- State for Forms ---
 
 const formOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
@@ -52,12 +222,6 @@ const { touched, errors, touchField, validateAll } = useInlineValidation(
   { name, direction },
   { name: nameSchema(t('categories.form.nameLabel')), direction: categoryDirectionSchema(t('categories.form.directionLabel')) }
 )
-
-const directionLabel = (value: CategoryDirection) =>
-  value === 'in' ? t('categories.directions.in') : t('categories.directions.out')
-
-const statusLabel = (value: boolean) =>
-  value ? t('categories.status.active') : t('categories.status.inactive')
 
 const resetValidation = () => {
   touched.name = false
@@ -196,44 +360,6 @@ watch(
   }
 )
 
-type CategoryRow = Category & { depth: number }
-
-const filteredCategories = computed(() => {
-  return categories.value.filter((item) => {
-    const matchesDirection =
-      directionFilter.value === 'all' || item.direction === directionFilter.value
-    const matchesStatus =
-      statusFilter.value === 'all' ||
-      (statusFilter.value === 'active' ? item.is_active : !item.is_active)
-    return matchesDirection && matchesStatus
-  })
-})
-
-const buildHierarchy = (items: Category[]) => {
-  const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name))
-  const byParent = new Map<string | null, Category[]>()
-  for (const item of sorted) {
-    const key = item.parent_id ?? null
-    const list = byParent.get(key) ?? []
-    list.push(item)
-    byParent.set(key, list)
-  }
-
-  const walk = (parentKey: string | null, depth: number, acc: CategoryRow[]) => {
-    const children = byParent.get(parentKey) ?? []
-    for (const child of children) {
-      acc.push({ ...child, depth })
-      walk(child.id, depth + 1, acc)
-    }
-  }
-
-  const output: CategoryRow[] = []
-  walk(null, 0, output)
-  return output
-}
-
-const flattenedCategories = computed<CategoryRow[]>(() => buildHierarchy(filteredCategories.value))
-
 const parentOptions = computed(() =>
   buildHierarchy(categories.value)
     .filter((item) => item.id !== editingCategory.value?.id)
@@ -245,13 +371,17 @@ const parentOptions = computed(() =>
 )
 
 watch(
-  () => [ledgerContext.activeLedgerId.value, statusFilter.value, directionFilter.value],
-  async ([ledgerId]) => {
+  () => ledgerContext.activeLedgerId.value,
+  async (ledgerId) => {
     if (!ledgerId) return
     await fetchCategories()
   },
   { immediate: true }
 )
+
+// Reset filters to default state (showing everything or filtered?)
+// Journal uses server-side filtering. Here we use client-side.
+// We can expose filter controls bound to table state.
 </script>
 
 <template>
@@ -283,115 +413,66 @@ watch(
       :description="t('categories.list.description')"
       :loading="loading"
       :error="error"
-      :empty="flattenedCategories.length === 0"
+      :empty="categories.length === 0"
       :loading-message="t('categories.loading')"
       :empty-message="t('categories.empty')"
     >
       <template #toolbar>
-        <div class="grid w-full gap-3 md:w-[420px] md:grid-cols-2">
-          <div>
-            <Label class="text-xs text-muted-foreground">{{ t('categories.filters.direction') }}</Label>
-            <Select v-model="directionFilter">
-              <SelectTrigger class="mt-2 w-full">
-                <SelectValue :placeholder="t('categories.filters.placeholder')" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{{ t('categories.filters.allDirections') }}</SelectItem>
-                <SelectItem value="out">{{ t('categories.directions.out') }}</SelectItem>
-                <SelectItem value="in">{{ t('categories.directions.in') }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label class="text-xs text-muted-foreground">{{ t('categories.filters.status') }}</Label>
-            <Select v-model="statusFilter">
-              <SelectTrigger class="mt-2 w-full">
-                <SelectValue :placeholder="t('categories.filters.placeholder')" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{{ t('categories.filters.all') }}</SelectItem>
-                <SelectItem value="active">{{ t('categories.filters.active') }}</SelectItem>
-                <SelectItem value="inactive">{{ t('categories.filters.inactive') }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+         <div class="flex w-full items-center justify-between gap-4 flex-wrap">
+             <div class="flex flex-1 items-center gap-2 max-w-sm">
+                <Input 
+                   :placeholder="t('categories.filters.placeholder')" 
+                   :model-value="globalFilter"
+                   @update:model-value="globalFilter = String($event)"
+                   class="h-8 w-full"
+                />
+             </div>
+             <div class="flex items-center gap-2">
+                 <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <Button variant="outline" size="sm" class="ml-auto">
+                            {{ t('journal.columns.toggle') || 'Columns' }} <ChevronDown class="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuCheckboxItem
+                            v-for="column in table.getAllColumns().filter(c => c.getCanHide())"
+                            :key="column.id"
+                            :checked="column.getIsVisible()"
+                            @update:checked="(value: boolean) => column.toggleVisibility(!!value)"
+                        >
+                            {{ column.columnDef.header }}
+                        </DropdownMenuCheckboxItem>
+                    </DropdownMenuContent>
+                 </DropdownMenu>
+             </div>
+         </div>
       </template>
 
-      <div class="overflow-hidden rounded-lg border">
-        <table class="w-full text-sm">
-          <thead class="bg-muted/50 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th class="px-4 py-3 text-left">{{ t('categories.table.name') }}</th>
-              <th class="px-4 py-3 text-left">{{ t('categories.table.direction') }}</th>
-              <th class="px-4 py-3 text-left">{{ t('categories.table.flags') }}</th>
-              <th class="px-4 py-3 text-left">{{ t('categories.table.status') }}</th>
-              <th class="px-4 py-3 text-right">{{ t('categories.table.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="category in flattenedCategories" :key="category.id" class="border-t">
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2" :style="{ paddingLeft: `${category.depth * 12}px` }">
-                  <CornerDownRight v-if="category.depth > 0" class="h-3.5 w-3.5 text-muted-foreground" />
-                  <div>
-                    <div class="font-medium text-foreground">{{ category.name }}</div>
-                    <div class="text-xs text-muted-foreground">{{ category.id }}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">
-                {{ directionLabel(category.direction) }}
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">
-                <div class="flex flex-wrap gap-2">
-                  <span
-                    v-if="category.is_budget_base"
-                    class="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-xs text-primary"
-                  >
-                    {{ t('categories.flags.budgetBase') }}
-                  </span>
-                  <span
-                    v-if="category.is_budget_relevant"
-                    class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-300"
-                  >
-                    {{ t('categories.flags.budgetRelevant') }}
-                  </span>
-                  <span v-if="!category.is_budget_base && !category.is_budget_relevant" class="text-xs text-muted-foreground">
-                    {{ t('categories.flags.none') }}
-                  </span>
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex items-center rounded-full border px-2 py-1 text-xs"
-                  :class="category.is_active
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'border-muted-foreground/30 bg-muted/50 text-muted-foreground'"
-                >
-                  {{ statusLabel(category.is_active) }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" :disabled="!canEdit">
-                      <MoreHorizontal class="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="openEdit(category)">
-                      {{ t('categories.actions.edit') }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="handleToggleActive(category)">
-                      {{ category.is_active ? t('categories.actions.deactivate') : t('categories.actions.activate') }}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="rounded-md border">
+         <Table>
+            <TableHeader>
+               <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+                  <TableHead v-for="header in headerGroup.headers" :key="header.id">
+                     <FlexRender v-if="!header.isPlaceholder" :render="header.column.columnDef.header" :props="header.getContext()" />
+                  </TableHead>
+               </TableRow>
+            </TableHeader>
+            <TableBody>
+               <template v-if="table.getRowModel().rows?.length">
+                  <TableRow v-for="row in table.getRowModel().rows" :key="row.id">
+                     <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                        <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                     </TableCell>
+                  </TableRow>
+               </template>
+               <TableRow v-else>
+                  <TableCell :colspan="columns.length" class="h-24 text-center">
+                     {{ t('categories.empty') }}
+                  </TableCell>
+               </TableRow>
+            </TableBody>
+         </Table>
       </div>
     </CrudTableCard>
 

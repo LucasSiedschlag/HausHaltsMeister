@@ -28,20 +28,14 @@ type AccountUpdatePayload = {
 export const useAccounts = () => {
   const api = useApiClient()
   const { currentLedgerId } = useLedger()
-  const { accessToken, refresh } = useAuth()
+  const { accessToken } = useAuth()
 
   const accounts = useState<Account[]>('accounts_list', () => [])
   const loading = useState<boolean>('accounts_loading', () => false)
   const error = useState<string | null>('accounts_error', () => null)
 
   const ensureAccessToken = async () => {
-    if (accessToken.value) return true
-    try {
-      await refresh()
-      return Boolean(accessToken.value)
-    } catch {
-      return false
-    }
+    return Boolean(accessToken.value)
   }
 
   const fetchAccounts = async () => {
@@ -59,8 +53,8 @@ export const useAccounts = () => {
       })
       accounts.value = payload
       return payload
-    } catch (err: any) {
-      error.value = err?.message || 'Erro ao carregar contas'
+    } catch (err) {
+      error.value = (err as Error)?.message || 'Erro ao carregar contas'
       return []
     } finally {
       loading.value = false
