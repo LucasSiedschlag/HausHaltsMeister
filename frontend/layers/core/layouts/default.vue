@@ -1,18 +1,19 @@
+<script setup lang="ts">
+import { SidebarInset, SidebarProvider } from '@shared/components/ui/sidebar'
+import AppSidebar from '../components/AppSidebar.vue'
+import SiteHeader from '../components/SiteHeader.vue'
+</script>
+
 <template>
-  <div class="min-h-screen w-full bg-background text-foreground">
+  <SidebarProvider>
     <AppSidebar />
-    <div class="flex min-h-screen flex-col md:pl-64">
-      <AppHeader />
-      <main class="flex-1">
-        <div class="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 lg:px-8">
+    <SidebarInset>
+      <SiteHeader />
+      <main class="flex-1 px-6 py-6">
+        <div class="mx-auto w-full max-w-6xl">
           <slot />
         </div>
       </main>
-    </div>
-  </div>
+    </SidebarInset>
+  </SidebarProvider>
 </template>
-
-<script setup lang="ts">
-import AppSidebar from '~/layers/core/components/layout/AppSidebar.vue'
-import AppHeader from '~/layers/core/components/layout/AppHeader.vue'
-</script>

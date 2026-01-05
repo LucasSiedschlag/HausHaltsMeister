@@ -1,81 +1,87 @@
-# Frontend - HausHaltsMeister
+# Frontend — HausHaltsMeister
 
-Este diretório contém o frontend da aplicação HausHaltsMeister, construído com **Nuxt 3** seguindo uma **Arquitetura Modular (Nuxt Layers)**.
+Este diretório define o frontend em Nuxt 4 com **SSR habilitado** e arquitetura modular (Nuxt Layers) alinhada ao modelo de ledger do backend.
 
-## Visão Geral
+## Visao geral
 
-O projeto utiliza o conceito de [Nuxt Layers](https://nuxt.com/docs/getting-started/layers) para separar funcionalidades em domínios distintos, permitindo um desenvolvimento escalável que mantém as características de um monólito (repositório único, deploy único), mas com organização de módulos independentes.
+O frontend sera organizado por dominios equivalentes ao backend:
 
-O Sistema de Design (UI) é padronizado utilizando **shadcn-vue** + **Tailwind CSS**.
+- auth (sessao e OAuth)
+- ledgers (selecao e administracao)
+- accounts, categories
+- journal (transacoes)
+- budget (planejamento e paines)
+- investments
+- creditcard (cartoes, planos, faturas)
+- reports (relatorios agregados)
 
-## Como rodar localmente
+A UI usa shadcn-vue + Tailwind e tokens centralizados no layer `shared`.
 
-Certifique-se de ter o `pnpm` instalado.
+## SSR como padrao
 
-1.  Acesse a pasta do frontend:
+- Todas as paginas rodam em SSR por default.
+- Componentes client-only devem ser explicitos (`<ClientOnly>`).
+- Evitar acesso a `window`/`document` fora de hooks client-side.
 
-    ```bash
-    cd frontend
-    ```
+## i18n
 
-2.  Instale as dependências:
+- Idiomas: `pt-BR` (default) e `en-US`.
+- Estrategia atual: `no_prefix` (sem idioma na URL).
+- Detecao automatica usa idioma do navegador apenas no primeiro acesso (cookie `hhm_locale`), inclusive nas telas de auth.
 
-    ```bash
-    pnpm install
-    ```
+## Rotas de auth (UI)
 
-3.  Inicie o servidor de desenvolvimento:
-    ```bash
-    pnpm dev
-    ```
-    O app estará disponível em `http://localhost:3000`.
+- A UI usa as mesmas rotas do backend:
+  - `/auth/login`
+  - `/auth/signup`
+  - `/auth/forgot-password`
 
-## Estrutura de Módulos (Layers)
+## Estrutura de layers
 
-Os módulos estão localizados em `frontend/layers/`. A ordem de carregamento é definida no `nuxt.config.ts` raiz.
+- `layers/shared`: UI base, tokens, utils.
+- `layers/core`: shell, layouts, navegacao.
+- `layers/auth`: login, signup, sessao.
+- `layers/ledgers`: selecao e membros.
+- `layers/accounts`: contas.
+- `layers/categories`: categorias.
+- `layers/journal`: transacoes e entradas.
+- `layers/budget`: plano e dashboards.
+- `layers/investments`: aportes e resumo.
+- `layers/creditcard`: cartoes, parcelas, faturas.
+- `layers/reports`: relatorios.
 
-- `layers/shared`: UI Kit (shadcn), utilitários globais, estilos base.
-- `layers/core`: Layouts principais, páginas base (Home), navegação.
-- `layers/dashboard`: Exemplo de feature/domínio específico.
-- `layers/payment-methods`: Cadastro de meios de pagamento.
-- `layers/picuinhas`: Pessoas e lançamentos de picuinhas.
+## Principios de integracao
 
-## Rotas de Picuinhas
+- Toda chamada de API respeita `ledgerId` quando exigido.
+- Paginacao do journal e por cursor (`cursor_occurred_at`, `cursor_id`).
+- Sem dependencia cruzada entre features: comunicacao via `core`.
+- Padroes de payload seguem `docs/api/`.
 
-- `/picuinhas/pessoas`: cadastro e listagem de pessoas.
-- `/picuinhas/pessoas/:id`: detalhamento das picuinhas da pessoa (casos + parcelas).
-- `/picuinhas/lancamentos`: lançamentos vinculados às pessoas (depende do cadastro em Pessoas).
+## Design system
 
-## Rotas de Meios de Pagamento
+- Componentes shadcn-vue ficam em `layers/shared/components/ui`.
+- Tokens e CSS global ficam em `layers/shared/assets`.
+- `components.json` aponta para o layer `shared`.
 
-- `/meios-de-pagamento`: cadastro e listagem de cartões e outros meios.
-- `/parcelamentos/nova-compra`: cadastro de compras parceladas.
-- `/parcelamentos/fatura`: visão da fatura por cartão/mês.
+## Padroes obrigatorios
 
-## Adicionando um novo Módulo (Layer)
+Consulte `docs/frontend/CONVENTIONS.md` para os padroes de i18n, tema, validacao e arquitetura.
 
-1.  Crie uma nova pasta em `frontend/layers/<nome-do-modulo>`.
-2.  Adicione um arquivo `nuxt.config.ts` dentro dessa pasta para defini-la como um layer.
-    ```typescript
-    // frontend/layers/<nome-do-modulo>/nuxt.config.ts
-    export default defineNuxtConfig({
-      // Configurações específicas do layer
-    });
-    ```
-3.  Registre o layer no `frontend/nuxt.config.ts` principal:
-    ```typescript
-    export default defineNuxtConfig({
-      extends: [
-        "./layers/<nome-do-modulo>",
-        // ... outros layers
-      ],
-    });
-    ```
-    _Nota: A ordem no array `extends` importa. Layers listados primeiro podem ser sobrescritos pelos subsequentes, mas geralmente organizamos da base (shared) para o topo (features)._
+## Validacao inline
 
-## Convenções
+- Validadores padrao ficam em `layers/shared/validators` e usam Zod.
+- Use `emailSchema`, `passwordSchema`, `nameSchema` e `useInlineValidation`.
+- Use `getInputClass` para manter o estilo de foco (outline solido + ring com opacidade 0,2).
+- Cada campo exibe apenas o primeiro erro (ordem definida no schema).
+- Erros de backend permanecem separados do erro de validacao local.
+- Placeholders com `@` devem usar interpolacao (ex.: `exemplo{at}dominio.com`).
 
-- **Imports**: Use aliases automáticos do Nuxt. Componentes em `layers/shared/components` estão disponíveis globalmente se configurados corretamente.
-- **Nomes de Componentes**: PascalCase. Ex: `BaseButton`.
-- **Rotas**: As rotas são geradas automaticamente baseadas na estrutura de pastas `pages/` dentro de cada layer. Evite conflitos de nomes de arquivos entre layers.
-- **Estilos**: Use classes utilitárias do Tailwind sempre que possível. Estilos globais ficam no layer `shared`.
+## Eventos de analytics
+
+- Use `useAnalytics().track(event, payload)` para emitir eventos no frontend.
+- Eventos sao disparados via `window` com `CustomEvent` (`hhm:analytics`).
+- Fluxos de auth ja emitem: `auth.login`, `auth.signup`, `auth.oauth.start`, `auth.refresh`.
+
+## Referencias
+
+Consulte `docs/frontend/references.md` para links de Nuxt Layers, shadcn-vue, OAuth e cookies.

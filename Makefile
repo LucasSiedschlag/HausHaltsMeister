@@ -1,12 +1,14 @@
-DB_NAME ?= cashflow
+DB_NAME ?= ledger
 DB_USER ?= postgres
 DB_PASS ?= postgres
 DB_HOST ?= localhost
-DB_PORT ?= 5432
+DB_PORT ?= 5434
 
 DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+TERN ?= tern
+TERN_CONF ?= internal/db/tern.conf
 
-.PHONY: all build run migrate migrate-status sqlc test clean
+.PHONY: all build run migrate migrate-status migrate-prod migrate-status-prod sqlc sqlc-ledger test typecheck clean
 
 all: build
 
@@ -23,10 +25,24 @@ docker-down:
 	docker-compose down
 
 migrate:
-	tern migrate -c internal/db/tern.conf -m migrations
+	$(TERN) migrate -c $(TERN_CONF) -m migrations
 
 migrate-status:
-	tern status -c internal/db/tern.conf -m migrations
+	$(TERN) status -c $(TERN_CONF) -m migrations
+
+migrate-prod:
+	@if [ "$(TERN_CONF)" = "internal/db/tern.conf" ]; then \
+		echo "Set TERN_CONF to a production config path."; \
+		exit 1; \
+	fi
+	$(TERN) migrate -c $(TERN_CONF) -m migrations
+
+migrate-status-prod:
+	@if [ "$(TERN_CONF)" = "internal/db/tern.conf" ]; then \
+		echo "Set TERN_CONF to a production config path."; \
+		exit 1; \
+	fi
+	$(TERN) status -c $(TERN_CONF) -m migrations
 
 migrestore:
 	@echo "Restoring database..."
@@ -39,8 +55,14 @@ swagger:
 sqlc:
 	sqlc generate
 
+sqlc-ledger:
+	sqlc generate -f sqlc-ledger.yaml
+
 test:
 	go test ./...
+
+typecheck:
+	cd frontend && npx nuxi typecheck
 
 clean:
 	rm -rf bin

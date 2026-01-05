@@ -2,46 +2,149 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	DBUrl string
-	Port  string
+	DatabaseURL            string
+	HTTPAddr               string
+	JWTSecret              string
+	AccessTokenTTL         time.Duration
+	RefreshTokenTTL        time.Duration
+	RefreshTokenSessionTTL time.Duration
+	RefreshCookieName      string
+	RefreshCookieDomain    string
+	RefreshCookieSecure    bool
+	RefreshCookieSameSite  string
+	OAuthRedirectAllowlist []string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
+
+	GitHubClientID     string
+	GitHubClientSecret string
+	GitHubRedirectURL  string
 }
 
-func Load() *Config {
-	// Load .env file if it exists, but don't fail if missing (environment might be set otherwise)
+func Load() Config {
 	_ = godotenv.Load()
 
-	// Construct DB URL from individual vars if DATABASE_URL is not set
-	dbUrl := os.Getenv("DATABASE_URL")
-	if dbUrl == "" {
-		host := getEnvOrDefault("POSTGRES_HOST", "localhost")
-		port := getEnvOrDefault("POSTGRES_PORT", "5432")
-		user := getEnvOrDefault("POSTGRES_USER", "postgres")
-		pass := getEnvOrDefault("POSTGRES_PASSWORD", "postgres")
-		dbname := getEnvOrDefault("POSTGRES_DB", "haushaltsmeister")
-		sslmode := getEnvOrDefault("POSTGRES_SSLMODE", "disable")
-
-		dbUrl = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-			user, pass, host, port, dbname, sslmode,
-		)
+	databaseURL := getEnv("DATABASE_URL", "")
+	if databaseURL == "" {
+		databaseURL = buildDatabaseURL()
 	}
 
-	port := getEnvOrDefault("PORT", "8080")
+	httpAddr := getEnv("HTTP_ADDR", "")
+	if httpAddr == "" {
+		httpAddr = ":" + getEnv("PORT", "8080")
+	}
 
-	return &Config{
-		DBUrl: dbUrl,
-		Port:  port,
+	env := getEnv("ENV", "development")
+	return Config{
+		DatabaseURL:            databaseURL,
+		HTTPAddr:               httpAddr,
+		JWTSecret:              getEnv("JWT_SECRET", "change-me"),
+		AccessTokenTTL:         time.Duration(getEnvInt("ACCESS_TOKEN_TTL_SECONDS", 900)) * time.Second,
+		RefreshTokenTTL:        time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 30)) * 24 * time.Hour,
+		RefreshTokenSessionTTL: time.Duration(getEnvInt("REFRESH_TOKEN_SESSION_TTL_DAYS", 7)) * 24 * time.Hour,
+		RefreshCookieName:      getEnv("REFRESH_COOKIE_NAME", "hhm_refresh"),
+		RefreshCookieDomain:    getEnv("REFRESH_COOKIE_DOMAIN", ""),
+		RefreshCookieSecure:    getEnvBool("REFRESH_COOKIE_SECURE", false),
+		RefreshCookieSameSite:  getEnv("REFRESH_COOKIE_SAMESITE", "Lax"),
+		OAuthRedirectAllowlist: splitCSV(getEnv(allowlistKey(env), getEnv("OAUTH_REDIRECT_ALLOWLIST", "http://localhost:3000"))),
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
+
+		GitHubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+		GitHubRedirectURL:  getEnv("GITHUB_REDIRECT_URL", ""),
 	}
 }
 
-func getEnvOrDefault(key, fallback string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
+func allowlistKey(env string) string {
+	if env == "" {
+		return "OAUTH_REDIRECT_ALLOWLIST"
 	}
-	return fallback
+	return "OAUTH_REDIRECT_ALLOWLIST_" + strings.ToUpper(env)
+}
+
+func buildDatabaseURL() string {
+	host := getEnv("POSTGRES_HOST", "")
+	user := getEnv("POSTGRES_USER", "")
+	pass := getEnv("POSTGRES_PASSWORD", "")
+	name := getEnv("POSTGRES_DB", "")
+	port := getEnv("POSTGRES_PORT", "")
+	if port == "" {
+		port = getEnv("POSTGRES_HOST_PORT", "")
+	}
+	if port == "" {
+		port = "5432"
+	}
+	if host == "" || user == "" || name == "" {
+		return ""
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		url.QueryEscape(user),
+		url.QueryEscape(pass),
+		host,
+		port,
+		name,
+	)
+}
+
+func getEnv(key, def string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return def
+	}
+	return value
+}
+
+func getEnvInt(key string, def int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return def
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return def
+	}
+	return parsed
+}
+
+func getEnvBool(key string, def bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return def
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return def
+	}
+	return parsed
+}
+
+func splitCSV(value string) []string {
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		out = append(out, trimmed)
+	}
+	return out
 }

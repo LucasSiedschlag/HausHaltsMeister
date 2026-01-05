@@ -1,1 +1,8 @@
+# Local env files
 .env
+.env.*
+!.env.example
+
+# Database
+internal/db/tern.conf
+internal/db/tern.conf.prod

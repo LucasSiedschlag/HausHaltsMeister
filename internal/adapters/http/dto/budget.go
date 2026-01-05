@@ -1,49 +1,87 @@
 package dto
 
-type SetBudgetItemRequest struct {
-	CategoryID    int32    `json:"category_id"`
-	Mode          string   `json:"mode"`
-	PlannedAmount *float64 `json:"planned_amount,omitempty"`
-	TargetPercent *float64 `json:"target_percent,omitempty"`
+import "time"
+
+type BudgetPlanRequest struct {
+	Name string `json:"name"`
 }
 
-type UpdateBudgetItemRequest struct {
-	Mode          string   `json:"mode"`
-	PlannedAmount *float64 `json:"planned_amount,omitempty"`
-	TargetPercent *float64 `json:"target_percent,omitempty"`
+type BudgetPlanResponse struct {
+	ID        string     `json:"id"`
+	LedgerID  string     `json:"ledger_id"`
+	Name      string     `json:"name"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
-type BudgetItemResponse struct {
-	ID             int32   `json:"id"`
-	BudgetPeriodID int32   `json:"budget_period_id"`
-	CategoryID     int32   `json:"category_id"`
-	CategoryName   string  `json:"category_name,omitempty"`
-	Mode           string  `json:"mode"`
-	PlannedAmount  float64 `json:"planned_amount"`
-	ActualAmount   float64 `json:"actual_amount"`
-	TargetPercent  float64 `json:"target_percent"`
+type BudgetVersionRequest struct {
+	EffectiveFromMonth string                     `json:"effective_from_month"`
+	Lines              []BudgetVersionLineRequest `json:"lines"`
 }
 
-type BudgetSummaryResponse struct {
-	Month       string               `json:"month"`
-	TotalIncome float64              `json:"total_income"`
-	Items       []BudgetItemResponse `json:"items"`
+type BudgetVersionLineRequest struct {
+	CategoryID      string  `json:"category_id"`
+	Percent         float64 `json:"percent"`
+	IncludeChildren bool    `json:"include_children"`
 }
 
-type SetBudgetBatchRequest struct {
-	StartMonth    string   `json:"start_month"`
-	EndMonth      string   `json:"end_month"`
-	CategoryID    int32    `json:"category_id"`
-	Mode          string   `json:"mode"`
-	PlannedAmount *float64 `json:"planned_amount,omitempty"`
-	TargetPercent *float64 `json:"target_percent,omitempty"`
+type BudgetVersionResponse struct {
+	ID                 string               `json:"id"`
+	LedgerID           string               `json:"ledger_id"`
+	PlanID             string               `json:"plan_id"`
+	EffectiveFromMonth time.Time            `json:"effective_from_month"`
+	CreatedByUserID    string               `json:"created_by_user_id"`
+	CreatedAt          time.Time            `json:"created_at"`
+	UpdatedAt          *time.Time           `json:"updated_at,omitempty"`
+	Lines              []BudgetLineResponse `json:"lines,omitempty"`
 }
 
-type BulkBudgetItemRequest struct {
-	CategoryID    int32   `json:"category_id"`
-	TargetPercent float64 `json:"target_percent"`
+type BudgetLineResponse struct {
+	ID              string     `json:"id"`
+	LedgerID        string     `json:"ledger_id"`
+	VersionID       string     `json:"version_id"`
+	CategoryID      string     `json:"category_id"`
+	Percent         float64    `json:"percent"`
+	IncludeChildren bool       `json:"include_children"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
 }
 
-type BulkBudgetItemsRequest struct {
-	Items []BulkBudgetItemRequest `json:"items"`
+type BudgetMonthlyResponse struct {
+	LedgerID           string                     `json:"ledger_id"`
+	Month              time.Time                   `json:"month"`
+	IncomeBaseCents    int64                       `json:"income_base_cents"`
+	OutsideBudgetCents int64                       `json:"outside_budget_cents"`
+	Version            *BudgetVersionResponse      `json:"version,omitempty"`
+	Lines              []BudgetMonthlyLineResponse `json:"lines"`
+}
+
+type BudgetMonthlyLineResponse struct {
+	CategoryID       string  `json:"category_id"`
+	Percent          float64 `json:"percent"`
+	IncludeChildren  bool    `json:"include_children"`
+	BudgetLimitCents int64   `json:"budget_limit_cents"`
+	SpentActualCents int64   `json:"spent_actual_cents"`
+	DeltaCents       int64   `json:"delta_cents"`
+	UsagePct         float64 `json:"usage_pct"`
+}
+
+type BudgetPeriodResponse struct {
+	LedgerID           string                      `json:"ledger_id"`
+	From               time.Time                    `json:"from"`
+	To                 time.Time                    `json:"to"`
+	OutsideBudgetCents int64                        `json:"outside_budget_cents"`
+	TotalBudgetedCents int64                        `json:"total_budgeted_cents"`
+	TotalSpentCents    int64                        `json:"total_spent_cents"`
+	TotalDeltaCents    int64                        `json:"total_delta_cents"`
+	Months             []BudgetMonthlyResponse      `json:"months"`
+	Categories         []BudgetPeriodLineResponse   `json:"categories"`
+}
+
+type BudgetPeriodLineResponse struct {
+	CategoryID       string  `json:"category_id"`
+	BudgetLimitCents int64   `json:"budget_limit_cents"`
+	SpentActualCents int64   `json:"spent_actual_cents"`
+	DeltaCents       int64   `json:"delta_cents"`
+	UsagePct         float64 `json:"usage_pct"`
 }

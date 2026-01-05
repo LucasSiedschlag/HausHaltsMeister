@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from "vue"
 import type { AvatarVariants } from "."
 import { AvatarRoot } from "reka-ui"
-import { cn } from '~/layers/shared/utils/cn'
+import { cn } from '@shared/utils'
 import { avatarVariant } from "."
 
 const props = withDefaults(defineProps<{

@@ -1,43 +1,93 @@
-// frontend/nuxt.config.ts
+// https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const apiBase = process.env.NUXT_API_BASE_URL || 'http://localhost:8080'
+const rootDir = dirname(fileURLToPath(import.meta.url))
+
 export default defineNuxtConfig({
-  compatibilityDate: '2024-04-03',
+  ssr: true,
+  compatibilityDate: '2026-01-01',
   devtools: { enabled: true },
-  css: [
-    '~/layers/shared/assets/css/tailwind.css'
-  ],
+  alias: {
+    '@shared': join(rootDir, 'layers/shared')
+  },
   extends: [
     './layers/shared',
     './layers/core',
+    './layers/auth',
+    './layers/ledgers',
+    './layers/accounts',
     './layers/categories',
+    './layers/journal',
     './layers/budget',
-    './layers/payment-methods',
-    './layers/picuinhas',
-    './layers/dashboard'
+    './layers/core',
+    './layers/investments',
+    './layers/creditcard',
+    './layers/reports'
   ],
-  modules: [
-    '@nuxtjs/tailwindcss',
-    'shadcn-nuxt',
-    '@nuxtjs/color-mode'
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', '@nuxtjs/i18n', 'shadcn-nuxt', 'notivue/nuxt'],
+  css: [
+    join(rootDir, 'layers/shared/assets/css/tailwind.css'),
+    'notivue/notification.css',
+    'notivue/notification-progress.css',
+    'notivue/animations.css'
   ],
+  runtimeConfig: {
+    apiBase,
+    public: {
+      apiBase: '/api',
+      oauthBase: process.env.NUXT_PUBLIC_OAUTH_BASE_URL || '',
+      refreshCookieName: process.env.NUXT_PUBLIC_REFRESH_COOKIE_NAME || 'hhm_refresh'
+    }
+  },
+  nitro: {
+    routeRules: {
+      '/api/**': {
+        proxy: `${apiBase}/**`
+      },
+      // Disable SSR for auth forms - eliminates hydration issues
+      // Keep /auth/oauth/callback with SSR to properly read cookies
+      '/auth/login': {
+        ssr: false
+      },
+      '/auth/signup': {
+        ssr: false
+      },
+      '/auth/forgot-password': {
+        ssr: false
+      }
+    }
+  },
   colorMode: {
     classSuffix: '',
     preference: 'system',
     fallback: 'light',
-    disableTransition: true
+    storage: 'cookie',
+    storageKey: 'hhm-color-mode'
   },
-  runtimeConfig: {
-    public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
-      apiToken: process.env.NUXT_PUBLIC_API_TOKEN || '',
-      apiTimeoutMs: Number(process.env.NUXT_PUBLIC_API_TIMEOUT_MS || 15000),
-    }
+  i18n: {
+    strategy: 'no_prefix',
+    defaultLocale: 'pt-BR',
+    detectBrowserLanguage: {
+      alwaysRedirect: false,
+      redirectOn: 'root',
+      useCookie: true,
+      cookieKey: 'hhm_locale',
+      fallbackLocale: 'pt-BR'
+    },
+    restructureDir: '.',
+    compilation: {
+      strictMessage: false
+    },
+    langDir: 'layers/shared/i18n',
+    locales: [
+      { code: 'pt-BR', iso: 'pt-BR', name: 'Português (Brasil)', file: 'pt-BR.json' },
+      { code: 'en-US', iso: 'en-US', name: 'English (US)', file: 'en-US.json' }
+    ]
   },
-  nitro: {
-    devProxy: {
-      '/api': {
-        target: process.env.NUXT_PUBLIC_API_PROXY_TARGET || 'http://localhost:8080',
-        changeOrigin: true
-      }
-    }
-  },
+  shadcn: {
+    prefix: 'Ui',
+    componentDir: './layers/shared/components/ui'
+  }
 })

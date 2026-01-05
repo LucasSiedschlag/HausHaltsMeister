@@ -1,8 +1,9 @@
 export default defineNuxtConfig({
   components: [
     {
-      path: 'components',
-      pathPrefix: false,
-    },
-  ],
+      path: './components',
+      prefix: 'Budget',
+      global: true
+    }
+  ]
 })

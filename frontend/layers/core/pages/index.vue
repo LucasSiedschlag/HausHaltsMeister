@@ -1,59 +1,83 @@
+<script setup lang="ts">
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
+import { Button } from '@shared/components/ui/button'
+</script>
+
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div class="space-y-1">
-        <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p class="text-sm text-muted-foreground">
-          Overview of your household finance activity.
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <Button variant="outline">Export</Button>
-        <Button>Add entry</Button>
-      </div>
-    </div>
+  <div class="grid gap-6">
+    <section class="grid gap-3">
+      <h1 class="text-2xl font-semibold">Saúde financeira do mês</h1>
+      <p class="max-w-2xl text-sm text-muted-foreground">
+        Acompanhe o saldo real, separando patrimônio próprio de valores transitórios.
+      </p>
+    </section>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-        <p class="text-sm text-muted-foreground">Monthly balance</p>
-        <p class="mt-2 text-2xl font-semibold">$4,320</p>
-        <p class="mt-2 text-xs text-muted-foreground">+12.4% vs last month</p>
-      </div>
-      <div class="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-        <p class="text-sm text-muted-foreground">Upcoming bills</p>
-        <p class="mt-2 text-2xl font-semibold">$1,280</p>
-        <p class="mt-2 text-xs text-muted-foreground">3 payments scheduled</p>
-      </div>
-      <div class="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-        <p class="text-sm text-muted-foreground">Savings goal</p>
-        <p class="mt-2 text-2xl font-semibold">62%</p>
-        <p class="mt-2 text-xs text-muted-foreground">Target by Dec 2024</p>
-      </div>
-    </div>
+    <section class="grid gap-4 md:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm font-medium text-muted-foreground">Saldo disponível</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p class="text-2xl font-semibold">R$ 12.480,00</p>
+          <p class="text-xs text-muted-foreground">Após contas a pagar e receber</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm font-medium text-muted-foreground">Orçamento do mês</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p class="text-2xl font-semibold">R$ 4.200,00</p>
+          <p class="text-xs text-muted-foreground">Planejado x realizado</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm font-medium text-muted-foreground">Cartões ativos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p class="text-2xl font-semibold">3</p>
+          <p class="text-xs text-muted-foreground">Próximo fechamento em 5 dias</p>
+        </CardContent>
+      </Card>
+    </section>
 
-    <div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 class="text-lg font-semibold">Recent activity</h2>
-          <p class="text-sm text-muted-foreground">
-            Last 30 days of transactions and updates.
-          </p>
-        </div>
-        <Button variant="secondary">View reports</Button>
-      </div>
-      <div class="mt-4 grid gap-3 md:grid-cols-2">
-        <div class="rounded-md border border-dashed bg-muted/30 p-4">
-          <p class="text-sm font-medium">Utilities</p>
-          <p class="mt-1 text-sm text-muted-foreground">$320 paid on Aug 12</p>
-        </div>
-        <div class="rounded-md border border-dashed bg-muted/30 p-4">
-          <p class="text-sm font-medium">Groceries</p>
-          <p class="mt-1 text-sm text-muted-foreground">$210 paid on Aug 10</p>
-        </div>
-      </div>
-    </div>
+    <section class="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm font-medium text-muted-foreground">Transações recentes</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span>Mercado Central</span>
+            <span class="text-destructive">- R$ 182,90</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Salário</span>
+            <span class="text-emerald-600">+ R$ 8.500,00</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Assinaturas</span>
+            <span class="text-destructive">- R$ 96,00</span>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm font-medium text-muted-foreground">Próximas ações</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span>Fechamento Visa</span>
+            <span class="text-muted-foreground">07/02</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Revisar orçamento</span>
+            <span class="text-muted-foreground">Em 3 dias</span>
+          </div>
+          <Button variant="outline" class="mt-2 w-full">Abrir painel</Button>
+        </CardContent>
+      </Card>
+    </section>
   </div>
 </template>
-
-<script setup lang="ts">
-</script>

@@ -1,0 +1,67 @@
+# Implementation Playbook
+
+This document defines how the agent must work on every feature. It is the default operating procedure.
+
+---
+
+## Feature checklist (mandatory)
+
+1. **Docs/API**
+   - Update `docs/api/` or confirm the endpoint already exists.
+   - Update `docs/ledger/` when rules or flows change.
+
+2. **Migrations**
+   - Add/adjust migrations if schema changes are required.
+   - Keep `created_at` default and set `updated_at` in the app.
+
+3. **SQLC queries**
+   - Add/modify queries in `internal/adapters/postgres/<module>/queries/`.
+   - Ensure queries always filter by `ledger_id`.
+   - Run the ledger scope scan test (`TestQueriesScopedByLedgerID`).
+
+4. **Service layer**
+   - Implement domain rules and validations first.
+   - Enforce ledger boundary and transfer balance.
+
+5. **Handlers**
+   - Implement HTTP layer with correct status codes and errors.
+   - Use the standard error payload from `docs/agent/ERRORS.md`.
+
+6. **Tests**
+   - Follow `docs/agent/TEST_STRATEGY.md`.
+   - Add handler + service tests; integration test if DB touched.
+   - Add role tests for owner-only endpoints when introduced.
+
+7. **Decisions (ADR)**
+   - If a new irreversible decision is made, update `docs/agent/DECISIONS.md`.
+
+8. **Seeds**
+  - Update seeds if a new technical category or catalog entry is required.
+9. **Frontend / UI**
+   - Use `useLedgerContext` for the active ledger/role and keep the `hhm_ledger_id` cookie in sync via `useLedger`.
+   - Surface the role badge and ledger errors in the header/sidebar, and disable editor-only actions (e.g., “Nova transação”) for viewers.
+   - Normalize API errors through `useApiClient` so RATE_LIMITED responses can power user-facing messages.
+
+---
+
+## PR template
+
+```
+## O que foi feito
+- ...
+
+## Decisões
+- ...
+
+## Migrations
+- ...
+
+## Queries sqlc
+- ...
+
+## Testes
+- ...
+
+## Como validar
+- ...
+```

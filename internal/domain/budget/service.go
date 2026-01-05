@@ -2,216 +2,396 @@ package budget
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"strings"
 	"time"
 
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/cashflow"
-	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/category"
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 )
 
-type BudgetService struct {
-	repo    Repository
-	catRepo category.Repository
-	cfRepo  cashflow.Repository
+type Repository interface {
+	GetPlanByLedger(ctx context.Context, ledgerID string) (Plan, error)
+	CreatePlan(ctx context.Context, ledgerID, name string) (Plan, error)
+	UpdatePlan(ctx context.Context, ledgerID, name string, updatedAt time.Time) (Plan, error)
+	ListVersions(ctx context.Context, ledgerID string, from, to *time.Time) ([]Version, error)
+	GetVersion(ctx context.Context, ledgerID, versionID string) (Version, error)
+	CreateVersionWithLines(ctx context.Context, ledgerID, planID, userID string, effectiveFrom time.Time, lines []LineInput) (Version, error)
+	UpdateLine(ctx context.Context, lineID string, percent float64, includeChildren bool, updatedAt time.Time) (Line, error)
+	DeleteLine(ctx context.Context, lineID string) error
+	AddLine(ctx context.Context, versionID string, line LineInput) (Line, error)
+	GetLinesByVersion(ctx context.Context, versionID string) ([]Line, error)
+	GetApplicableVersion(ctx context.Context, ledgerID string, month time.Time) (Version, error)
+	GetCategoryInfo(ctx context.Context, ledgerID string, categoryIDs []string) (map[string]CategoryInfo, error)
+	GetCategoryDescendants(ctx context.Context, ledgerID, categoryID string) ([]string, error)
+	IncomeBaseForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error)
+	SpentActualForMonth(ctx context.Context, ledgerID string, categoryIDs []string, month time.Time) (int64, error)
+	OutsideBudgetForMonth(ctx context.Context, ledgerID string, month time.Time) (int64, error)
+	GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error)
+	LedgerExists(ctx context.Context, ledgerID string) (bool, error)
 }
 
-func NewService(repo Repository, catRepo category.Repository, cfRepo cashflow.Repository) *BudgetService {
-	return &BudgetService{
-		repo:    repo,
-		catRepo: catRepo,
-		cfRepo:  cfRepo,
-	}
+type CategoryInfo struct {
+	Direction        string
+	IsBudgetRelevant bool
 }
 
-func (s *BudgetService) GetOrCreatePeriod(ctx context.Context, month time.Time) (*BudgetPeriod, error) {
-	// 1. Try to get existing
-	period, err := s.repo.GetPeriodByMonth(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	if period != nil {
-		// Fetch items
-		items, err := s.repo.GetItemsByPeriod(ctx, period.ID)
-		if err != nil {
-			return nil, err
-		}
-		period.Items = items
-		return period, nil
-	}
-
-	// 2. Create new
-	newPeriod := NewPeriod(month)
-	created, err := s.repo.CreatePeriod(ctx, newPeriod)
-	if err != nil {
-		return nil, err
-	}
-	created.Items = []BudgetItem{}
-	return created, nil
+type LineInput struct {
+	CategoryID      string
+	Percent         float64
+	IncludeChildren bool
 }
 
-func (s *BudgetService) SetBudgetItem(ctx context.Context, month time.Time, categoryID int32, mode string, plannedAmount float64, targetPercent float64) (*BudgetItem, error) {
-	// 1. Validate Category (Must be OUT and Active, potentially)
-	cat, err := s.catRepo.GetByID(ctx, categoryID)
-	if err != nil {
-		return nil, err
-	}
-	if cat == nil {
-		return nil, ErrInvalidCategory
-	}
-	if cat.Direction != "OUT" {
-		return nil, fmt.Errorf("%w: only OUT categories allowed in budget", ErrInvalidCategory)
-	}
-	if !cat.IsBudgetRelevant {
-		return nil, fmt.Errorf("%w: category not relevant for budget", ErrInvalidCategory)
-	}
-
-	if err := validateBudgetInput(mode, plannedAmount, targetPercent); err != nil {
-		return nil, err
-	}
-
-	// 2. Ensure Period Exists
-	period, err := s.GetOrCreatePeriod(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	if period.IsClosed {
-		return nil, fmt.Errorf("budget period is closed")
-	}
-
-	// 3. Upsert Item
-	if mode == ModePercentOfIncome {
-		plannedAmount = 0
-	}
-	item := &BudgetItem{
-		BudgetPeriodID: period.ID,
-		CategoryID:     categoryID,
-		Mode:           mode,
-		PlannedAmount:  plannedAmount,
-		TargetPercent:  targetPercent,
-		Notes:          "",
-	}
-
-	return s.repo.UpsertItem(ctx, item)
+type Service struct {
+	repo Repository
+	now  func() time.Time
 }
 
-func (s *BudgetService) GetBudgetSummary(ctx context.Context, month time.Time) (*BudgetPeriod, error) {
-	// 1. Get Base Plan
-	period, err := s.GetOrCreatePeriod(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-	if len(period.Items) == 0 {
-		fallback, err := s.repo.GetLatestPeriodWithItemsBefore(ctx, month)
-		if err != nil {
-			return nil, err
-		}
-		if fallback != nil {
-			items, err := s.repo.GetItemsByPeriod(ctx, fallback.ID)
-			if err != nil {
-				return nil, err
-			}
-			period.Items = items
-		}
-	}
-
-	// 2. Get Actuals (CashFlows)
-	// Assuming month is the 1st of the month
-	flows, err := s.cfRepo.ListByMonth(ctx, month)
-	if err != nil {
-		return nil, err
-	}
-
-	categories, err := s.catRepo.List(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-	categoryMap := make(map[int32]*category.Category, len(categories))
-	for _, cat := range categories {
-		categoryMap[cat.ID] = cat
-	}
-
-	// 3. Aggregate Actuals by Category and total income for budget-relevant IN categories
-	actuals := make(map[int32]float64)
-	totalIncome := 0.0
-	for _, f := range flows {
-		if cat, ok := categoryMap[f.CategoryID]; ok {
-			if f.Direction == category.DirectionIn && cat.Direction == category.DirectionIn && cat.IsBudgetRelevant {
-				totalIncome += f.Amount
-			}
-		}
-		if f.Direction == "OUT" {
-			actuals[f.CategoryID] += f.Amount
-		}
-	}
-
-	// 4. Enrich Items
-	for i := range period.Items {
-		if period.Items[i].Mode == ModePercentOfIncome {
-			period.Items[i].PlannedAmount = totalIncome * (period.Items[i].TargetPercent / 100.0)
-		}
-		period.Items[i].ActualAmount = actuals[period.Items[i].CategoryID]
-	}
-	period.TotalIncome = totalIncome
-
-	return period, nil
+func NewService(repo Repository) *Service {
+	return &Service{repo: repo, now: time.Now().UTC}
 }
 
-func (s *BudgetService) SetBudgetBatch(ctx context.Context, startMonth, endMonth time.Time, categoryID int32, mode string, plannedAmount float64, targetPercent float64) error {
-	// Normalize to 1st of month
-	current := time.Date(startMonth.Year(), startMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
-	end := time.Date(endMonth.Year(), endMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
-
-	for !current.After(end) {
-		_, err := s.SetBudgetItem(ctx, current, categoryID, mode, plannedAmount, targetPercent)
-		if err != nil {
-			return fmt.Errorf("failed at month %s: %w", current.Format("2006-01"), err)
+func (s *Service) GetPlan(ctx context.Context, userID, ledgerID string) (Plan, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return Plan{}, err
+	}
+	plan, err := s.repo.GetPlanByLedger(ctx, ledgerID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Plan{}, ErrPlanNotFound
 		}
-		current = current.AddDate(0, 1, 0)
+		return Plan{}, err
+	}
+	return plan, nil
+}
+
+func (s *Service) CreatePlan(ctx context.Context, userID, ledgerID, name string) (Plan, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return Plan{}, err
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "Default"
+	}
+	return s.repo.CreatePlan(ctx, ledgerID, name)
+}
+
+func (s *Service) UpdatePlan(ctx context.Context, userID, ledgerID, name string) (Plan, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return Plan{}, err
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Plan{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"name": "required"})
+	}
+	return s.repo.UpdatePlan(ctx, ledgerID, name, s.now())
+}
+
+func (s *Service) ListVersions(ctx context.Context, userID, ledgerID string, from, to *time.Time) ([]Version, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return nil, err
+	}
+	return s.repo.ListVersions(ctx, ledgerID, from, to)
+}
+
+func (s *Service) GetVersion(ctx context.Context, userID, ledgerID, versionID string) (Version, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return Version{}, err
+	}
+	version, err := s.repo.GetVersion(ctx, ledgerID, versionID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Version{}, ErrVersionNotFound
+		}
+		return Version{}, err
+	}
+	lines, err := s.repo.GetLinesByVersion(ctx, version.ID)
+	if err != nil {
+		return Version{}, err
+	}
+	version.Lines = lines
+	return version, nil
+}
+
+func (s *Service) CreateVersion(ctx context.Context, userID, ledgerID string, effectiveFrom time.Time, lines []LineInput) (Version, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return Version{}, err
+	}
+	if !isMonthStart(effectiveFrom) {
+		return Version{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"effective_from_month": "invalid"})
+	}
+	if len(lines) == 0 {
+		return Version{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"lines": "required"})
+	}
+
+	plan, err := s.repo.GetPlanByLedger(ctx, ledgerID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			plan, err = s.repo.CreatePlan(ctx, ledgerID, "Default")
+		}
+	}
+	if err != nil {
+		return Version{}, err
+	}
+
+	validated, err := s.validateLines(ctx, ledgerID, lines)
+	if err != nil {
+		return Version{}, err
+	}
+
+	return s.repo.CreateVersionWithLines(ctx, ledgerID, plan.ID, userID, effectiveFrom, validated)
+}
+
+func (s *Service) AddLine(ctx context.Context, userID, ledgerID, versionID string, line LineInput) (Line, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return Line{}, err
+	}
+	validated, err := s.validateLines(ctx, ledgerID, []LineInput{line})
+	if err != nil {
+		return Line{}, err
+	}
+	return s.repo.AddLine(ctx, versionID, validated[0])
+}
+
+func (s *Service) UpdateLine(ctx context.Context, userID, ledgerID, lineID string, percent float64, includeChildren bool) (Line, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return Line{}, err
+	}
+	if percent <= 0 {
+		return Line{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"percent": "invalid"})
+	}
+	line, err := s.repo.UpdateLine(ctx, lineID, percent, includeChildren, s.now())
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Line{}, ErrLineNotFound
+		}
+		return Line{}, err
+	}
+	return line, nil
+}
+
+func (s *Service) DeleteLine(ctx context.Context, userID, ledgerID, lineID string) error {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return err
+	}
+	if err := s.repo.DeleteLine(ctx, lineID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ErrLineNotFound
+		}
+		return err
 	}
 	return nil
 }
 
-func (s *BudgetService) UpdateBudgetItem(ctx context.Context, id int32, mode string, plannedAmount float64, targetPercent float64) (*BudgetItem, error) {
-	if err := validateBudgetInput(mode, plannedAmount, targetPercent); err != nil {
-		return nil, err
+func (s *Service) MonthlySummary(ctx context.Context, userID, ledgerID string, month time.Time) (MonthlySummary, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return MonthlySummary{}, err
+	}
+	if !isMonthStart(month) {
+		return MonthlySummary{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"month": "invalid"})
 	}
 
-	item, err := s.repo.GetItemByID(ctx, id)
+	version, err := s.repo.GetApplicableVersion(ctx, ledgerID, month)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, ErrNotFound) {
+			return MonthlySummary{Month: month}, nil
+		}
+		return MonthlySummary{}, err
 	}
-	if item == nil {
-		return nil, ErrBudgetItemNotFound
-	}
-
-	if mode == ModePercentOfIncome {
-		plannedAmount = 0
-	}
-	item.Mode = mode
-	item.PlannedAmount = plannedAmount
-	item.TargetPercent = targetPercent
-
-	updated, err := s.repo.UpdateItem(ctx, item)
+	lines, err := s.repo.GetLinesByVersion(ctx, version.ID)
 	if err != nil {
-		return nil, err
+		return MonthlySummary{}, err
 	}
-	return updated, nil
+	version.Lines = lines
+
+	incomeBase, err := s.repo.IncomeBaseForMonth(ctx, ledgerID, month)
+	if err != nil {
+		return MonthlySummary{}, err
+	}
+
+	items := make([]MonthlyLine, 0, len(lines))
+	for _, line := range lines {
+		categoryIDs := []string{line.CategoryID}
+		if line.IncludeChildren {
+			desc, err := s.repo.GetCategoryDescendants(ctx, ledgerID, line.CategoryID)
+			if err != nil {
+				return MonthlySummary{}, err
+			}
+			categoryIDs = uniqueStrings(append(categoryIDs, desc...))
+		}
+
+		spent, err := s.repo.SpentActualForMonth(ctx, ledgerID, categoryIDs, month)
+		if err != nil {
+			return MonthlySummary{}, err
+		}
+
+		limit := int64(float64(incomeBase) * (line.Percent / 100.0))
+		delta := spent - limit
+		usage := 0.0
+		if limit > 0 {
+			usage = float64(spent) / float64(limit)
+		}
+		items = append(items, MonthlyLine{
+			CategoryID:       line.CategoryID,
+			Percent:          line.Percent,
+			IncludeChildren:  line.IncludeChildren,
+			BudgetLimitCents: limit,
+			SpentActualCents: spent,
+			DeltaCents:       delta,
+			UsagePct:         usage,
+		})
+	}
+
+	outside, err := s.repo.OutsideBudgetForMonth(ctx, ledgerID, month)
+	if err != nil {
+		return MonthlySummary{}, err
+	}
+
+	return MonthlySummary{
+		Month:              month,
+		Version:            &version,
+		IncomeBaseCents:    incomeBase,
+		Lines:              items,
+		OutsideBudgetCents: outside,
+	}, nil
 }
 
-func validateBudgetInput(mode string, plannedAmount float64, targetPercent float64) error {
-	switch mode {
-	case ModePercentOfIncome:
-		if targetPercent < 0 || targetPercent > 100 {
-			return ErrInvalidPercent
-		}
-		return nil
-	case ModeAbsolute:
-		if plannedAmount < 0 {
-			return ErrInvalidAmount
-		}
-		return nil
-	default:
-		return ErrInvalidMode
+func (s *Service) PeriodSummary(ctx context.Context, userID, ledgerID string, from, to time.Time) (PeriodSummary, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+		return PeriodSummary{}, err
 	}
+	if from.IsZero() || to.IsZero() || to.Before(from) {
+		return PeriodSummary{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"range": "invalid"})
+	}
+	if !isMonthStart(from) || !isMonthStart(to) {
+		return PeriodSummary{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"range": "month_start"})
+	}
+
+	months := []MonthlySummary{}
+	categoryTotals := map[string]*PeriodCategorySummary{}
+	var outsideTotal int64
+
+	for cursor := from; !cursor.After(to); cursor = cursor.AddDate(0, 1, 0) {
+		monthly, err := s.MonthlySummary(ctx, userID, ledgerID, cursor)
+		if err != nil {
+			return PeriodSummary{}, err
+		}
+		months = append(months, monthly)
+		outsideTotal += monthly.OutsideBudgetCents
+
+		for _, line := range monthly.Lines {
+			item, ok := categoryTotals[line.CategoryID]
+			if !ok {
+				item = &PeriodCategorySummary{CategoryID: line.CategoryID}
+				categoryTotals[line.CategoryID] = item
+			}
+			item.BudgetLimitCents += line.BudgetLimitCents
+			item.SpentActualCents += line.SpentActualCents
+			item.DeltaCents += line.DeltaCents
+		}
+	}
+
+	results := make([]PeriodCategorySummary, 0, len(categoryTotals))
+	var totalBudgeted int64
+	var totalSpent int64
+	var totalDelta int64
+	for _, item := range categoryTotals {
+		if item.BudgetLimitCents > 0 {
+			item.UsagePct = float64(item.SpentActualCents) / float64(item.BudgetLimitCents)
+		}
+		totalBudgeted += item.BudgetLimitCents
+		totalSpent += item.SpentActualCents
+		totalDelta += item.DeltaCents
+		results = append(results, *item)
+	}
+
+	return PeriodSummary{
+		From:               from,
+		To:                 to,
+		Months:             months,
+		Categories:         results,
+		OutsideBudgetCents: outsideTotal,
+		TotalBudgetedCents: totalBudgeted,
+		TotalSpentCents:    totalSpent,
+		TotalDeltaCents:    totalDelta,
+	}, nil
+}
+
+func (s *Service) validateLines(ctx context.Context, ledgerID string, lines []LineInput) ([]LineInput, error) {
+	categoryIDs := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line.CategoryID) == "" {
+			return nil, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"category_id": "required"})
+		}
+		if line.Percent <= 0 {
+			return nil, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"percent": "invalid"})
+		}
+		categoryIDs = append(categoryIDs, line.CategoryID)
+	}
+
+	info, err := s.repo.GetCategoryInfo(ctx, ledgerID, uniqueStrings(categoryIDs))
+	if err != nil {
+		return nil, err
+	}
+	for _, line := range lines {
+		data, ok := info[line.CategoryID]
+		if !ok {
+			return nil, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"category_id": "invalid"})
+		}
+		if data.Direction != "out" || !data.IsBudgetRelevant {
+			return nil, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"category_id": "not_eligible"})
+		}
+	}
+	return lines, nil
+}
+
+func (s *Service) requireRole(ctx context.Context, ledgerID, userID, minRole string) error {
+	role, err := s.repo.GetLedgerRole(ctx, ledgerID, userID)
+	if err != nil {
+		return s.mapAccessError(ctx, ledgerID, err)
+	}
+	if roleRank(role) < roleRank(minRole) {
+		return ErrAccessDenied
+	}
+	return nil
+}
+
+func (s *Service) mapAccessError(ctx context.Context, ledgerID string, err error) error {
+	if errors.Is(err, ErrNotFound) || errors.Is(err, ledger.ErrNotFound) {
+		exists, checkErr := s.repo.LedgerExists(ctx, ledgerID)
+		if checkErr == nil && exists {
+			return ErrAccessDenied
+		}
+		return ErrLedgerNotFound
+	}
+	return err
+}
+
+func isMonthStart(value time.Time) bool {
+	return value.Day() == 1 && value.Equal(time.Date(value.Year(), value.Month(), 1, 0, 0, 0, 0, value.Location()))
+}
+
+func roleRank(role string) int {
+	switch role {
+	case "owner":
+		return 3
+	case "editor":
+		return 2
+	case "viewer":
+		return 1
+	default:
+		return 0
+	}
+}
+
+func uniqueStrings(items []string) []string {
+	seen := map[string]struct{}{}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		result = append(result, item)
+	}
+	return result
 }
