@@ -3,9 +3,9 @@ export default defineNuxtPlugin({
   setup() {
     const publicRoutes = ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/oauth/callback']
     const route = useRoute()
-    const { accessToken, user, refresh, me } = useAuth()
+    const { accessToken, user, refresh, me, sessionExpired } = useAuth()
     const { preferences, fetchPreferences } = usePreferences()
-    const { selectLedger } = useLedger()
+    const ledgerContext = useLedgerContext()
     const router = useRouter()
 
     const resetUserScopedState = (options?: { keepPreferencesNeeded?: boolean }) => {
@@ -75,13 +75,7 @@ export default defineNuxtPlugin({
         }
 
         const defaultLedgerId = preferences.value?.default_ledger_id
-        if (defaultLedgerId) {
-          try {
-            await selectLedger(defaultLedgerId)
-          } catch {
-            // Fallback to manual selection if default ledger is unavailable.
-          }
-        }
+        await ledgerContext.ensureLedger(defaultLedgerId ?? undefined)
       } catch {
         // On error, redirect to login
         await router.push('/auth/login')
@@ -98,6 +92,15 @@ export default defineNuxtPlugin({
         }
       },
       { immediate: true }
+    )
+
+    watch(
+      () => accessToken.value,
+      async (token) => {
+        if (!token || sessionExpired.value) return
+        const defaultLedgerId = preferences.value?.default_ledger_id
+        await ledgerContext.ensureLedger(defaultLedgerId ?? undefined)
+      }
     )
   }
 })
