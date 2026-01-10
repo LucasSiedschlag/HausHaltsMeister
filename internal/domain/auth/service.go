@@ -351,7 +351,7 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 		return s.createSession(ctx, user, userAgent, ip, nil, true)
 	}
 
-	if err != nil && !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, ErrNotFound) {
 		return AuthResult{}, err
 	}
 
@@ -395,7 +395,7 @@ func (s *Service) handleOAuthProfile(ctx context.Context, provider string, profi
 		return s.createSession(ctx, user, userAgent, ip, nil, true)
 	}
 
-	if err != nil && !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, ErrNotFound) {
 		return AuthResult{}, err
 	}
 

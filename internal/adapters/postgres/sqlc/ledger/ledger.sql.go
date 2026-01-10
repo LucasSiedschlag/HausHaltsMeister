@@ -12,14 +12,22 @@ import (
 )
 
 const addMember = `-- name: AddMember :one
-INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (ledger_id, user_id) DO UPDATE
-SET role = EXCLUDED.role,
-  removed_at = NULL,
-  updated_at = EXCLUDED.updated_at
-WHERE ledger_members.removed_at IS NOT NULL
-RETURNING ledger_id, user_id, role, created_at, updated_at
+WITH upserted AS (
+  INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
+  VALUES ($1, $2, $3, $4)
+  ON CONFLICT (ledger_id, user_id) DO UPDATE
+  SET role = EXCLUDED.role,
+    removed_at = NULL,
+    updated_at = EXCLUDED.updated_at
+  WHERE ledger_members.removed_at IS NOT NULL
+  RETURNING ledger_id, user_id, role, created_at, updated_at
+)
+SELECT upserted.ledger_id, upserted.user_id, upserted.role, upserted.created_at, upserted.updated_at,
+  COALESCE(u.display_name, '') AS display_name,
+  u.email,
+  u.avatar_url
+FROM upserted
+JOIN users u ON u.id = upserted.user_id
 `
 
 type AddMemberParams struct {
@@ -30,11 +38,14 @@ type AddMemberParams struct {
 }
 
 type AddMemberRow struct {
-	LedgerID  pgtype.UUID
-	UserID    pgtype.UUID
-	Role      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	LedgerID    pgtype.UUID
+	UserID      pgtype.UUID
+	Role        string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DisplayName string
+	Email       string
+	AvatarUrl   pgtype.Text
 }
 
 func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) (AddMemberRow, error) {
@@ -51,6 +62,9 @@ func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) (AddMember
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisplayName,
+		&i.Email,
+		&i.AvatarUrl,
 	)
 	return i, err
 }
@@ -230,18 +244,25 @@ func (q *Queries) ListLedgersForUser(ctx context.Context, ownerUserID pgtype.UUI
 
 const listMembers = `-- name: ListMembers :many
 
-SELECT ledger_id, user_id, role, created_at, updated_at
-FROM ledger_members
-WHERE ledger_id = $1 AND removed_at IS NULL
-ORDER BY created_at
+SELECT lm.ledger_id, lm.user_id, lm.role, lm.created_at, lm.updated_at,
+  COALESCE(u.display_name, '') AS display_name,
+  u.email,
+  u.avatar_url
+FROM ledger_members lm
+JOIN users u ON u.id = lm.user_id
+WHERE lm.ledger_id = $1 AND lm.removed_at IS NULL
+ORDER BY lm.created_at
 `
 
 type ListMembersRow struct {
-	LedgerID  pgtype.UUID
-	UserID    pgtype.UUID
-	Role      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	LedgerID    pgtype.UUID
+	UserID      pgtype.UUID
+	Role        string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DisplayName string
+	Email       string
+	AvatarUrl   pgtype.Text
 }
 
 // Members
@@ -260,6 +281,9 @@ func (q *Queries) ListMembers(ctx context.Context, ledgerID pgtype.UUID) ([]List
 			&i.Role,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisplayName,
+			&i.Email,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -315,10 +339,18 @@ func (q *Queries) UpdateLedger(ctx context.Context, arg UpdateLedgerParams) (Led
 }
 
 const updateMemberRole = `-- name: UpdateMemberRole :one
-UPDATE ledger_members
-SET role = $3, updated_at = $4
-WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
-RETURNING ledger_id, user_id, role, created_at, updated_at
+WITH updated AS (
+  UPDATE ledger_members
+  SET role = $3, updated_at = $4
+  WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
+  RETURNING ledger_id, user_id, role, created_at, updated_at
+)
+SELECT updated.ledger_id, updated.user_id, updated.role, updated.created_at, updated.updated_at,
+  COALESCE(u.display_name, '') AS display_name,
+  u.email,
+  u.avatar_url
+FROM updated
+JOIN users u ON u.id = updated.user_id
 `
 
 type UpdateMemberRoleParams struct {
@@ -329,11 +361,14 @@ type UpdateMemberRoleParams struct {
 }
 
 type UpdateMemberRoleRow struct {
-	LedgerID  pgtype.UUID
-	UserID    pgtype.UUID
-	Role      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	LedgerID    pgtype.UUID
+	UserID      pgtype.UUID
+	Role        string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DisplayName string
+	Email       string
+	AvatarUrl   pgtype.Text
 }
 
 func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (UpdateMemberRoleRow, error) {
@@ -350,6 +385,9 @@ func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRolePara
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisplayName,
+		&i.Email,
+		&i.AvatarUrl,
 	)
 	return i, err
 }

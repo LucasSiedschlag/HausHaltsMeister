@@ -1479,6 +1479,9 @@ components:
           type: boolean
         notify_payables:
           type: boolean
+        default_ledger_id:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -1512,6 +1515,9 @@ components:
           type: boolean
         notify_payables:
           type: boolean
+        default_ledger_id:
+          type: string
+          nullable: true
     Ledger:
       type: object
       properties:
@@ -1546,6 +1552,13 @@ components:
           type: string
         role:
           type: string
+        display_name:
+          type: string
+        email:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -1569,6 +1582,8 @@ components:
       type: object
       properties:
         user_id:
+          type: string
+        email:
           type: string
         role:
           type: string

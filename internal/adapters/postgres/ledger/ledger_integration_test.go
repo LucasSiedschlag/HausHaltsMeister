@@ -57,3 +57,50 @@ func TestCreateLedgerCreatesOwnerMember(t *testing.T) {
 	require.Equal(t, "owner", ledgers[0].Role)
 	require.WithinDuration(t, time.Now().UTC(), ledgers[0].Ledger.CreatedAt, time.Second*5)
 }
+
+func TestListMembersIncludesProfile(t *testing.T) {
+	ctx := context.Background()
+	postgrestest.SkipIfDockerUnavailable(t)
+
+	pgContainer, err := postgres.Run(ctx,
+		"postgres:16-alpine",
+		postgres.WithDatabase("hhm"),
+		postgres.WithUsername("hhm"),
+		postgres.WithPassword("hhm"),
+	)
+	require.NoError(t, err)
+	defer func() { _ = pgContainer.Terminate(ctx) }()
+
+	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
+	require.NoError(t, err)
+
+	require.NoError(t, postgrestest.WaitForPostgres(ctx, connStr))
+	require.NoError(t, postgrestest.ApplyMigrations(ctx, connStr))
+
+	store, err := pgstore.NewStore(ctx, connStr)
+	require.NoError(t, err)
+	defer store.Close()
+
+	repo := NewRepository(store)
+	service := ledger.NewService(repo)
+
+	conn, err := pgx.Connect(ctx, connStr)
+	require.NoError(t, err)
+	defer conn.Close(ctx)
+
+	_, err = conn.Exec(ctx, `
+		INSERT INTO users (id, email, display_name, avatar_url)
+		VALUES ($1, $2, $3, $4)
+	`, "00000000-0000-0000-0000-000000000001", "user@example.com", "User Name", "https://example.com/avatar.png")
+	require.NoError(t, err)
+
+	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL")
+	require.NoError(t, err)
+
+	members, err := service.ListMembers(ctx, "00000000-0000-0000-0000-000000000001", created.ID)
+	require.NoError(t, err)
+	require.Len(t, members, 1)
+	require.Equal(t, "User Name", members[0].DisplayName)
+	require.Equal(t, "user@example.com", members[0].Email)
+	require.Equal(t, "https://example.com/avatar.png", *members[0].AvatarURL)
+}

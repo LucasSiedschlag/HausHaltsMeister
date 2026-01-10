@@ -157,7 +157,8 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
   "font_scale": "md",
   "notify_card_close": true,
   "notify_budget_over": true,
-  "notify_payables": true
+  "notify_payables": true,
+  "default_ledger_id": "uuid"
 }
 ```
 
@@ -187,7 +188,8 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
   "font_scale": "lg",
   "notify_card_close": false,
   "notify_budget_over": true,
-  "notify_payables": true
+  "notify_payables": true,
+  "default_ledger_id": "uuid"
 }
 ```
 
@@ -197,6 +199,9 @@ Este modulo cobre sessao com access token curto + refresh token, alem de OAuth p
 5) Errors
 - 401 `AUTH_INVALID_CREDENTIALS`
 - 422 `VALIDATION_ERROR`
+
+6) Semantics / Notes
+- `default_ledger_id` pode ser `null` para limpar a preferencia.
 
 ### GET /auth/oauth/{provider}/start (Frontend)
 1) Summary / Purpose

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
+	"strings"
 
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/dto"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
@@ -11,6 +13,11 @@ import (
 
 type PreferencesHandler struct {
 	Service *preferences.Service
+	Ledger  PreferencesLedgerService
+}
+
+type PreferencesLedgerService interface {
+	GetMembership(ctx context.Context, userID, ledgerID string) (string, error)
 }
 
 func (h *PreferencesHandler) Register(g *echo.Group) {
@@ -45,16 +52,31 @@ func (h *PreferencesHandler) UpdatePreferences(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", details)
 	}
 
+	defaultLedgerIDSet := req.DefaultLedgerID.Set
+	var defaultLedgerID *string
+	if req.DefaultLedgerID.Set && req.DefaultLedgerID.Value != nil {
+		trimmed := strings.TrimSpace(*req.DefaultLedgerID.Value)
+		defaultLedgerID = &trimmed
+	}
+
+	if defaultLedgerIDSet && defaultLedgerID != nil && h.Ledger != nil {
+		if _, err := h.Ledger.GetMembership(c.Request().Context(), user.ID, *defaultLedgerID); err != nil {
+			return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"default_ledger_id": "invalid"})
+		}
+	}
+
 	updated, err := h.Service.Update(c.Request().Context(), user.ID, preferences.UpdateParams{
-		ThemeMode:        req.ThemeMode,
-		ThemePalette:     req.ThemePalette,
-		ThemeTone:        req.ThemeTone,
-		Locale:           req.Locale,
-		CompactMode:      req.CompactMode,
-		FontScale:        req.FontScale,
-		NotifyCardClose:  req.NotifyCardClose,
-		NotifyBudgetOver: req.NotifyBudgetOver,
-		NotifyPayables:   req.NotifyPayables,
+		ThemeMode:          req.ThemeMode,
+		ThemePalette:       req.ThemePalette,
+		ThemeTone:          req.ThemeTone,
+		Locale:             req.Locale,
+		CompactMode:        req.CompactMode,
+		FontScale:          req.FontScale,
+		NotifyCardClose:    req.NotifyCardClose,
+		NotifyBudgetOver:   req.NotifyBudgetOver,
+		NotifyPayables:     req.NotifyPayables,
+		DefaultLedgerID:    defaultLedgerID,
+		DefaultLedgerIDSet: defaultLedgerIDSet,
 	})
 	if err != nil {
 		if err == preferences.ErrInvalidPreferences {
@@ -78,6 +100,7 @@ func preferencesResponseFrom(prefs preferences.UserPreferences) dto.UserPreferen
 		NotifyCardClose:  prefs.NotifyCardClose,
 		NotifyBudgetOver: prefs.NotifyBudgetOver,
 		NotifyPayables:   prefs.NotifyPayables,
+		DefaultLedgerID:  prefs.DefaultLedgerID,
 		CreatedAt:        prefs.CreatedAt,
 		UpdatedAt:        prefs.UpdatedAt,
 	}
@@ -102,6 +125,12 @@ func validatePreferencesRequest(req dto.UserPreferencesRequest) map[string]strin
 	allowed(req.Locale, map[string]struct{}{"pt-BR": {}, "en-US": {}}, "locale")
 	allowed(req.CompactMode, map[string]struct{}{"comfortable": {}, "compact": {}, "dense": {}}, "compact_mode")
 	allowed(req.FontScale, map[string]struct{}{"sm": {}, "md": {}, "lg": {}}, "font_scale")
+	if req.DefaultLedgerID.Set && req.DefaultLedgerID.Value != nil {
+		value := strings.TrimSpace(*req.DefaultLedgerID.Value)
+		if value == "" || !httpx.IsUUID(value) {
+			details["default_ledger_id"] = "invalid"
+		}
+	}
 
 	return details
 }

@@ -3,6 +3,7 @@ package ledger
 import (
 	"context"
 	"errors"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -19,6 +20,7 @@ type Repository interface {
 	AddMember(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (Member, error)
 	UpdateMemberRole(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (Member, error)
 	RemoveMember(ctx context.Context, ledgerID, userID string) error
+	GetUserIDByEmail(ctx context.Context, email string) (string, error)
 }
 
 type CreateLedgerParams struct {
@@ -94,7 +96,7 @@ func (s *Service) DeleteLedger(ctx context.Context, userID, ledgerID string) err
 }
 
 func (s *Service) ListMembers(ctx context.Context, userID, ledgerID string) ([]Member, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "owner"); err != nil {
+	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
 		return nil, err
 	}
 	return s.repo.ListMembers(ctx, ledgerID)
@@ -121,6 +123,27 @@ func (s *Service) AddMember(ctx context.Context, userID, ledgerID, memberUserID,
 		return Member{}, err
 	}
 	return member, nil
+}
+
+func (s *Service) AddMemberByEmail(ctx context.Context, userID, ledgerID, email, role string) (Member, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "owner"); err != nil {
+		return Member{}, err
+	}
+
+	email = normalizeEmail(email)
+	if !isValidEmail(email) {
+		return Member{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"email": "invalid"})
+	}
+
+	memberUserID, err := s.repo.GetUserIDByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return Member{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"email": "not_found"})
+		}
+		return Member{}, err
+	}
+
+	return s.AddMember(ctx, userID, ledgerID, memberUserID, role)
 }
 
 func (s *Service) UpdateMember(ctx context.Context, userID, ledgerID, memberUserID, role string) (Member, error) {
@@ -215,4 +238,13 @@ func roleRank(role string) int {
 	default:
 		return 0
 	}
+}
+
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func isValidEmail(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
 }

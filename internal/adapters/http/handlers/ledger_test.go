@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LucasSiedschlag/HausHaltsMeister/internal/adapters/http/httpx"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/auth"
 	"github.com/LucasSiedschlag/HausHaltsMeister/internal/domain/ledger"
 	"github.com/labstack/echo/v4"
@@ -50,6 +51,10 @@ func (f fakeLedgerService) AddMember(ctx context.Context, userID, ledgerID, memb
 	return ledger.Member{}, nil
 }
 
+func (f fakeLedgerService) AddMemberByEmail(ctx context.Context, userID, ledgerID, email, role string) (ledger.Member, error) {
+	return ledger.Member{}, nil
+}
+
 func (f fakeLedgerService) UpdateMember(ctx context.Context, userID, ledgerID, memberUserID, role string) (ledger.Member, error) {
 	return ledger.Member{}, nil
 }
@@ -77,4 +82,30 @@ func TestUpdateLedgerAccessDenied(t *testing.T) {
 	err = handler.UpdateLedger(c)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestAddMemberRejectsInvalidUserID(t *testing.T) {
+	e := echo.New()
+	payload := map[string]string{"user_id": "not-a-uuid", "role": "viewer"}
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/ledgers/11111111-1111-1111-1111-111111111111/members", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("ledgerId")
+	c.SetParamValues("11111111-1111-1111-1111-111111111111")
+	c.Set("user", auth.User{ID: "user-1"})
+
+	handler := LedgerHandler{Service: fakeLedgerService{}}
+
+	err = handler.AddMember(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+
+	var resp httpx.ErrorResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "VALIDATION_ERROR", resp.Code)
+	require.Equal(t, "invalid", resp.Details["user_id"])
 }

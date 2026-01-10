@@ -26,6 +26,7 @@ export type UserPreferences = {
   notify_card_close: boolean
   notify_budget_over: boolean
   notify_payables: boolean
+  default_ledger_id: string | null
   created_at: string
   updated_at?: string | null
 }
@@ -42,6 +43,7 @@ type PreferencesUpdate = Partial<
     | 'notify_card_close'
     | 'notify_budget_over'
     | 'notify_payables'
+    | 'default_ledger_id'
   >
 >
 
@@ -60,7 +62,29 @@ export const usePreferences = () => {
   const api = useApiClient()
   const { accessToken } = useAuth()
   const colorMode = useColorMode()
-  const { locale, setLocale } = useI18n()
+  const nuxtApp = useNuxtApp()
+  const i18n = nuxtApp.$i18n
+
+  const getLocale = () => {
+    if (!i18n) return null
+    const localeValue = (i18n.locale as { value?: string } | string | undefined)
+    if (typeof localeValue === 'string') {
+      return localeValue
+    }
+    return localeValue?.value ?? null
+  }
+
+  const setLocaleSafe = async (value: Locale) => {
+    if (!i18n) return
+    if (typeof i18n.setLocale === 'function') {
+      await i18n.setLocale(value)
+      return
+    }
+    const localeValue = i18n.locale as { value?: string } | string | undefined
+    if (localeValue && typeof localeValue === 'object' && 'value' in localeValue) {
+      localeValue.value = value
+    }
+  }
 
   const ensureAccessToken = async () => {
     return Boolean(accessToken.value)
@@ -75,10 +99,11 @@ export const usePreferences = () => {
         ? localeMatch[1]
         : null
     colorMode.preference = prefs.theme_mode
-    if (!routeLocale && locale.value !== prefs.locale) {
-      void setLocale(prefs.locale)
-    } else if (routeLocale === prefs.locale && locale.value !== routeLocale) {
-      void setLocale(routeLocale)
+    const currentLocale = getLocale()
+    if (!routeLocale && currentLocale && currentLocale !== prefs.locale) {
+      void setLocaleSafe(prefs.locale)
+    } else if (routeLocale === prefs.locale && currentLocale !== routeLocale) {
+      void setLocaleSafe(routeLocale)
     }
     applyThemeAttributes(prefs)
   }

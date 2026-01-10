@@ -1,7 +1,7 @@
 # Implementação de Ledger Padrão e Gestão de Membros
 
 **Data**: 2026-01-05
-**Status**: Planejado
+**Status**: Implementado
 **Objetivo**: Permitir que usuários definam um ledger padrão nas preferências e gerenciem membros/permissões
 
 ---
@@ -37,7 +37,7 @@ type UserPreferences struct {
 }
 ```
 
-#### Na Migration 001
+#### Na Migration 002
 
 ```sql
 ALTER TABLE user_preferences
@@ -52,18 +52,18 @@ Atualizar endpoints GET/PUT para incluir `default_ledger_id`.
 
 ### 2. Backend - API de Membros do Ledger
 
-#### `internal/domain/ledger/member.go` (novo)
+#### `internal/domain/ledger/models.go`
 
 ```go
-type LedgerMember struct {
-    ID          string    `json:"id"`
-    LedgerID    string    `json:"ledger_id"`
-    UserID      string    `json:"user_id"`
-    Role        string    `json:"role"` // owner, editor, viewer
-    DisplayName string    `json:"display_name"`
-    Email       string    `json:"email"`
-    AvatarURL   string    `json:"avatar_url,omitempty"`
-    JoinedAt    time.Time `json:"joined_at"`
+type Member struct {
+    LedgerID    string     `json:"ledger_id"`
+    UserID      string     `json:"user_id"`
+    Role        string     `json:"role"` // owner, editor, viewer
+    DisplayName string     `json:"display_name"`
+    Email       string     `json:"email"`
+    AvatarURL   *string    `json:"avatar_url,omitempty"`
+    CreatedAt   time.Time  `json:"created_at"`
+    UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 }
 ```
 
@@ -75,7 +75,7 @@ Novos endpoints:
 | ------ | -------------------------------- | -------------------------- |
 | GET    | `/ledgers/:ledgerId/members`     | Lista membros              |
 | POST   | `/ledgers/:ledgerId/members`     | Convida membro (por email) |
-| PUT    | `/ledgers/:ledgerId/members/:id` | Atualiza permissão         |
+| PATCH  | `/ledgers/:ledgerId/members/:id` | Atualiza permissão         |
 | DELETE | `/ledgers/:ledgerId/members/:id` | Remove membro              |
 
 ---
@@ -164,18 +164,18 @@ flowchart TD
 
 ## Tarefas Ordenadas
 
-1. [ ] Migration: adicionar `default_ledger_id` na tabela
-2. [ ] Backend: atualizar entity e repository de preferences
-3. [ ] Backend: atualizar handlers de preferences
-4. [ ] Backend: criar entity e repository de ledger_members
-5. [ ] Backend: criar handlers de ledger_members
-6. [ ] Frontend: atualizar types em usePreferences
-7. [ ] Frontend: criar composable useLedgerMembers
-8. [ ] Frontend: implementar UI de ledger padrão em settings
-9. [ ] Frontend: implementar UI de lista de membros
-10. [ ] Frontend: implementar modal de convite
-11. [ ] Frontend: atualizar auth-bootstrap para usar default_ledger_id
-12. [ ] Testes e ajustes finais
+1. [x] Migration: adicionar `default_ledger_id` na tabela
+2. [x] Backend: atualizar entity e repository de preferences
+3. [x] Backend: atualizar handlers de preferences
+4. [x] Backend: atualizar entity e repository de ledger_members
+5. [x] Backend: atualizar handlers de ledger_members
+6. [x] Frontend: atualizar types em usePreferences
+7. [x] Frontend: criar composable useLedgerMembers
+8. [x] Frontend: implementar UI de ledger padrão em settings
+9. [x] Frontend: implementar UI de lista de membros
+10. [x] Frontend: implementar modal de convite
+11. [x] Frontend: atualizar auth-bootstrap para usar default_ledger_id
+12. [x] Testes e ajustes finais
 
 ---
 
@@ -191,9 +191,9 @@ flowchart TD
 
 ## Verificação
 
-- [ ] Ao fazer login, o ledger padrão é ativado automaticamente
-- [ ] Se não há ledger padrão, o LedgerSwitcher funciona normalmente
-- [ ] Usuário pode alterar ledger padrão nas configurações
-- [ ] Lista de membros aparece corretamente para cada ledger
-- [ ] Convite por email funciona (owner/editor apenas)
-- [ ] Permissões são respeitadas (viewer não pode editar nada)
+- [x] Ao fazer login, o ledger padrão é ativado automaticamente
+- [x] Se não há ledger padrão, o LedgerSwitcher funciona normalmente
+- [x] Usuário pode alterar ledger padrão nas configurações
+- [x] Lista de membros aparece corretamente para cada ledger
+- [x] Convite por email funciona (owner/editor apenas)
+- [x] Permissões são respeitadas (viewer não pode editar nada)

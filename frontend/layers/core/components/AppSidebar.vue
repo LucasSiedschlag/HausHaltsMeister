@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarRail
 } from '@shared/components/ui/sidebar'
-import { Calendar, CreditCard, LayoutDashboard, LineChart, Send, Settings, Tag, Wallet } from 'lucide-vue-next'
+import { Calendar, CreditCard, Crown, Eye, LayoutDashboard, LineChart, Pencil, Send, Settings, Tag, Wallet } from 'lucide-vue-next'
 import { useRoute } from '#imports'
 import NavMain from './NavMain.vue'
 import NavProjects from './NavProjects.vue'
@@ -24,16 +24,33 @@ import { useLedger } from '@shared/composables/useLedger'
 const { t } = useI18n()
 const { currentLedger, currentLedgerId, ledgers, fetchLedgers } = useLedger()
 
-const roleLabel = computed(() => {
-  const role = currentLedger.value?.role
-  return role ? t(`ledgers.roles.${role}`) : t('ledgers.roles.unknown')
-})
-const roleHint = computed(() => {
-  const role = currentLedger.value?.role
-  if (!role) return ''
-  return t(`sidebar.footer.roleHint.${role}`)
-})
 const ledgerName = computed(() => currentLedger.value?.name || t('ledgers.sidebar.placeholder'))
+const roleMeta = computed(() => {
+  const role = currentLedger.value?.role
+  if (role === 'owner') {
+    return { icon: Crown, class: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' }
+  }
+  if (role === 'editor') {
+    return { icon: Pencil, class: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300' }
+  }
+  if (role === 'viewer') {
+    return { icon: Eye, class: 'border-muted-foreground/30 bg-muted/50 text-muted-foreground' }
+  }
+  return { icon: Eye, class: 'border-muted-foreground/30 bg-muted/50 text-muted-foreground' }
+})
+const roleIconClass = computed(() => {
+  const role = currentLedger.value?.role
+  if (role === 'owner') {
+    return 'text-emerald-600 dark:text-emerald-300'
+  }
+  if (role === 'editor') {
+    return 'text-sky-600 dark:text-sky-300'
+  }
+  if (role === 'viewer') {
+    return 'text-muted-foreground'
+  }
+  return 'text-muted-foreground'
+})
 
 const route = useRoute()
 
@@ -77,10 +94,14 @@ const navProjects = computed(() =>
       item.key === 'ledgerMain'
         ? currentLedger.value?.name || t('ledgers.sidebar.placeholder')
         : t(`sidebar.projects.${item.key}`)
+    const icon = item.key === 'ledgerMain' && currentLedger.value ? roleMeta.value.icon : item.icon
+    const iconClass =
+      item.key === 'ledgerMain' && currentLedger.value ? roleIconClass.value : undefined
     return {
       title,
       url: item.url,
-      icon: item.icon,
+      icon,
+      iconClass,
       isActive: isActiveRoute(item.url)
     }
   })
@@ -147,9 +168,12 @@ const navSecondary = computed(() =>
         data-sidebar="footer"
         class="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
       >
-        <p class="font-medium text-foreground">{{ ledgerName }}</p>
-        <p>{{ t('sidebar.footer.roleLabel', { role: roleLabel }) }}</p>
-        <p v-if="roleHint">{{ roleHint }}</p>
+        <p class="flex items-center gap-2 font-medium text-foreground">
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border" :class="roleMeta.class">
+            <component :is="roleMeta.icon" class="h-3.5 w-3.5" />
+          </span>
+          <span class="truncate">{{ ledgerName }}</span>
+        </p>
       </div>
       <NavUser />
     </SidebarFooter>

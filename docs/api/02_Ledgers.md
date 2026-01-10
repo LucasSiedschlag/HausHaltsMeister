@@ -271,7 +271,16 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 200
 ```json
 [
-  { "ledger_id": "uuid", "user_id": "uuid", "role": "viewer", "created_at": "...", "updated_at": "..." }
+  {
+    "ledger_id": "uuid",
+    "user_id": "uuid",
+    "role": "viewer",
+    "display_name": "Nome",
+    "email": "user@example.com",
+    "avatar_url": "https://...",
+    "created_at": "...",
+    "updated_at": "..."
+  }
 ]
 ```
 
@@ -279,7 +288,7 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
-- Nao expor dados sensiveis de usuario.
+- Expor apenas nome, email e avatar (sem dados sensiveis adicionais).
 
 7) Pagination
 - n/a.
@@ -299,13 +308,22 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 3) Request
 - Body:
 ```json
-{ "user_id": "uuid", "role": "viewer" }
+{ "user_id": "uuid", "email": "user@example.com", "role": "viewer" }
 ```
 
 4) Response
 - 201
 ```json
-{ "ledger_id": "uuid", "user_id": "uuid", "role": "viewer", "created_at": "...", "updated_at": "..." }
+{
+  "ledger_id": "uuid",
+  "user_id": "uuid",
+  "role": "viewer",
+  "display_name": "Nome",
+  "email": "user@example.com",
+  "avatar_url": "https://...",
+  "created_at": "...",
+  "updated_at": "..."
+}
 ```
 
 5) Errors
@@ -313,6 +331,7 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
+- Enviar `user_id` **ou** `email` (um dos dois).
 - Validar role.
 
 7) Pagination

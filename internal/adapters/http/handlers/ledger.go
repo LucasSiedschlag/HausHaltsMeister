@@ -26,6 +26,7 @@ type LedgerService interface {
 	DeleteLedger(ctx context.Context, userID, ledgerID string) error
 	ListMembers(ctx context.Context, userID, ledgerID string) ([]ledger.Member, error)
 	AddMember(ctx context.Context, userID, ledgerID, memberUserID, role string) (ledger.Member, error)
+	AddMemberByEmail(ctx context.Context, userID, ledgerID, email, role string) (ledger.Member, error)
 	UpdateMember(ctx context.Context, userID, ledgerID, memberUserID, role string) (ledger.Member, error)
 	RemoveMember(ctx context.Context, userID, ledgerID, memberUserID string) error
 }
@@ -52,7 +53,7 @@ func (h *LedgerHandler) Register(g *echo.Group, guards LedgerGuards) {
 	g.PATCH("/:ledgerId", h.UpdateLedger, guards.Editor)
 	g.DELETE("/:ledgerId", h.DeleteLedger, guards.Owner)
 
-	g.GET("/:ledgerId/members", h.ListMembers, guards.Owner)
+	g.GET("/:ledgerId/members", h.ListMembers, guards.Viewer)
 	g.POST("/:ledgerId/members", h.AddMember, guards.Owner)
 	g.PATCH("/:ledgerId/members/:userId", h.UpdateMember, guards.Owner)
 	g.DELETE("/:ledgerId/members/:userId", h.DeleteMember, guards.Owner)
@@ -226,11 +227,14 @@ func (h *LedgerHandler) ListMembers(c echo.Context) error {
 	response := make([]memberResponse, 0, len(members))
 	for _, member := range members {
 		response = append(response, memberResponse{
-			LedgerID:  member.LedgerID,
-			UserID:    member.UserID,
-			Role:      member.Role,
-			CreatedAt: member.CreatedAt,
-			UpdatedAt: member.UpdatedAt,
+			LedgerID:    member.LedgerID,
+			UserID:      member.UserID,
+			Role:        member.Role,
+			DisplayName: member.DisplayName,
+			Email:       member.Email,
+			AvatarURL:   member.AvatarURL,
+			CreatedAt:   member.CreatedAt,
+			UpdatedAt:   member.UpdatedAt,
 		})
 	}
 	return c.JSON(http.StatusOK, response)
@@ -252,30 +256,55 @@ func (h *LedgerHandler) AddMember(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	if strings.TrimSpace(req.UserID) == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "required"})
+	memberID := strings.TrimSpace(req.UserID)
+	memberEmail := strings.TrimSpace(req.Email)
+	if memberID == "" && memberEmail == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{
+			"user_id": "required",
+		})
+	}
+	if memberID != "" && memberEmail != "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{
+			"user_id": "conflict",
+			"email":   "conflict",
+		})
+	}
+	if memberID != "" && !httpx.IsUUID(memberID) {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"user_id": "invalid"})
 	}
 
-	member, err := h.Service.AddMember(c.Request().Context(), user.ID, ledgerID, req.UserID, req.Role)
-	if err != nil {
-		return httpx.WriteAppError(c, err)
+	var (
+		member    ledger.Member
+		memberErr error
+	)
+	if memberEmail != "" {
+		member, memberErr = h.Service.AddMemberByEmail(c.Request().Context(), user.ID, ledgerID, memberEmail, req.Role)
+	} else {
+		member, memberErr = h.Service.AddMember(c.Request().Context(), user.ID, ledgerID, memberID, req.Role)
+	}
+	if memberErr != nil {
+		return httpx.WriteAppError(c, memberErr)
 	}
 
+	entityID := member.UserID
 	recordAudit(c, h.Audit, audit.Event{
 		LedgerID:  ledgerID,
 		UserID:    user.ID,
 		Action:    "ledger.member.add",
-		EntityID:  &req.UserID,
+		EntityID:  &entityID,
 		IP:        c.RealIP(),
 		UserAgent: c.Request().UserAgent(),
 	})
 
 	return c.JSON(http.StatusCreated, memberResponse{
-		LedgerID:  member.LedgerID,
-		UserID:    member.UserID,
-		Role:      member.Role,
-		CreatedAt: member.CreatedAt,
-		UpdatedAt: member.UpdatedAt,
+		LedgerID:    member.LedgerID,
+		UserID:      member.UserID,
+		Role:        member.Role,
+		DisplayName: member.DisplayName,
+		Email:       member.Email,
+		AvatarURL:   member.AvatarURL,
+		CreatedAt:   member.CreatedAt,
+		UpdatedAt:   member.UpdatedAt,
 	})
 }
 
@@ -314,11 +343,14 @@ func (h *LedgerHandler) UpdateMember(c echo.Context) error {
 	})
 
 	return c.JSON(http.StatusOK, memberResponse{
-		LedgerID:  member.LedgerID,
-		UserID:    member.UserID,
-		Role:      member.Role,
-		CreatedAt: member.CreatedAt,
-		UpdatedAt: member.UpdatedAt,
+		LedgerID:    member.LedgerID,
+		UserID:      member.UserID,
+		Role:        member.Role,
+		DisplayName: member.DisplayName,
+		Email:       member.Email,
+		AvatarURL:   member.AvatarURL,
+		CreatedAt:   member.CreatedAt,
+		UpdatedAt:   member.UpdatedAt,
 	})
 }
 

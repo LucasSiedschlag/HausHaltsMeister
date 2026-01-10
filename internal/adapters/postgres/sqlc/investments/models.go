@@ -264,4 +264,5 @@ type UserPreference struct {
 	NotifyPayables   bool
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
+	DefaultLedgerID  pgtype.UUID
 }

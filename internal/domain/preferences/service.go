@@ -65,6 +65,9 @@ func (s *Service) Update(ctx context.Context, userID string, input UpdateParams)
 	if input.NotifyPayables != nil {
 		current.NotifyPayables = *input.NotifyPayables
 	}
+	if input.DefaultLedgerIDSet {
+		current.DefaultLedgerID = input.DefaultLedgerID
+	}
 
 	if err := validatePreferences(current); err != nil {
 		return UserPreferences{}, err

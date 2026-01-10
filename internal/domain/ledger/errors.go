@@ -30,6 +30,7 @@ func NewError(code, message string, details map[string]string) *Error {
 
 var (
 	ErrNotFound       = errors.New("not_found")
+	ErrUserNotFound   = errors.New("user_not_found")
 	ErrAccessDenied   = NewError("LEDGER_ACCESS_DENIED", "Acesso negado ao ledger", nil)
 	ErrLedgerNotFound = NewError("LEDGER_NOT_FOUND", "Ledger nao encontrado", nil)
 	ErrMemberExists   = NewError("MEMBER_ALREADY_EXISTS", "Membro já existe", nil)

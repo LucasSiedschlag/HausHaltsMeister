@@ -9,10 +9,11 @@ import (
 )
 
 type fakeRepo struct {
-	role   string
-	exists bool
-	added  Member
-	ledger Ledger
+	role        string
+	exists      bool
+	added       Member
+	ledger      Ledger
+	userByEmail map[string]string
 }
 
 func (f *fakeRepo) ListLedgersForUser(ctx context.Context, userID string) ([]LedgerWithRole, error) {
@@ -63,6 +64,15 @@ func (f *fakeRepo) RemoveMember(ctx context.Context, ledgerID, userID string) er
 	return nil
 }
 
+func (f *fakeRepo) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
+	if f.userByEmail != nil {
+		if userID, ok := f.userByEmail[email]; ok {
+			return userID, nil
+		}
+	}
+	return "", ErrUserNotFound
+}
+
 func TestAddMemberRequiresOwner(t *testing.T) {
 	repo := &fakeRepo{role: "viewer"}
 	service := NewService(repo)
@@ -88,12 +98,12 @@ func TestDeleteLedgerRequiresOwner(t *testing.T) {
 	require.Equal(t, ErrAccessDenied, err)
 }
 
-func TestListMembersRequiresOwner(t *testing.T) {
+func TestListMembersAllowsViewer(t *testing.T) {
 	repo := &fakeRepo{role: "viewer"}
 	service := NewService(repo)
 
 	_, err := service.ListMembers(context.Background(), "user-1", "ledger-1")
-	require.Equal(t, ErrAccessDenied, err)
+	require.NoError(t, err)
 }
 
 func TestUpdateMemberRequiresOwner(t *testing.T) {
@@ -136,6 +146,40 @@ func TestAddMemberSuccess(t *testing.T) {
 	service := NewService(repo)
 
 	member, err := service.AddMember(context.Background(), "user-1", "ledger-1", "user-2", "viewer")
+	require.NoError(t, err)
+	require.Equal(t, "user-2", member.UserID)
+	require.Equal(t, "viewer", member.Role)
+}
+
+func TestAddMemberByEmailInvalidEmail(t *testing.T) {
+	repo := &fakeRepo{role: "owner"}
+	service := NewService(repo)
+
+	_, err := service.AddMemberByEmail(context.Background(), "user-1", "ledger-1", "invalid", "viewer")
+	require.Error(t, err)
+	ledgerErr, ok := err.(*Error)
+	require.True(t, ok)
+	require.Equal(t, "VALIDATION_ERROR", ledgerErr.Code())
+	require.Equal(t, "invalid", ledgerErr.Details()["email"])
+}
+
+func TestAddMemberByEmailNotFound(t *testing.T) {
+	repo := &fakeRepo{role: "owner", userByEmail: map[string]string{}}
+	service := NewService(repo)
+
+	_, err := service.AddMemberByEmail(context.Background(), "user-1", "ledger-1", "user@example.com", "viewer")
+	require.Error(t, err)
+	ledgerErr, ok := err.(*Error)
+	require.True(t, ok)
+	require.Equal(t, "VALIDATION_ERROR", ledgerErr.Code())
+	require.Equal(t, "not_found", ledgerErr.Details()["email"])
+}
+
+func TestAddMemberByEmailSuccess(t *testing.T) {
+	repo := &fakeRepo{role: "owner", userByEmail: map[string]string{"user@example.com": "user-2"}}
+	service := NewService(repo)
+
+	member, err := service.AddMemberByEmail(context.Background(), "user-1", "ledger-1", "user@example.com", "viewer")
 	require.NoError(t, err)
 	require.Equal(t, "user-2", member.UserID)
 	require.Equal(t, "viewer", member.Role)

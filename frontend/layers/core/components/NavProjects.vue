@@ -10,6 +10,7 @@ type NavItem = {
   title: string
   url: string
   icon: Component
+  iconClass?: string
   isActive?: boolean
 }
 </script>
@@ -19,7 +20,7 @@ type NavItem = {
     <SidebarMenuItem v-for="item in items" :key="item.url">
       <SidebarMenuButton as-child :is-active="item.isActive" :tooltip="item.title">
         <NuxtLink :to="item.url">
-          <component :is="item.icon" />
+          <component :is="item.icon" :class="item.iconClass" />
           <span>{{ item.title }}</span>
         </NuxtLink>
       </SidebarMenuButton>

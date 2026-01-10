@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@shared/components/ui/alert-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar'
+import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
@@ -7,16 +9,22 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs'
+import { useLedger } from '@shared/composables/useLedger'
 import { usePreferences, type UserPreferences } from '@shared/composables/usePreferences'
 import { push } from 'notivue'
 import { useAuth } from '#layers/auth/composables/useAuth'
+import { useLedgerMembers, type LedgerMember } from '#layers/ledgers/composables/useLedgerMembers'
+import type { LedgerRole } from '#layers/shared/utils/ledger-roles'
 import { useDebounceFn } from '@vueuse/core'
+import { emailSchema, getInputClass, useInlineValidation } from '@shared/validators'
 
 const { t, locale, setLocale } = useI18n()
 
 const { user, listSessions, revokeSession, logoutAll, logout, clearSession } = useAuth()
 const router = useRouter()
 const { preferences, fetchPreferences, updatePreferences } = usePreferences()
+const { ledgers, fetchLedgers, isLoading: ledgersLoading } = useLedger()
+const { membersByLedger, loadingByLedger, fetchMembers, inviteMember, updateRole, removeMember } = useLedgerMembers()
 type LocaleOption = 'pt-BR' | 'en-US'
 type PreferencesUpdate = Partial<
   Pick<
@@ -30,15 +38,20 @@ type PreferencesUpdate = Partial<
     | 'notify_card_close'
     | 'notify_budget_over'
     | 'notify_payables'
+    | 'default_ledger_id'
   >
 >
 
-const savingSection = ref<'account' | 'notifications' | 'visual' | null>(null)
+const savingSection = ref<'account' | 'notifications' | 'visual' | 'ledger' | null>(null)
 const autosaveReady = ref(false)
 const autosaveAccountReady = ref(false)
 const autosaveVisualReady = ref(false)
+const autosaveLedgerReady = ref(false)
 const isHydrating = ref(true)
 const isLocaleSwitching = ref(false)
+const ledgerDataLoaded = ref(false)
+const inviteDialogOpen = ref(false)
+const inviteSaving = ref(false)
 
 const lastSavedAccount = reactive<{ locale: LocaleOption; theme_mode: 'light' | 'dark' | 'system' }>({
   locale: 'pt-BR',
@@ -55,6 +68,24 @@ const lastSavedVisual = reactive({
   theme_palette: 'default',
   theme_tone: 'vivid'
 })
+const lastSavedLedger = reactive<{ default_ledger_id: string | null }>({
+  default_ledger_id: null
+})
+const inviteForm = reactive<{ ledgerId: string; email: string; role: LedgerRole }>({
+  ledgerId: '',
+  email: '',
+  role: 'viewer'
+})
+const inviteEmail = computed(() => inviteForm.email)
+const inviteLedgerName = computed(() =>
+  ledgers.value.find((ledger) => ledger.id === inviteForm.ledgerId)?.name ?? ''
+)
+const {
+  touched: inviteTouched,
+  errors: inviteErrors,
+  touchField: touchInviteField,
+  validateAll: validateInvite
+} = useInlineValidation({ email: inviteEmail }, { email: emailSchema(t('settings.members.inviteEmail')) })
 
 const activeTab = ref('conta')
 const sessions = ref<Array<{
@@ -112,7 +143,8 @@ const form = reactive({
   font_scale: 'md' as 'sm' | 'md' | 'lg',
   notify_card_close: true,
   notify_budget_over: true,
-  notify_payables: true
+  notify_payables: true,
+  default_ledger_id: 'none' as string
 })
 
 const syncUser = () => {
@@ -131,6 +163,7 @@ const syncPreferences = () => {
   form.notify_card_close = preferences.value.notify_card_close
   form.notify_budget_over = preferences.value.notify_budget_over
   form.notify_payables = preferences.value.notify_payables
+  form.default_ledger_id = preferences.value.default_ledger_id ?? 'none'
 
   lastSavedAccount.locale = preferences.value.locale
   lastSavedAccount.theme_mode = preferences.value.theme_mode
@@ -141,10 +174,11 @@ const syncPreferences = () => {
   lastSavedVisual.font_scale = preferences.value.font_scale
   lastSavedVisual.theme_palette = preferences.value.theme_palette
   lastSavedVisual.theme_tone = preferences.value.theme_tone
+  lastSavedLedger.default_ledger_id = preferences.value.default_ledger_id
 }
 
 const saveSection = async (
-  section: 'account' | 'notifications' | 'visual',
+  section: 'account' | 'notifications' | 'visual' | 'ledger',
   payload: PreferencesUpdate
 ) => {
   savingSection.value = section
@@ -212,6 +246,18 @@ const saveVisual = async () => {
   }
 }
 
+const resolveDefaultLedgerSelection = () =>
+  form.default_ledger_id === 'none' ? null : form.default_ledger_id
+
+const saveDefaultLedger = async () => {
+  const updated = await saveSection('ledger', {
+    default_ledger_id: resolveDefaultLedgerSelection()
+  })
+  if (updated) {
+    lastSavedLedger.default_ledger_id = updated.default_ledger_id
+  }
+}
+
 const isAccountDirty = () => form.theme_mode !== lastSavedAccount.theme_mode
 
 const isNotificationsDirty = () =>
@@ -224,6 +270,9 @@ const isVisualDirty = () =>
   form.font_scale !== lastSavedVisual.font_scale ||
   form.theme_palette !== lastSavedVisual.theme_palette ||
   form.theme_tone !== lastSavedVisual.theme_tone
+
+const isLedgerDirty = () =>
+  resolveDefaultLedgerSelection() !== lastSavedLedger.default_ledger_id
 
 watch(user, syncUser, { immediate: true })
 watch(preferences, syncPreferences, { immediate: true })
@@ -242,6 +291,11 @@ const autosaveVisual = useDebounceFn(() => {
   if (!autosaveVisualReady.value || isHydrating.value || !isVisualDirty()) return
   saveVisual()
 }, 600)
+
+const autosaveLedger = useDebounceFn(() => {
+  if (!autosaveLedgerReady.value || isHydrating.value || !isLedgerDirty()) return
+  saveDefaultLedger()
+}, 500)
 
 watch(
   () => form.theme_mode,
@@ -282,11 +336,107 @@ watch(
   }
 )
 
+watch(
+  () => form.default_ledger_id,
+  () => {
+    autosaveLedger()
+  }
+)
+
+const loadLedgerData = async () => {
+  if (ledgerDataLoaded.value) return
+  await fetchLedgers()
+  if (ledgers.value.length > 0) {
+    await Promise.all(ledgers.value.map((ledger) => fetchMembers(ledger.id)))
+  }
+  ledgerDataLoaded.value = true
+}
+
+const membersForLedger = (ledgerId: string) => membersByLedger.value[ledgerId] ?? []
+const membersLoading = (ledgerId: string) => Boolean(loadingByLedger.value[ledgerId])
+
+const memberDisplayName = (member: LedgerMember) => member.display_name || member.email
+const memberInitials = (member: LedgerMember) => {
+  const source = memberDisplayName(member).trim()
+  if (!source) return '??'
+  const parts = source.split(' ').filter(Boolean)
+  const first = parts[0]?.[0] ?? source[0]
+  const second = parts.length > 1 ? parts[1]?.[0] : source[1]
+  return `${first ?? ''}${second ?? ''}`.toUpperCase()
+}
+
+const openInviteDialog = (ledgerId: string) => {
+  inviteForm.ledgerId = ledgerId
+  inviteForm.email = ''
+  inviteForm.role = 'viewer'
+  inviteTouched.email = false
+  inviteErrors.email = []
+  inviteDialogOpen.value = true
+}
+
+const handleInviteMember = async () => {
+  const email = inviteForm.email.trim()
+  inviteForm.email = email
+  if (!inviteForm.ledgerId) return
+  if (validateInvite()) return
+  inviteSaving.value = true
+  try {
+    await inviteMember(inviteForm.ledgerId, email.toLowerCase(), inviteForm.role)
+    push.success({
+      title: t('settings.members.inviteTitle'),
+      message: t('settings.members.inviteSuccess')
+    })
+    inviteDialogOpen.value = false
+  } catch {
+    push.error({
+      title: t('settings.members.inviteTitle'),
+      message: t('settings.members.inviteError')
+    })
+  } finally {
+    inviteSaving.value = false
+  }
+}
+
+const handleRoleChange = async (ledgerId: string, member: LedgerMember, role: LedgerRole) => {
+  if (role === member.role) return
+  const previous = member.role
+  member.role = role
+  try {
+    await updateRole(ledgerId, member.user_id, role)
+    push.success({
+      title: t('settings.members.updateTitle'),
+      message: t('settings.members.updateSuccess')
+    })
+  } catch {
+    member.role = previous
+    push.error({
+      title: t('settings.members.updateTitle'),
+      message: t('settings.members.updateError')
+    })
+  }
+}
+
+const handleRemoveMember = async (ledgerId: string, member: LedgerMember) => {
+  try {
+    await removeMember(ledgerId, member.user_id)
+    push.success({
+      title: t('settings.members.removeTitle'),
+      message: t('settings.members.removeSuccess')
+    })
+  } catch {
+    push.error({
+      title: t('settings.members.removeTitle'),
+      message: t('settings.members.removeError')
+    })
+  }
+}
+
 onMounted(async () => {
   await fetchPreferences()
   autosaveReady.value = true
   autosaveAccountReady.value = true
   autosaveVisualReady.value = true
+  autosaveLedgerReady.value = true
   await nextTick()
   isHydrating.value = false
 })
@@ -329,6 +479,9 @@ const handleLogoutAll = async () => {
 watch(activeTab, async (value) => {
   if (value === 'seguranca' && sessions.value.length === 0) {
     await loadSessions()
+  }
+  if (value === 'ledger') {
+    await loadLedgerData()
   }
 })
 </script>
@@ -497,31 +650,143 @@ watch(activeTab, async (value) => {
             <CardTitle>{{ t('settings.ledger.title') }}</CardTitle>
             <CardDescription>{{ t('settings.ledger.description') }}</CardDescription>
           </CardHeader>
-          <CardContent class="grid gap-4 md:grid-cols-2">
+          <CardContent class="space-y-4">
             <div class="grid gap-2">
-              <Label for="currency">{{ t('settings.ledger.currency') }}</Label>
-              <Select default-value="BRL">
-                <SelectTrigger id="currency">
-                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
+              <Label>{{ t('settings.ledger.defaultLedger') }}</Label>
+              <Select v-model="form.default_ledger_id" :disabled="ledgersLoading">
+                <SelectTrigger>
+                  <SelectValue :placeholder="t('settings.ledger.defaultLedgerPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BRL">BRL</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="none">{{ t('settings.ledger.defaultLedgerNone') }}</SelectItem>
+                  <SelectItem
+                    v-for="ledger in ledgers"
+                    :key="ledger.id"
+                    :value="ledger.id"
+                  >
+                    {{ ledger.name }}
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              <p class="text-xs text-muted-foreground">
+                {{ t('settings.ledger.defaultLedgerHint') }}
+              </p>
             </div>
-            <div class="grid gap-2">
-              <Label for="timezone">{{ t('settings.ledger.timezone') }}</Label>
-              <Select default-value="America/Sao_Paulo">
-                <SelectTrigger id="timezone">
-                  <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="America/Sao_Paulo">{{ t('settings.ledger.timezoneOptions.saoPaulo') }}</SelectItem>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                </SelectContent>
-              </Select>
+            <div v-if="ledgersLoading" class="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
+              {{ t('settings.ledger.loading') }}
+            </div>
+            <div
+              v-else-if="ledgerDataLoaded && ledgers.length === 0"
+              class="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground"
+            >
+              {{ t('settings.ledger.empty') }}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{{ t('settings.members.title') }}</CardTitle>
+            <CardDescription>{{ t('settings.members.description') }}</CardDescription>
+          </CardHeader>
+          <CardContent class="space-y-4 text-sm">
+            <div v-if="ledgersLoading && !ledgerDataLoaded" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
+              {{ t('settings.members.loadingLedgers') }}
+            </div>
+            <div v-else-if="ledgers.length === 0" class="rounded-lg border border-border/60 p-3 text-muted-foreground">
+              {{ t('settings.members.noLedgers') }}
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="ledger in ledgers"
+                :key="ledger.id"
+                class="space-y-3 rounded-lg border border-border/60 p-4"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-medium">{{ ledger.name }}</p>
+                    <p class="text-xs text-muted-foreground">
+                      {{ t('settings.members.ledgerRole', { role: t(`ledgers.roles.${ledger.role ?? 'unknown'}`) }) }}
+                    </p>
+                  </div>
+                  <Badge variant="outline" class="text-xs">
+                    {{ t(`ledgers.roles.${ledger.role ?? 'unknown'}`) }}
+                  </Badge>
+                </div>
+
+                <div v-if="membersLoading(ledger.id)" class="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
+                  {{ t('settings.members.loading') }}
+                </div>
+                <div
+                  v-else-if="membersForLedger(ledger.id).length === 0"
+                  class="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground"
+                >
+                  {{ t('settings.members.empty') }}
+                </div>
+                <div v-else class="space-y-2">
+                  <div
+                    v-for="member in membersForLedger(ledger.id)"
+                    :key="member.user_id"
+                    class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
+                  >
+                    <div class="flex items-center gap-3">
+                      <Avatar class="h-9 w-9">
+                        <AvatarImage :src="member.avatar_url || ''" :alt="memberDisplayName(member)" />
+                        <AvatarFallback class="bg-primary/10 text-xs text-primary">
+                          {{ memberInitials(member) }}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p class="text-sm font-medium">
+                          {{ memberDisplayName(member) }}
+                          <span v-if="member.user_id === user?.id" class="ml-2 text-xs text-muted-foreground">
+                            {{ t('settings.members.you') }}
+                          </span>
+                        </p>
+                        <p class="text-xs text-muted-foreground">{{ member.email }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Badge v-if="member.role === 'owner'" variant="outline" class="text-xs">
+                        {{ t('ledgers.roles.owner') }}
+                      </Badge>
+                      <Select
+                        v-else
+                        :model-value="member.role"
+                        :disabled="ledger.role !== 'owner'"
+                        @update:model-value="(value) => handleRoleChange(ledger.id, member, value as LedgerRole)"
+                      >
+                        <SelectTrigger class="h-8 w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="editor">{{ t('ledgers.roles.editor') }}</SelectItem>
+                          <SelectItem value="viewer">{{ t('ledgers.roles.viewer') }}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        :disabled="ledger.role !== 'owner' || member.role === 'owner'"
+                        @click="handleRemoveMember(ledger.id, member)"
+                      >
+                        {{ t('settings.members.remove') }}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="ledger.role !== 'owner'"
+                    @click="openInviteDialog(ledger.id)"
+                  >
+                    {{ t('settings.members.invite') }}
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -544,22 +809,6 @@ watch(activeTab, async (value) => {
 
         <Card>
           <CardHeader>
-            <CardTitle>{{ t('settings.members.title') }}</CardTitle>
-            <CardDescription>{{ t('settings.members.description') }}</CardDescription>
-          </CardHeader>
-          <CardContent class="space-y-3 text-sm">
-            <div class="flex items-center justify-between rounded-lg border border-border/60 p-3">
-              <div>
-                <p class="font-medium">{{ t('settings.members.currentUser') }}</p>
-                <p class="text-xs text-muted-foreground">{{ t('settings.members.you') }}</p>
-              </div>
-              <Button variant="outline" size="sm">{{ t('settings.members.manage') }}</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>{{ t('settings.changePolicy.title') }}</CardTitle>
             <CardDescription>{{ t('settings.changePolicy.description') }}</CardDescription>
           </CardHeader>
@@ -573,6 +822,54 @@ watch(activeTab, async (value) => {
             </div>
           </CardContent>
         </Card>
+
+        <AlertDialog v-model:open="inviteDialogOpen">
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{{ t('settings.members.inviteTitle') }}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {{ t('settings.members.inviteDescription', { ledger: inviteLedgerName }) }}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div class="grid gap-4 py-4">
+              <div class="grid gap-2">
+                <Label for="inviteEmail">{{ t('settings.members.inviteEmail') }}</Label>
+                <Input
+                  id="inviteEmail"
+                  v-model="inviteForm.email"
+                  :class="getInputClass({ touched: inviteTouched.email, hasError: Boolean(inviteErrors.email[0]) })"
+                  type="email"
+                  :placeholder="t('settings.members.inviteEmailPlaceholder', { at: '@' })"
+                  @blur="touchInviteField('email')"
+                />
+                <p v-if="inviteTouched.email && inviteErrors.email[0]" class="text-xs text-destructive">
+                  {{ inviteErrors.email[0].message }}
+                </p>
+              </div>
+              <div class="grid gap-2">
+                <Label>{{ t('settings.members.inviteRole') }}</Label>
+                <Select v-model="inviteForm.role">
+                  <SelectTrigger>
+                    <SelectValue :placeholder="t('settings.common.selectPlaceholder')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="editor">{{ t('ledgers.roles.editor') }}</SelectItem>
+                    <SelectItem value="viewer">{{ t('ledgers.roles.viewer') }}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+              <Button
+                :disabled="inviteSaving || !inviteForm.email.trim() || inviteErrors.email.length > 0"
+                @click="handleInviteMember"
+              >
+                {{ inviteSaving ? t('settings.members.inviteSending') : t('settings.members.inviteConfirm') }}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </TabsContent>
 
       <TabsContent value="notificacoes" class="space-y-6">

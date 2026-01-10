@@ -17,9 +17,12 @@ type LedgerWithRole struct {
 }
 
 type Member struct {
-	LedgerID  string
-	UserID    string
-	Role      string
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	LedgerID    string
+	UserID      string
+	Role        string
+	DisplayName string
+	Email       string
+	AvatarURL   *string
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
 }

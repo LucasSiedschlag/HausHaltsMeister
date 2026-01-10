@@ -209,6 +209,7 @@ func main() {
 
 	preferencesHandler := &handlers.PreferencesHandler{
 		Service: preferencesService,
+		Ledger:  ledgerService,
 	}
 	meGroup := e.Group("/me", middleware.RequireAuth(authService))
 	preferencesHandler.Register(meGroup)

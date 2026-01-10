@@ -619,7 +619,16 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 - 200
 ```json
 [
-  { "ledger_id": "uuid", "user_id": "uuid", "role": "viewer", "created_at": "...", "updated_at": "..." }
+  {
+    "ledger_id": "uuid",
+    "user_id": "uuid",
+    "role": "viewer",
+    "display_name": "Nome",
+    "email": "user@example.com",
+    "avatar_url": "https://...",
+    "created_at": "...",
+    "updated_at": "..."
+  }
 ]
 ```
 
@@ -627,7 +636,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
-- Dados minimos.
+- Expor apenas nome, email e avatar (sem dados sensiveis adicionais).
 
 7) Pagination
 - n/a.
@@ -645,13 +654,22 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 3) Request
 - Body:
 ```json
-{ "user_id": "uuid", "role": "viewer" }
+{ "user_id": "uuid", "email": "user@example.com", "role": "viewer" }
 ```
 
 4) Response
 - 201
 ```json
-{ "ledger_id": "uuid", "user_id": "uuid", "role": "viewer", "created_at": "...", "updated_at": "..." }
+{
+  "ledger_id": "uuid",
+  "user_id": "uuid",
+  "role": "viewer",
+  "display_name": "Nome",
+  "email": "user@example.com",
+  "avatar_url": "https://...",
+  "created_at": "...",
+  "updated_at": "..."
+}
 ```
 
 5) Errors
@@ -659,6 +677,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
+- Enviar `user_id` **ou** `email` (um dos dois).
 - Role valida: owner/editor/viewer.
 
 7) Pagination

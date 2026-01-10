@@ -13,18 +13,21 @@ type UserPreferences struct {
 	NotifyCardClose  bool
 	NotifyBudgetOver bool
 	NotifyPayables   bool
+	DefaultLedgerID  *string
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time
 }
 
 type UpdateParams struct {
-	ThemeMode        *string
-	ThemePalette     *string
-	ThemeTone        *string
-	Locale           *string
-	CompactMode      *string
-	FontScale        *string
-	NotifyCardClose  *bool
-	NotifyBudgetOver *bool
-	NotifyPayables   *bool
+	ThemeMode          *string
+	ThemePalette       *string
+	ThemeTone          *string
+	Locale             *string
+	CompactMode        *string
+	FontScale          *string
+	NotifyCardClose    *bool
+	NotifyBudgetOver   *bool
+	NotifyPayables     *bool
+	DefaultLedgerID    *string
+	DefaultLedgerIDSet bool
 }

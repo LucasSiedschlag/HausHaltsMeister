@@ -146,10 +146,14 @@ func (r *Repository) GetLedgerRole(ctx context.Context, ledgerID, userID string)
 
 func (r *Repository) ListMembers(ctx context.Context, ledgerID string) ([]ledger.Member, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT ledger_id, user_id, role, created_at, updated_at
-		FROM ledger_members
-		WHERE ledger_id = $1 AND removed_at IS NULL
-		ORDER BY created_at
+		SELECT lm.ledger_id, lm.user_id, lm.role, lm.created_at, lm.updated_at,
+			COALESCE(u.display_name, '') AS display_name,
+			u.email,
+			u.avatar_url
+		FROM ledger_members lm
+		JOIN users u ON u.id = lm.user_id
+		WHERE lm.ledger_id = $1 AND lm.removed_at IS NULL
+		ORDER BY lm.created_at
 	`, ledgerID)
 	if err != nil {
 		return nil, err
@@ -159,7 +163,7 @@ func (r *Repository) ListMembers(ctx context.Context, ledgerID string) ([]ledger
 	var members []ledger.Member
 	for rows.Next() {
 		var member ledger.Member
-		if err := rows.Scan(&member.LedgerID, &member.UserID, &member.Role, &member.CreatedAt, &member.UpdatedAt); err != nil {
+		if err := scanMember(rows, &member); err != nil {
 			return nil, err
 		}
 		members = append(members, member)
@@ -170,16 +174,24 @@ func (r *Repository) ListMembers(ctx context.Context, ledgerID string) ([]ledger
 func (r *Repository) AddMember(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (ledger.Member, error) {
 	var member ledger.Member
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (ledger_id, user_id) DO UPDATE
-		SET role = EXCLUDED.role,
-			removed_at = NULL,
-			updated_at = EXCLUDED.updated_at
-		WHERE ledger_members.removed_at IS NOT NULL
-		RETURNING ledger_id, user_id, role, created_at, updated_at
+		WITH upserted AS (
+			INSERT INTO ledger_members (ledger_id, user_id, role, updated_at)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (ledger_id, user_id) DO UPDATE
+			SET role = EXCLUDED.role,
+				removed_at = NULL,
+				updated_at = EXCLUDED.updated_at
+			WHERE ledger_members.removed_at IS NOT NULL
+			RETURNING ledger_id, user_id, role, created_at, updated_at
+		)
+		SELECT upserted.ledger_id, upserted.user_id, upserted.role, upserted.created_at, upserted.updated_at,
+			COALESCE(u.display_name, '') AS display_name,
+			u.email,
+			u.avatar_url
+		FROM upserted
+		JOIN users u ON u.id = upserted.user_id
 	`, ledgerID, userID, role, updatedAt)
-	if err := row.Scan(&member.LedgerID, &member.UserID, &member.Role, &member.CreatedAt, &member.UpdatedAt); err != nil {
+	if err := scanMember(row, &member); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) || postgres.IsUniqueViolation(err) {
 			return ledger.Member{}, ledger.ErrMemberExists
 		}
@@ -191,12 +203,20 @@ func (r *Repository) AddMember(ctx context.Context, ledgerID, userID, role strin
 func (r *Repository) UpdateMemberRole(ctx context.Context, ledgerID, userID, role string, updatedAt time.Time) (ledger.Member, error) {
 	var member ledger.Member
 	row := r.pool.QueryRow(ctx, `
-		UPDATE ledger_members
-		SET role = $3, updated_at = $4
-		WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
-		RETURNING ledger_id, user_id, role, created_at, updated_at
+		WITH updated AS (
+			UPDATE ledger_members
+			SET role = $3, updated_at = $4
+			WHERE ledger_id = $1 AND user_id = $2 AND removed_at IS NULL
+			RETURNING ledger_id, user_id, role, created_at, updated_at
+		)
+		SELECT updated.ledger_id, updated.user_id, updated.role, updated.created_at, updated.updated_at,
+			COALESCE(u.display_name, '') AS display_name,
+			u.email,
+			u.avatar_url
+		FROM updated
+		JOIN users u ON u.id = updated.user_id
 	`, ledgerID, userID, role, updatedAt)
-	if err := row.Scan(&member.LedgerID, &member.UserID, &member.Role, &member.CreatedAt, &member.UpdatedAt); err != nil {
+	if err := scanMember(row, &member); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ledger.Member{}, ledger.ErrNotFound
 		}
@@ -220,6 +240,18 @@ func (r *Repository) RemoveMember(ctx context.Context, ledgerID, userID string) 
 	return nil
 }
 
+func (r *Repository) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
+	var userID string
+	row := r.pool.QueryRow(ctx, `SELECT id FROM users WHERE email = $1`, email)
+	if err := row.Scan(&userID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ledger.ErrUserNotFound
+		}
+		return "", err
+	}
+	return userID, nil
+}
+
 func scanLedger(row pgx.Row, ledgerItem *ledger.Ledger) error {
 	if err := row.Scan(
 		&ledgerItem.ID,
@@ -231,6 +263,25 @@ func scanLedger(row pgx.Row, ledgerItem *ledger.Ledger) error {
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ledger.ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func scanMember(row pgx.Row, member *ledger.Member) error {
+	if err := row.Scan(
+		&member.LedgerID,
+		&member.UserID,
+		&member.Role,
+		&member.CreatedAt,
+		&member.UpdatedAt,
+		&member.DisplayName,
+		&member.Email,
+		&member.AvatarURL,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return pgx.ErrNoRows
 		}
 		return err
 	}
