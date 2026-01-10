@@ -119,11 +119,6 @@ watch(
 
 <template>
   <div class="space-y-6">
-    <section class="space-y-2">
-      <h1 class="text-2xl font-semibold">{{ t('ledgers.title') }}</h1>
-      <p class="text-sm text-muted-foreground">{{ t('ledgers.description') }}</p>
-    </section>
-
     <div class="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
       <Card ref="createCard">
         <CardHeader>

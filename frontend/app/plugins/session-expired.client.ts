@@ -7,7 +7,8 @@ export default defineNuxtPlugin(() => {
   watch(
     () => [sessionExpired.value, route.path],
     ([expired, path]) => {
-      blocked.value = Boolean(expired && !publicRoutes.includes(path))
+      const currentPath = typeof path === 'string' ? path : ''
+      blocked.value = Boolean(expired && !publicRoutes.includes(currentPath))
     },
     { immediate: true }
   )

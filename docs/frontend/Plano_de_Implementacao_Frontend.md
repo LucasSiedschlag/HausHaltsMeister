@@ -183,6 +183,8 @@ Passos:
 1. Forms para aporte, resgate e rendimento.
 2. Resumo agregado por periodo.
 
+Status: concluida.
+
 ---
 
 ## Etapa 8 — Cartao

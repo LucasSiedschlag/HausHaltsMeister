@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shar
 import { CornerDownRight, ArrowLeft } from 'lucide-vue-next'
 import { useCategories, type Category } from '#layers/categories/composables/useCategories'
 import { useBudgetEditor, type BudgetLine } from '../../../composables/useBudgetEditor'
-import { useBudget, type BudgetVersion } from '../../../composables/useBudget'
+import { useBudget } from '../../../composables/useBudget'
 import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useI18n } from 'vue-i18n'
 import { push } from 'notivue'
@@ -24,9 +24,7 @@ setHeaderAction({ key: 'budget:editor-save', labelKey: 'budget.editor.save', dis
 
 const { categories, fetchCategories } = useCategories()
 const { lines, loading: linesLoading, fetchLines, updateLine, createLine } = useBudgetEditor()
-const { versions, fetchVersions } = useBudget()
-
-const currentVersion = computed(() => versions.value.find((v: BudgetVersion) => v.id === versionId))
+const { fetchVersions } = useBudget()
 
 // State for manual calculation base since backend doesn't store it yet
 const totalEstimatedIncome = ref(0)
@@ -150,10 +148,6 @@ onMounted(async () => {
         <ArrowLeft class="h-4 w-4" />
       </Button>
       <div>
-        <h1 class="text-2xl font-semibold">{{ t('budget.editor.title') }}</h1>
-        <p class="text-sm text-muted-foreground" v-if="currentVersion">
-           {{ t('budget.editor.subtitle', { month: currentVersion.effective_from_month }) }}
-        </p>
       </div>
       <div class="ml-auto flex items-center gap-4">
           <!-- Total Income Input Helper -->

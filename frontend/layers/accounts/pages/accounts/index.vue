@@ -165,10 +165,6 @@ watch(
 <template>
   <div class="grid gap-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-semibold">{{ t('accounts.title') }}</h1>
-        <p class="text-sm text-muted-foreground">{{ t('accounts.description') }}</p>
-      </div>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>

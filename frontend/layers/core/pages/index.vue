@@ -23,13 +23,6 @@ setHeaderAction(
 
 <template>
   <div class="grid gap-6">
-    <section class="grid gap-3">
-      <h1 class="text-2xl font-semibold">Saúde financeira do mês</h1>
-      <p class="max-w-2xl text-sm text-muted-foreground">
-        Acompanhe o saldo real, separando patrimônio próprio de valores transitórios.
-      </p>
-    </section>
-
     <section class="grid gap-4 md:grid-cols-3">
       <Card>
         <CardHeader>

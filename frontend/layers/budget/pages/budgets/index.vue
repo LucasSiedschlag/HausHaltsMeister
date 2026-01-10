@@ -143,10 +143,6 @@ onMounted(() => {
 <template>
   <div class="grid gap-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-semibold">{{ t('budget.title') }}</h1>
-        <p class="text-sm text-muted-foreground">{{ t('budget.description') }}</p>
-      </div>
       <Button @click="openCreate">
         <Plus class="h-4 w-4 mr-2" />
         {{ t('budget.actions.newVersion') }}

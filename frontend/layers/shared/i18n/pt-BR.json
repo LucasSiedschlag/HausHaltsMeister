@@ -641,6 +641,106 @@
     },
     "emptyCategories": "Nenhuma categoria relevante para orçamento encontrada."
   },
+  "investments": {
+    "title": "Investimentos",
+    "description": "Registre aportes, resgates e rendimentos do ledger.",
+    "readOnlyHint": "Você possui acesso apenas de leitura.",
+    "summary": {
+      "title": "Resumo do período",
+      "contributions": "Aportes",
+      "redemptions": "Resgates",
+      "earnings": "Rendimentos",
+      "losses": "Perdas",
+      "netVariation": "Variação líquida",
+      "error": "Não foi possível carregar o resumo.",
+      "unavailable": "Resumo disponível após configurar contas e categorias."
+    },
+    "balances": {
+      "title": "Patrimônio",
+      "description": "Total em {period}.",
+      "totalLabel": "Total geral",
+      "error": "Não foi possível carregar os saldos."
+    },
+    "accounts": {
+      "title": "Contas",
+      "inactive": "Inativa",
+      "selectHint": "Selecione uma conta para visualizar movimentações.",
+      "unsupportedHint": "Selecione uma conta do tipo caixa ou investimento.",
+      "inactiveHint": "Conta inativa. Ative para registrar movimentações.",
+      "earningsHint": "Selecione uma conta de investimento para registrar rendimentos."
+    },
+    "activity": {
+      "title": "Movimentações",
+      "description": "{account} · {period}",
+      "empty": "Nenhuma movimentação no período.",
+      "selectAccount": "Selecione uma conta para ver as movimentações.",
+      "error": "Não foi possível carregar as movimentações."
+    },
+    "tabs": {
+      "contribution": "Aporte",
+      "redemption": "Resgate",
+      "earnings": "Rendimento",
+      "loss": "Perda"
+    },
+    "setup": {
+      "title": "Configuração necessária",
+      "description": "Crie as contas e categorias técnicas para habilitar os lançamentos.",
+      "accountsTitle": "Contas obrigatórias",
+      "categoriesTitle": "Categorias técnicas",
+      "categoriesHint": "Os nomes abaixo devem ser exatamente iguais:",
+      "optionalHint": "Opcional: {names}.",
+      "lossCategoryHint": "Crie a categoria Perdas para registrar perdas.",
+      "goAccounts": "Ir para contas",
+      "goCategories": "Ir para categorias",
+      "blockedHint": "Finalize a configuração antes de registrar movimentações.",
+      "accounts": {
+        "cash": "Conta tipo caixa (cash)",
+        "investment": "Conta tipo investimento (investment)"
+      }
+    },
+    "form": {
+      "amountLabel": "Valor",
+      "amountPlaceholder": "0,00",
+      "dateLabel": "Data",
+      "memoLabel": "Memo",
+      "memoPlaceholder": "Observações opcionais",
+      "saving": "Registrando..."
+    },
+    "forms": {
+      "contribution": {
+        "title": "Aporte",
+        "description": "Transfira recursos da conta pessoal para investimentos."
+      },
+      "redemption": {
+        "title": "Resgate",
+        "description": "Traga recursos de investimentos para a conta pessoal."
+      },
+      "earnings": {
+        "title": "Rendimento",
+        "description": "Registre ganhos ou rendimentos no investimento."
+      },
+      "loss": {
+        "title": "Perda",
+        "description": "Registre perdas ou desvalorizações no investimento."
+      }
+    },
+    "actions": {
+      "contribution": "Registrar aporte",
+      "redemption": "Registrar resgate",
+      "earnings": "Registrar rendimento",
+      "loss": "Registrar perda"
+    },
+    "header": {
+      "newContribution": "Novo aporte"
+    },
+    "messages": {
+      "contributionSuccess": "Aporte registrado.",
+      "redemptionSuccess": "Resgate registrado.",
+      "earningsSuccess": "Rendimento registrado.",
+      "lossSuccess": "Perda registrada.",
+      "error": "Não foi possível registrar a movimentação."
+    }
+  },
   "sidebar": {
     "groups": {
       "main": "Principal",

@@ -641,6 +641,106 @@
     },
     "emptyCategories": "No budget-relevant categories found."
   },
+  "investments": {
+    "title": "Investments",
+    "description": "Record contributions, redemptions, and earnings in the ledger.",
+    "readOnlyHint": "You have read-only access.",
+    "summary": {
+      "title": "Period summary",
+      "contributions": "Contributions",
+      "redemptions": "Redemptions",
+      "earnings": "Earnings",
+      "losses": "Losses",
+      "netVariation": "Net variation",
+      "error": "Could not load the summary.",
+      "unavailable": "Summary available after setting up accounts and categories."
+    },
+    "balances": {
+      "title": "Net worth",
+      "description": "Total for {period}.",
+      "totalLabel": "Total",
+      "error": "Could not load balances."
+    },
+    "accounts": {
+      "title": "Accounts",
+      "inactive": "Inactive",
+      "selectHint": "Select an account to view activity.",
+      "unsupportedHint": "Select a cash or investment account.",
+      "inactiveHint": "Inactive account. Activate it to record entries.",
+      "earningsHint": "Select an investment account to record earnings."
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "{account} · {period}",
+      "empty": "No activity in this period.",
+      "selectAccount": "Select an account to see activity.",
+      "error": "Could not load activity."
+    },
+    "tabs": {
+      "contribution": "Contribution",
+      "redemption": "Redemption",
+      "earnings": "Earnings",
+      "loss": "Loss"
+    },
+    "setup": {
+      "title": "Setup required",
+      "description": "Create the required accounts and technical categories to enable investments.",
+      "accountsTitle": "Required accounts",
+      "categoriesTitle": "Technical categories",
+      "categoriesHint": "The names below must match exactly:",
+      "optionalHint": "Optional: {names}.",
+      "lossCategoryHint": "Create the Losses category to record losses.",
+      "goAccounts": "Go to accounts",
+      "goCategories": "Go to categories",
+      "blockedHint": "Finish setup before recording entries.",
+      "accounts": {
+        "cash": "Cash account (type: cash)",
+        "investment": "Investment account (type: investment)"
+      }
+    },
+    "form": {
+      "amountLabel": "Amount",
+      "amountPlaceholder": "0,00",
+      "dateLabel": "Date",
+      "memoLabel": "Memo",
+      "memoPlaceholder": "Optional notes",
+      "saving": "Saving..."
+    },
+    "forms": {
+      "contribution": {
+        "title": "Contribution",
+        "description": "Move funds from the cash account to investments."
+      },
+      "redemption": {
+        "title": "Redemption",
+        "description": "Move funds from investments back to cash."
+      },
+      "earnings": {
+        "title": "Earnings",
+        "description": "Record gains or earnings in investments."
+      },
+      "loss": {
+        "title": "Loss",
+        "description": "Record losses or devaluations in investments."
+      }
+    },
+    "actions": {
+      "contribution": "Record contribution",
+      "redemption": "Record redemption",
+      "earnings": "Record earnings",
+      "loss": "Record loss"
+    },
+    "header": {
+      "newContribution": "New contribution"
+    },
+    "messages": {
+      "contributionSuccess": "Contribution recorded.",
+      "redemptionSuccess": "Redemption recorded.",
+      "earningsSuccess": "Earnings recorded.",
+      "lossSuccess": "Loss recorded.",
+      "error": "Could not record the entry."
+    }
+  },
   "sidebar": {
     "groups": {
       "main": "Main",

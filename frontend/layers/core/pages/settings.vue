@@ -492,13 +492,6 @@ watch(activeTab, async (value) => {
 
 <template>
   <div class="grid gap-6">
-    <section class="grid gap-2">
-      <h1 class="text-2xl font-semibold">{{ t('settings.title') }}</h1>
-      <p class="text-sm text-muted-foreground">
-        {{ t('settings.description') }}
-      </p>
-    </section>
-
     <Tabs v-model="activeTab" class="space-y-6">
       <TabsList class="flex w-full flex-wrap justify-start gap-2">
         <TabsTrigger value="conta">{{ t('settings.tabs.account') }}</TabsTrigger>

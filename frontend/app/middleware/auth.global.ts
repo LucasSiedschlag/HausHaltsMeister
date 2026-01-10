@@ -39,8 +39,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Protected routes: check auth
   // On SSR: just check if token exists (will be refreshed client-side if needed)
   // On client: refresh will be handled by the auth-bootstrap plugin
-  const { accessToken } = useAuth()
-
   if (import.meta.server) {
     // On SSR, just check if we have a refresh cookie
     // Don't try to refresh here - let the client handle it

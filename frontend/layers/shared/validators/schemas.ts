@@ -89,6 +89,16 @@ export const dateSchema = (label = 'Data') =>
     }
   })
 
+export const amountSchema = (label = 'Valor') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    const digits = value.replace(/\D/g, '')
+    if (!digits || Number(digits) <= 0) {
+      add('min_value', messages.amountPositive(label))
+    }
+  })
+
 export const accountTypeSchema = (label = 'Tipo') =>
   z.string().superRefine((value, ctx) => {
     const add: AddIssue = (code, message) => issue(ctx, code, message)

@@ -2,6 +2,7 @@ export const messages = {
   required: (label: string) => `${label} é obrigatório.`,
   minLength: (label: string, min: number) => `${label} deve ter pelo menos ${min} caracteres.`,
   maxLength: (label: string, max: number) => `${label} deve ter no máximo ${max} caracteres.`,
+  amountPositive: (label: string) => `${label} deve ser maior que zero.`,
   invalidOption: (label: string) => `${label} inválido.`,
   invalidDate: (label: string) => `${label} inválida.`,
   emailInvalid: () => 'E-mail inválido.',
