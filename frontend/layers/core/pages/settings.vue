@@ -11,6 +11,7 @@ import { Switch } from '@shared/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs'
 import { useLedger } from '@shared/composables/useLedger'
 import { usePreferences, type UserPreferences } from '@shared/composables/usePreferences'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { push } from 'notivue'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import { useLedgerMembers, type LedgerMember } from '#layers/ledgers/composables/useLedgerMembers'
@@ -19,12 +20,15 @@ import { useDebounceFn } from '@vueuse/core'
 import { emailSchema, getInputClass, useInlineValidation } from '@shared/validators'
 
 const { t, locale, setLocale } = useI18n()
+const { setHeaderAction } = useHeaderAction()
 
 const { user, listSessions, revokeSession, logoutAll, logout, clearSession } = useAuth()
 const router = useRouter()
 const { preferences, fetchPreferences, updatePreferences } = usePreferences()
 const { ledgers, fetchLedgers, isLoading: ledgersLoading } = useLedger()
 const { membersByLedger, loadingByLedger, fetchMembers, inviteMember, updateRole, removeMember } = useLedgerMembers()
+
+setHeaderAction({ key: 'settings:save', labelKey: 'common.save', disabled: true })
 type LocaleOption = 'pt-BR' | 'en-US'
 type PreferencesUpdate = Partial<
   Pick<

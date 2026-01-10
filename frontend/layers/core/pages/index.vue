@@ -1,6 +1,24 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { Button } from '@shared/components/ui/button'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
+import { useJournalUi } from '#layers/journal/composables/useJournalUi'
+
+const { setHeaderAction } = useHeaderAction()
+const journalUi = useJournalUi()
+const router = useRouter()
+
+const handleNewTransaction = async () => {
+  journalUi.openCreate()
+  await router.push('/journal')
+}
+
+setHeaderAction(
+  { key: 'dashboard:new-transaction', labelKey: 'journal.header.newTransaction', requiresEditor: true },
+  () => {
+    void handleNewTransaction()
+  }
+)
 </script>
 
 <template>

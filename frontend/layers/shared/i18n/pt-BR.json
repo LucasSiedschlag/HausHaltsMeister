@@ -1,5 +1,6 @@
 {
   "common": {
+    "action": "Ação",
     "save": "Salvar",
     "cancel": "Cancelar",
     "loading": "Carregando",
@@ -146,6 +147,12 @@
     "ledger": {
       "title": "Preferências do ledger",
       "description": "Definições padrão para o seu ledger.",
+      "defaultLedger": "Ledger padrão",
+      "defaultLedgerHint": "Selecionado automaticamente após o login.",
+      "defaultLedgerPlaceholder": "Selecione um ledger",
+      "defaultLedgerNone": "Sem ledger padrão",
+      "loading": "Carregando ledgers...",
+      "empty": "Nenhum ledger disponível.",
       "currency": "Moeda base",
       "timezone": "Fuso horário",
       "timezoneOptions": {
@@ -163,7 +170,29 @@
       "description": "Controle de acesso ao ledger.",
       "currentUser": "Lucas (owner)",
       "you": "Você",
-      "manage": "Gerenciar"
+      "manage": "Gerenciar",
+      "ledgerRole": "Sua permissão: {role}",
+      "loadingLedgers": "Carregando acessos...",
+      "loading": "Carregando membros...",
+      "empty": "Nenhum membro ainda.",
+      "noLedgers": "Nenhum ledger encontrado.",
+      "invite": "Convidar membro",
+      "inviteTitle": "Convidar membro",
+      "inviteDescription": "Enviar acesso para {ledger}.",
+      "inviteEmail": "E-mail",
+      "inviteEmailPlaceholder": "membro{at}dominio.com",
+      "inviteRole": "Permissão",
+      "inviteConfirm": "Enviar convite",
+      "inviteSending": "Enviando...",
+      "inviteSuccess": "Membro convidado.",
+      "inviteError": "Não foi possível convidar o membro.",
+      "updateTitle": "Atualizar permissão",
+      "updateSuccess": "Permissão atualizada.",
+      "updateError": "Não foi possível atualizar a permissão.",
+      "remove": "Remover",
+      "removeTitle": "Remover membro",
+      "removeSuccess": "Membro removido.",
+      "removeError": "Não foi possível remover o membro."
     },
     "changePolicy": {
       "title": "Política de alterações",
@@ -256,9 +285,14 @@
     "sidebar": {
       "placeholder": "Selecione um ledger"
     },
+    "actions": {
+      "new": "Novo ledger"
+    },
     "list": {
       "title": "Seus ledgers",
       "description": "Escolha qual ledger usar.",
+      "ownedTitle": "Meus ledgers",
+      "sharedTitle": "Compartilhados",
       "role": "Permissão",
       "select": "Selecionar",
       "active": "Ativo"

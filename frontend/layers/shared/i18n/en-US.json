@@ -1,5 +1,6 @@
 {
   "common": {
+    "action": "Action",
     "save": "Save",
     "cancel": "Cancel",
     "loading": "Loading",
@@ -146,6 +147,12 @@
     "ledger": {
       "title": "Ledger preferences",
       "description": "Default settings for your ledger.",
+      "defaultLedger": "Default ledger",
+      "defaultLedgerHint": "Used automatically after login.",
+      "defaultLedgerPlaceholder": "Select a ledger",
+      "defaultLedgerNone": "No default ledger",
+      "loading": "Loading ledgers...",
+      "empty": "No ledgers available.",
       "currency": "Base currency",
       "timezone": "Timezone",
       "timezoneOptions": {
@@ -163,7 +170,29 @@
       "description": "Ledger access control.",
       "currentUser": "Lucas (owner)",
       "you": "You",
-      "manage": "Manage"
+      "manage": "Manage",
+      "ledgerRole": "Your role: {role}",
+      "loadingLedgers": "Loading ledger access...",
+      "loading": "Loading members...",
+      "empty": "No members yet.",
+      "noLedgers": "No ledgers found.",
+      "invite": "Invite member",
+      "inviteTitle": "Invite member",
+      "inviteDescription": "Send access for {ledger}.",
+      "inviteEmail": "Email",
+      "inviteEmailPlaceholder": "member{at}domain.com",
+      "inviteRole": "Permission",
+      "inviteConfirm": "Send invite",
+      "inviteSending": "Sending...",
+      "inviteSuccess": "Member invited.",
+      "inviteError": "Could not invite member.",
+      "updateTitle": "Update permission",
+      "updateSuccess": "Permission updated.",
+      "updateError": "Could not update permission.",
+      "remove": "Remove",
+      "removeTitle": "Remove member",
+      "removeSuccess": "Member removed.",
+      "removeError": "Could not remove member."
     },
     "changePolicy": {
       "title": "Change policy",
@@ -256,9 +285,14 @@
     "sidebar": {
       "placeholder": "Select a ledger"
     },
+    "actions": {
+      "new": "New ledger"
+    },
     "list": {
       "title": "Your ledgers",
       "description": "Choose which ledger to use.",
+      "ownedTitle": "My ledgers",
+      "sharedTitle": "Shared with me",
       "role": "Permission",
       "select": "Select",
       "active": "Active"

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@shared/components/ui/separator'
 import { SidebarTrigger } from '@shared/components/ui/sidebar'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
-import { useJournalUi } from '#layers/journal/composables/useJournalUi'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useJournalPeriod } from '#layers/journal/composables/useJournalPeriod'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import LedgerSwitcher from './LedgerSwitcher.vue'
@@ -14,13 +14,19 @@ import { cn } from '@shared/utils'
 
 const { locale, t } = useI18n()
 const ledgerContext = useLedgerContext()
-const journalUi = useJournalUi()
+const { action, runHeaderAction, hasHandler } = useHeaderAction()
 const journalPeriod = useJournalPeriod()
-const route = useRoute()
-const router = useRouter()
 
 const canEdit = computed(() => ledgerContext.hasRole('editor'))
-const showJournalPeriod = computed(() => route.path.startsWith('/journal'))
+const actionLabel = computed(() => t(action.value?.labelKey ?? 'common.action'))
+const actionDisabled = computed(() => {
+  const current = action.value
+  if (!current) return true
+  if (current.disabled) return true
+  if (import.meta.client && !hasHandler(current.key)) return true
+  if (current.requiresEditor && !canEdit.value) return true
+  return false
+})
 const yearOptions = computed(() => {
   const current = journalPeriod.year.value
   return [current - 2, current - 1, current, current + 1, current + 2]
@@ -67,11 +73,9 @@ const goNextMonth = () => {
   journalPeriod.setMonth(journalPeriod.month.value + 1)
 }
 
-const handleNewTransaction = async () => {
-  journalUi.openCreate()
-  if (route.path !== '/journal') {
-    await router.push('/journal')
-  }
+const handleHeaderAction = () => {
+  if (actionDisabled.value) return
+  runHeaderAction()
 }
 </script>
 
@@ -80,7 +84,7 @@ const handleNewTransaction = async () => {
     <SidebarTrigger class="lg:hidden" />
     <Separator orientation="vertical" class="h-6 lg:hidden" />
     <LedgerSwitcher />
-    <div v-if="showJournalPeriod" class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <Select v-model="selectedYear">
         <SelectTrigger class="h-9 w-[110px]">
           <SelectValue />
@@ -127,8 +131,8 @@ const handleNewTransaction = async () => {
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <Button :disabled="!canEdit" @click="handleNewTransaction">
-        {{ t('journal.header.newTransaction') }}
+      <Button :disabled="actionDisabled" @click="handleHeaderAction">
+        {{ actionLabel }}
       </Button>
     </div>
   </header>

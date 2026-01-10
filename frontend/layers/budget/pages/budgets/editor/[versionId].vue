@@ -10,13 +10,17 @@ import { CornerDownRight, ArrowLeft } from 'lucide-vue-next'
 import { useCategories, type Category } from '#layers/categories/composables/useCategories'
 import { useBudgetEditor, type BudgetLine } from '../../../composables/useBudgetEditor'
 import { useBudget, type BudgetVersion } from '../../../composables/useBudget'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useI18n } from 'vue-i18n'
 import { push } from 'notivue'
 
 const { t } = useI18n()
+const { setHeaderAction } = useHeaderAction()
 const route = useRoute()
 const router = useRouter()
 const versionId = route.params.versionId as string
+
+setHeaderAction({ key: 'budget:editor-save', labelKey: 'budget.editor.save', disabled: true })
 
 const { categories, fetchCategories } = useCategories()
 const { lines, loading: linesLoading, fetchLines, updateLine, createLine } = useBudgetEditor()

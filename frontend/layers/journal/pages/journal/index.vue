@@ -26,6 +26,7 @@ import SortableColumnHeader from '@shared/components/SortableColumnHeader.vue'
 import { Calendar } from '@shared/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useAccounts } from '#layers/accounts/composables/useAccounts'
 import { useCategories } from '#layers/categories/composables/useCategories'
 import { useJournal, type EntryKind, type Transaction, type TransactionEntryInput } from '#layers/journal/composables/useJournal'
@@ -54,6 +55,12 @@ const {
 
 const journalUi = useJournalUi()
 const journalPeriod = useJournalPeriod()
+const { setHeaderAction } = useHeaderAction()
+
+setHeaderAction(
+  { key: 'journal:new-transaction', labelKey: 'journal.header.newTransaction', requiresEditor: true },
+  journalUi.openCreate
+)
 
 const filterQuery = ref('')
 const filterAccounts = ref<string[]>([])

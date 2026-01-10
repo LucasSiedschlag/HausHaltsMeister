@@ -12,6 +12,7 @@ import { MoreHorizontal, Plus } from 'lucide-vue-next'
 import { push } from 'notivue'
 import { useAccounts, type Account, type AccountType } from '#layers/accounts/composables/useAccounts'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { accountTypeSchema, nameSchema, useInlineValidation, getInputClass } from '@shared/validators'
 import { isApiError } from '@shared/utils/api-error'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
@@ -21,6 +22,7 @@ const ledgerContext = useLedgerContext()
 const canEdit = computed(() => ledgerContext.hasRole('editor'))
 
 const { accounts, loading, error, fetchAccounts, createAccount, updateAccount, deactivateAccount } = useAccounts()
+const { setHeaderAction } = useHeaderAction()
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 const formOpen = ref(false)
@@ -76,6 +78,11 @@ const openCreate = () => {
   resetForm()
   formOpen.value = true
 }
+
+setHeaderAction(
+  { key: 'accounts:new', labelKey: 'accounts.actions.new', requiresEditor: true },
+  openCreate
+)
 
 const openEdit = (account: Account) => {
   formMode.value = 'edit'

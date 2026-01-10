@@ -12,6 +12,7 @@ import { push } from 'notivue'
 import CrudTableCard from '@shared/components/CrudTableCard.vue'
 import { useBudget, type BudgetVersion } from '../../composables/useBudget'
 import { useCategories } from '#layers/categories/composables/useCategories'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { isApiError } from '@shared/utils/api-error'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -20,6 +21,7 @@ const { t, locale, te } = useI18n()
 const router = useRouter()
 const { versions, loading, error, fetchVersions, createVersion, deleteVersion } = useBudget()
 const { categories, fetchCategories } = useCategories()
+const { setHeaderAction } = useHeaderAction()
 
 const formOpen = ref(false)
 const isSaving = ref(false)
@@ -56,6 +58,13 @@ const openCreate = async () => {
       push.error(t('budget.messages.error'))
   }
 }
+
+setHeaderAction(
+  { key: 'budget:new-version', labelKey: 'budget.actions.newVersion', requiresEditor: true },
+  () => {
+    void openCreate()
+  }
+)
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''

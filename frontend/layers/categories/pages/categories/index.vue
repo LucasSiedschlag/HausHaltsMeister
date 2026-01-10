@@ -27,6 +27,7 @@ import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
 import SortableColumnHeader from '@shared/components/SortableColumnHeader.vue'
 import { useCategories, type Category, type CategoryDirection } from '#layers/categories/composables/useCategories'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { categoryDirectionSchema, nameSchema, useInlineValidation, getInputClass } from '@shared/validators'
 import { isApiError } from '@shared/utils/api-error'
 import { useI18n } from 'vue-i18n'
@@ -34,6 +35,7 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const ledgerContext = useLedgerContext()
 const canEdit = computed(() => ledgerContext.hasRole('editor'))
+const { setHeaderAction } = useHeaderAction()
 
 const {
   categories,
@@ -246,6 +248,11 @@ const openCreate = () => {
   resetForm()
   formOpen.value = true
 }
+
+setHeaderAction(
+  { key: 'categories:new', labelKey: 'categories.actions.new', requiresEditor: true },
+  openCreate
+)
 
 const openEdit = (category: Category) => {
   formMode.value = 'edit'

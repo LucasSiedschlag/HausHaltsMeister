@@ -7,6 +7,7 @@ import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { useLedger } from '@shared/composables/useLedger'
+import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useAuth } from '#layers/auth/composables/useAuth'
 import type { LedgerRole } from '#layers/shared/utils/ledger-roles'
 import { push } from 'notivue'
@@ -15,12 +16,15 @@ const { t } = useI18n()
 const router = useRouter()
 const { ledgers, currentLedgerId, fetchLedgers, selectLedger, createLedger, isLoading } = useLedger()
 const { user } = useAuth()
+const { setHeaderAction } = useHeaderAction()
 
 const form = reactive({
   name: '',
   currency_code: 'BRL'
 })
 const isCreating = ref(false)
+const createCard = ref<{ $el: HTMLElement } | null>(null)
+const nameInput = ref<{ $el: HTMLInputElement } | null>(null)
 
 const defaultLedgerName = computed(() => {
   const source = user.value?.display_name || user.value?.email || ''
@@ -84,6 +88,19 @@ const handleCreate = async () => {
   }
 }
 
+const focusCreateLedger = () => {
+  const target = createCard.value?.$el
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  nameInput.value?.$el?.focus()
+}
+
+setHeaderAction(
+  { key: 'ledgers:new', labelKey: 'ledgers.actions.new' },
+  focusCreateLedger
+)
+
 
 onMounted(async () => {
   await loadLedgers()
@@ -108,7 +125,7 @@ watch(
     </section>
 
     <div class="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-      <Card>
+      <Card ref="createCard">
         <CardHeader>
           <CardTitle>{{ t('ledgers.list.title') }}</CardTitle>
           <CardDescription>{{ t('ledgers.list.description') }}</CardDescription>
@@ -198,6 +215,7 @@ watch(
             <Label for="ledgerName">{{ t('ledgers.create.nameLabel') }}</Label>
             <Input
               id="ledgerName"
+              ref="nameInput"
               v-model="form.name"
               :placeholder="defaultLedgerName || t('ledgers.create.namePlaceholder')"
             />
