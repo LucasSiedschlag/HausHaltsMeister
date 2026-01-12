@@ -2,11 +2,11 @@
 
 Este documento descreve as regras e os fluxos para suportar cartão de crédito no modelo atual:
 
-- `accounts` (inclui `credit_card`)
-- `credit_cards` (metadados do cartão)
+- `accounts` (com `nature=asset|liability`)
+- `credit_cards` (cartao como entidade principal, 1:N por conta)
 - `installment_plans` + `installments` (parcelamento)
 - `credit_card_statements` (fatura)
-- `transactions` + `entries` (journal)
+- `transactions` + `entries` (journal, com `transactions.credit_card_id`)
 - orçamento **só consome** quando a parcela é **postada** no mês
 
 ---
@@ -17,7 +17,7 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
 
 1. Registrar compras no cartão, inclusive parceladas.
 2. Gerar faturas mensais (statement) com fechamento/vencimento.
-3. Registrar pagamento da fatura como transferência de `Pessoal -> Cartão`.
+3. Registrar pagamento da fatura como transferência da conta pagadora para o passivo do cartao.
 4. **Orçamento e realizado** devem refletir **apenas as parcelas do mês** (não o total da compra no ato).
 
 ### Princípios do modelo
@@ -25,7 +25,7 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
 - Compra parcelada é um **plano** (`installment_plan`).
 - Cada parcela é uma **unidade mensal** (`installment`) com `due_month`.
 - Uma parcela só vira gasto (e entra no orçamento) quando é **postada**:
-  - isso cria uma `transaction` + `entry` (no cartão) e grava `posted_transaction_id`.
+  - isso cria uma `transaction` + `entry` no passivo do cartao e grava `posted_transaction_id`.
 - Pagamento de fatura **não** entra no orçamento (não duplicar gasto).
 - Categorias técnicas servem para separar “liquidação de dívida” de “consumo”.
 
@@ -36,14 +36,20 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
 ### 1.1. Dados de bandeira (catálogo)
 
 - `card_networks` mantém o catálogo de bandeiras.
-- `credit_cards.network` referencia `card_networks.code`.
+- `credit_cards.brand` referencia `card_networks.code`.
 
-### 1.2. Datas e “mês”
+### 1.2. Contas do cartao
+
+- `parent_account_id`: conta pai do cartao (nature=asset).
+- `liability_account_id`: conta de passivo obrigatoria (nature=liability).
+- ambas devem pertencer ao mesmo `ledger_id`.
+
+### 1.3. Datas e “mês”
 
 - `statement_month`, `due_month`, `first_due_month` são sempre `date` no 1º dia do mês.
   - Ex.: `2026-02-01` significa “competência fevereiro/2026”.
 
-### 1.3. Conceito de “posted”
+### 1.4. Conceito de “posted”
 
 - Uma parcela está `scheduled` até ser postada.
 - Ao postar:
@@ -52,7 +58,7 @@ Este documento descreve as regras e os fluxos para suportar cartão de crédito 
   - atualiza `installments.status = posted`
   - grava `installments.posted_transaction_id`
 
-### 1.4. Categorias: técnicas vs reais
+### 1.5. Categorias: técnicas vs reais
 
 #### Categorias reais (consumo)
 
@@ -83,6 +89,13 @@ Para pagamento da fatura:
 
 ### 2.1. Dados do cartão (credit_cards)
 
+- `id`: identificador do cartao
+- `ledger_id`
+- `parent_account_id`
+- `liability_account_id`
+- `label`, `brand`, `last4`, `cvv`, `holder_name`
+- `active`
+- `color`, `style`
 - `closing_day`: dia do fechamento (ex.: 25)
 - `due_day`: dia do vencimento (ex.: 10)
 
@@ -144,7 +157,7 @@ Assim:
 
 ### 3.1. Input do usuário (UI)
 
-- cartão (account_id)
+- cartao (`credit_card_id`)
 - data da compra (`purchase_occurred_at`)
 - descrição/lojista (`merchant`/`description`)
 - categoria real (ex.: Mercado)
@@ -157,7 +170,7 @@ Assim:
 - `installments_count >= 1`
 - `total_amount = installment_amount * count` (se não bater, permitir última parcela diferente)
 - categoria escolhida deve ser `direction=out`
-- cartão escolhido deve ser `accounts.type=credit_card`
+- `credit_card_id` deve existir no ledger
 
 ### 3.3. Determinar `first_due_month`
 
@@ -195,7 +208,7 @@ Opções:
 ### 4.2. Entrada
 
 - `ledger_id`
-- `card_account_id`
+- `credit_card_id`
 - `target_month` (date: 1º dia do mês)
 
 ### 4.3. Seleção de parcelas a postar
@@ -216,11 +229,12 @@ Para cada parcela selecionada:
    - `notes`: opcional com referência do plano
 2. criar `entries` (1 linha):
 
-   - `account_id = card_account_id` (cartão)
+   - `account_id = credit_cards.liability_account_id` (passivo do cartao)
    - `category_id = installment_plan.category_id` (categoria real: Mercado, etc.)
    - `kind = normal`
    - `amount_cents = installment.amount_cents`
    - `memo`: opcional `"Plano {id} parcela {n}/{N}"`
+   - `transactions.credit_card_id = credit_card_id`
 
 3. atualizar `installments`:
    - `status = posted`
@@ -249,12 +263,12 @@ Exemplo:
 
 ### 5.2. Entrada
 
-- `card_account_id`
+- `credit_card_id`
 - `statement_month`
 
 ### 5.3. Garantir existência de statement
 
-- buscar `credit_card_statements` para (card_account_id, statement_month)
+- buscar `credit_card_statements` para (credit_card_id, statement_month)
 - se não existir, criar com:
   - `closing_date` calculada para aquele mês
   - `due_date` calculada para aquele mês
@@ -279,14 +293,14 @@ Ao fechar:
 
 ---
 
-## 6) Fluxo 4 — Pagar fatura (transferência Pessoal -> Cartão)
+## 6) Fluxo 4 — Pagar fatura (transferência para o passivo do cartao)
 
 ### 6.1. Entrada (UI)
 
 - `statement_id`
 - `payment_date`
 - `pay_amount` (normalmente total da fatura, mas permitir parcial)
-- `cash_account_id` (Pessoal)
+- `paying_account_id` (conta pagadora, `nature=asset`)
 
 ### 6.2. Criar transaction de pagamento
 
@@ -296,14 +310,14 @@ Em uma transação de banco:
    - description: `"Pagamento fatura {cartão} {statement_month}"`
    - occurred_at = payment_date
 2. criar 2 `entries` (transfer):
-   A) OUT em Pessoal:
+   A) OUT na conta pagadora:
 
-   - account_id = cash_account_id
+   - account_id = paying_account_id
    - category = `Pagamento Fatura Cartão` (OUT, budget_relevant=false)
    - kind = transfer
    - amount = pay_amount
-     B) IN no Cartão:
-   - account_id = card_account_id
+     B) IN no passivo do cartao:
+   - account_id = credit_cards.liability_account_id
    - category = `Entrada Pagamento Cartão` (IN, budget_base=false)
    - kind = transfer
    - amount = pay_amount
@@ -341,7 +355,7 @@ Se parcelas já foram postadas, você não deve apagar.
 Você faz ajuste:
 
 - criar `transaction` “Estorno parcela X”
-- criar `entry` IN no cartão na mesma categoria real (ou categoria “Estorno” IN)
+- criar `entry` IN no passivo do cartao na mesma categoria real (ou categoria “Estorno” IN)
 - `kind=adjust`
   E atualizar a parcela como `skipped` ou manter `paid` com marcação adicional (depende do seu reporting).
 

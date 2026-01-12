@@ -9,24 +9,37 @@ type CardNetwork struct {
 	UpdatedAt   *time.Time
 }
 
+type AccountInfo struct {
+	ID       string
+	LedgerID string
+	Type     string
+	Nature   string
+	IsActive bool
+}
+
 type CreditCard struct {
-	AccountID        string
-	LedgerID         string
-	IssuerName       *string
-	Network          string
-	Nickname         *string
-	Last4            *string
-	CreditLimitCents *int64
-	ClosingDay       int
-	DueDay           int
-	CreatedAt        time.Time
-	UpdatedAt        *time.Time
+	ID                 string
+	LedgerID           string
+	ParentAccountID    string
+	LiabilityAccountID string
+	Label              *string
+	Brand              string
+	Last4              *string
+	CVV                *string
+	HolderName         *string
+	Active             bool
+	Color              *string
+	Style              *string
+	ClosingDay         int
+	DueDay             int
+	CreatedAt          time.Time
+	UpdatedAt          *time.Time
 }
 
 type InstallmentPlan struct {
 	ID                     string
 	LedgerID               string
-	CardAccountID          string
+	CreditCardID           string
 	PurchaseOccurredAt     time.Time
 	Merchant               *string
 	Description            string
@@ -58,7 +71,7 @@ type Installment struct {
 type Statement struct {
 	ID                   string
 	LedgerID             string
-	CardAccountID        string
+	CreditCardID         string
 	StatementMonth       time.Time
 	ClosingDate          time.Time
 	DueDate              time.Time

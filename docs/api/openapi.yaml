@@ -11,7 +11,7 @@ tags:
   - name: Ledgers
     description: Ledger access and membership
   - name: Accounts
-    description: Cash/investment accounts
+    description: Current, business, investment, exchange, and wallet accounts
   - name: Categories
     description: Income/expense classification
   - name: Journal
@@ -941,12 +941,12 @@ paths:
       responses:
         '204':
           description: Deleted
-  /ledgers/{ledgerId}/credit-cards:
+  /accounts/{accountId}/credit-cards:
     get:
       tags: [Cartao]
-      summary: List credit cards
+      summary: List credit cards for account
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/AccountId'
       responses:
         '200':
           description: Cards
@@ -958,9 +958,9 @@ paths:
                   $ref: '#/components/schemas/CreditCard'
     post:
       tags: [Cartao]
-      summary: Create credit card
+      summary: Create credit card for account
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
+        - $ref: '#/components/parameters/AccountId'
       requestBody:
         required: true
         content:
@@ -974,13 +974,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreditCard'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}:
+  /credit-cards/{cardId}:
     get:
       tags: [Cartao]
       summary: Get credit card
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
       responses:
         '200':
           description: Credit card
@@ -992,8 +991,7 @@ paths:
       tags: [Cartao]
       summary: Update credit card
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
       requestBody:
         required: true
         content:
@@ -1011,18 +1009,16 @@ paths:
       tags: [Cartao]
       summary: Delete credit card
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
       responses:
         '204':
           description: Deleted
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans:
+  /credit-cards/{cardId}/plans:
     post:
       tags: [Cartao]
       summary: Create installment plan
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
       requestBody:
         required: true
         content:
@@ -1040,8 +1036,7 @@ paths:
       tags: [Cartao]
       summary: List installment plans
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - in: query
           name: status
           schema:
@@ -1055,13 +1050,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/InstallmentPlan'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId}:
+  /credit-cards/{cardId}/plans/{planId}:
     get:
       tags: [Cartao]
       summary: Get installment plan
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - $ref: '#/components/parameters/PlanId'
       responses:
         '200':
@@ -1074,8 +1068,7 @@ paths:
       tags: [Cartao]
       summary: Update installment plan status
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - $ref: '#/components/parameters/PlanId'
       responses:
         '200':
@@ -1084,19 +1077,17 @@ paths:
       tags: [Cartao]
       summary: Cancel installment plan
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - $ref: '#/components/parameters/PlanId'
       responses:
         '204':
           description: Deleted
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments:
+  /credit-cards/{cardId}/installments:
     get:
       tags: [Cartao]
       summary: List installments
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - in: query
           name: month
           schema:
@@ -1115,13 +1106,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Installment'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments/{installmentId}:
+  /credit-cards/{cardId}/installments/{installmentId}:
     patch:
       tags: [Cartao]
       summary: Update installment status
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - $ref: '#/components/parameters/InstallmentId'
       responses:
         '200':
@@ -1130,13 +1120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Installment'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post:
+  /credit-cards/{cardId}/post:
     post:
       tags: [Cartao]
       summary: Post installments for month
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - in: query
           name: month
           required: true
@@ -1150,13 +1139,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostingResult'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements:
+  /credit-cards/{cardId}/statements:
     get:
       tags: [Cartao]
       summary: List statements
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - in: query
           name: month
           schema:
@@ -1171,13 +1159,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Statement'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId}:
+  /credit-cards/{cardId}/statements/{statementId}:
     get:
       tags: [Cartao]
       summary: Get statement
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - $ref: '#/components/parameters/StatementId'
       responses:
         '200':
@@ -1186,13 +1173,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Statement'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close:
+  /credit-cards/{cardId}/statements/close:
     post:
       tags: [Cartao]
       summary: Close statement
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
         - in: query
           name: month
           required: true
@@ -1206,13 +1192,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Statement'
-  /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay:
+  /credit-cards/{cardId}/statements/pay:
     post:
       tags: [Cartao]
       summary: Pay statement
       parameters:
-        - $ref: '#/components/parameters/LedgerId'
-        - $ref: '#/components/parameters/CardAccountId'
+        - $ref: '#/components/parameters/CardId'
       requestBody:
         required: true
         content:
@@ -1344,9 +1329,9 @@ components:
       required: true
       schema:
         type: string
-    CardAccountId:
+    CardId:
       in: path
-      name: cardAccountId
+      name: cardId
       required: true
       schema:
         type: string
@@ -1573,6 +1558,10 @@ components:
           type: string
         currency_code:
           type: string
+        create_default_accounts:
+          type: boolean
+        include_investment:
+          type: boolean
     LedgerUpdateRequest:
       type: object
       properties:
@@ -1603,6 +1592,10 @@ components:
           type: string
         type:
           type: string
+          enum: [current, business, investment, exchange, wallet]
+        nature:
+          type: string
+          enum: [asset, liability]
         is_active:
           type: boolean
         created_at:
@@ -1619,6 +1612,10 @@ components:
           type: string
         type:
           type: string
+          enum: [current, business, investment, exchange, wallet]
+        nature:
+          type: string
+          enum: [asset, liability]
         is_active:
           type: boolean
     AccountUpdateRequest:
@@ -1992,23 +1989,35 @@ components:
     CreditCard:
       type: object
       properties:
-        account_id:
+        id:
           type: string
         ledger_id:
           type: string
-        issuer_name:
+        parent_account_id:
+          type: string
+        liability_account_id:
+          type: string
+        label:
           type: string
           nullable: true
-        network:
+        brand:
           type: string
-        nickname:
-          type: string
-          nullable: true
         last4:
           type: string
           nullable: true
-        credit_limit_cents:
-          type: integer
+        cvv:
+          type: string
+          nullable: true
+        holder_name:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        color:
+          type: string
+          nullable: true
+        style:
+          type: string
           nullable: true
         closing_day:
           type: integer
@@ -2024,18 +2033,22 @@ components:
     CreditCardRequest:
       type: object
       properties:
-        account_id:
+        label:
           type: string
-        issuer_name:
-          type: string
-        network:
-          type: string
-        nickname:
+        brand:
           type: string
         last4:
           type: string
-        credit_limit_cents:
-          type: integer
+        cvv:
+          type: string
+        holder_name:
+          type: string
+        active:
+          type: boolean
+        color:
+          type: string
+        style:
+          type: string
         closing_day:
           type: integer
         due_day:
@@ -2047,7 +2060,7 @@ components:
           type: string
         ledger_id:
           type: string
-        card_account_id:
+        credit_card_id:
           type: string
         purchase_occurred_at:
           type: string
@@ -2138,7 +2151,7 @@ components:
           type: string
         ledger_id:
           type: string
-        card_account_id:
+        credit_card_id:
           type: string
         statement_month:
           type: string
@@ -2175,7 +2188,7 @@ components:
           format: date-time
         pay_amount_cents:
           type: integer
-        cash_account_id:
+        paying_account_id:
           type: string
     PostingResult:
       type: object
@@ -2204,6 +2217,8 @@ components:
         account_name:
           type: string
         account_type:
+          type: string
+        account_nature:
           type: string
         balance_cents:
           type: integer

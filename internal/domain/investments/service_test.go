@@ -10,8 +10,8 @@ import (
 )
 
 type fakeRepo struct {
-	role string
-	last journal.CreateTransactionParams
+	role       string
+	last       journal.CreateTransactionParams
 	categories map[string]string
 	sums       map[string]int64
 }
@@ -25,8 +25,11 @@ func (f *fakeRepo) LedgerExists(ctx context.Context, ledgerID string) (bool, err
 }
 
 func (f *fakeRepo) FindAccountByType(ctx context.Context, ledgerID, accountType string) (string, error) {
-	if accountType == "cash" {
-		return "cash-1", nil
+	if accountType == "wallet" {
+		return "wallet-1", nil
+	}
+	if accountType == "current" {
+		return "current-1", nil
 	}
 	return "inv-1", nil
 }

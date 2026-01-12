@@ -19,24 +19,24 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 | POST | /card-networks | Criar bandeira | Sim | owner |
 | PATCH | /card-networks/{code} | Atualizar bandeira | Sim | owner |
 | DELETE | /card-networks/{code} | Remover bandeira | Sim | owner |
-| GET | /ledgers/{ledgerId}/credit-cards | Listar cartoes | Sim | viewer |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | Detalhe do cartao | Sim | viewer |
-| POST | /ledgers/{ledgerId}/credit-cards | Criar cartao | Sim | editor |
-| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | Atualizar cartao | Sim | editor |
-| DELETE | /ledgers/{ledgerId}/credit-cards/{cardAccountId} | Remover cartao | Sim | editor |
-| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans | Criar plano | Sim | editor |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans | Listar planos | Sim | viewer |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | Detalhe do plano | Sim | viewer |
-| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | Atualizar plano | Sim | editor |
-| DELETE | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId} | Remover plano | Sim | editor |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments | Listar parcelas | Sim | viewer |
-| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments/{installmentId} | Atualizar parcela | Sim | editor |
-| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post | Postar parcelas do mes | Sim | editor |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements | Listar faturas | Sim | viewer |
-| GET | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId} | Detalhe da fatura | Sim | viewer |
-| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close | Fechar fatura | Sim | editor |
-| POST | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay | Pagar fatura | Sim | editor |
-| PATCH | /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId} | Ajuste manual | Sim | owner |
+| GET | /accounts/{accountId}/credit-cards | Listar cartoes da conta | Sim | viewer |
+| POST | /accounts/{accountId}/credit-cards | Criar cartao para a conta | Sim | editor |
+| GET | /credit-cards/{cardId} | Detalhe do cartao | Sim | viewer |
+| PATCH | /credit-cards/{cardId} | Atualizar cartao | Sim | editor |
+| DELETE | /credit-cards/{cardId} | Remover cartao | Sim | editor |
+| POST | /credit-cards/{cardId}/plans | Criar plano | Sim | editor |
+| GET | /credit-cards/{cardId}/plans | Listar planos | Sim | viewer |
+| GET | /credit-cards/{cardId}/plans/{planId} | Detalhe do plano | Sim | viewer |
+| PATCH | /credit-cards/{cardId}/plans/{planId} | Atualizar plano | Sim | editor |
+| DELETE | /credit-cards/{cardId}/plans/{planId} | Remover plano | Sim | editor |
+| GET | /credit-cards/{cardId}/installments | Listar parcelas | Sim | viewer |
+| PATCH | /credit-cards/{cardId}/installments/{installmentId} | Atualizar parcela | Sim | editor |
+| POST | /credit-cards/{cardId}/post | Postar parcelas do mes | Sim | editor |
+| GET | /credit-cards/{cardId}/statements | Listar faturas | Sim | viewer |
+| GET | /credit-cards/{cardId}/statements/{statementId} | Detalhe da fatura | Sim | viewer |
+| POST | /credit-cards/{cardId}/statements/close | Fechar fatura | Sim | editor |
+| POST | /credit-cards/{cardId}/statements/pay | Pagar fatura | Sim | editor |
+| PATCH | /credit-cards/{cardId}/statements/{statementId} | Ajuste manual | Sim | owner |
 
 ---
 
@@ -163,7 +163,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### POST /ledgers/{ledgerId}/credit-cards
+### POST /accounts/{accountId}/credit-cards
 1) Summary / Purpose
 - Criar cartao.
 
@@ -174,12 +174,14 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - Body:
 ```json
 {
-  "account_id": "uuid",
-  "issuer_name": "Banco X",
-  "network": "visa",
-  "nickname": "Cartao Principal",
+  "label": "Cartao Principal",
+  "brand": "visa",
   "last4": "1234",
-  "credit_limit_cents": 500000,
+  "cvv": "123",
+  "holder_name": "Fulano da Silva",
+  "active": true,
+  "color": "slate",
+  "style": "gradient",
   "closing_day": 25,
   "due_day": 10
 }
@@ -192,7 +194,8 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - 422 `VALIDATION_ERROR`
 
 6) Semantics / Notes
-- `account_id` deve ser tipo credit_card.
+- `accountId` vem do path e deve pertencer ao ledger.
+- o passivo do cartao e criado automaticamente (`type=current`, `nature=liability`).
 
 7) Pagination
 - n/a.
@@ -202,7 +205,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards
+### GET /accounts/{accountId}/credit-cards
 1) Summary / Purpose
 - Listar cartoes.
 
@@ -210,7 +213,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - Role: viewer+.
 
 3) Request
-- Path: `ledgerId`.
+- Path: `accountId`.
 
 4) Response
 - 200 (lista).
@@ -219,7 +222,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - 403 `LEDGER_ACCESS_DENIED`
 
 6) Semantics / Notes
-- Ledger boundary.
+- Ledger boundary via account.
 
 7) Pagination
 - n/a.
@@ -229,7 +232,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}
+### GET /credit-cards/{cardId}
 1) Summary / Purpose
 - Detalhe do cartao.
 
@@ -237,7 +240,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - Role: viewer+.
 
 3) Request
-- Path: `cardAccountId`.
+- Path: `cardId`.
 
 4) Response
 - 200 (cartao).
@@ -256,7 +259,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### PATCH /ledgers/{ledgerId}/credit-cards/{cardAccountId}
+### PATCH /credit-cards/{cardId}
 1) Summary / Purpose
 - Atualizar cartao.
 
@@ -283,7 +286,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### DELETE /ledgers/{ledgerId}/credit-cards/{cardAccountId}
+### DELETE /credit-cards/{cardId}
 1) Summary / Purpose
 - Remover cartao.
 
@@ -310,7 +313,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans
+### POST /credit-cards/{cardId}/plans
 1) Summary / Purpose
 - Criar plano de parcelas.
 
@@ -349,7 +352,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans
+### GET /credit-cards/{cardId}/plans
 1) Summary / Purpose
 - Listar planos.
 
@@ -376,7 +379,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId}
+### GET /credit-cards/{cardId}/plans/{planId}
 1) Summary / Purpose
 - Detalhe do plano.
 
@@ -403,7 +406,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### PATCH /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId}
+### PATCH /credit-cards/{cardId}/plans/{planId}
 1) Summary / Purpose
 - Atualizar plano.
 
@@ -430,7 +433,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### DELETE /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans/{planId}
+### DELETE /credit-cards/{cardId}/plans/{planId}
 1) Summary / Purpose
 - Remover plano.
 
@@ -457,7 +460,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments
+### GET /credit-cards/{cardId}/installments
 1) Summary / Purpose
 - Listar parcelas.
 
@@ -484,7 +487,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### PATCH /ledgers/{ledgerId}/credit-cards/{cardAccountId}/installments/{installmentId}
+### PATCH /credit-cards/{cardId}/installments/{installmentId}
 1) Summary / Purpose
 - Atualizar parcela (ex.: skipped).
 
@@ -514,7 +517,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post
+### POST /credit-cards/{cardId}/post
 1) Summary / Purpose
 - Postar parcelas do mes.
 
@@ -545,7 +548,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements
+### GET /credit-cards/{cardId}/statements
 1) Summary / Purpose
 - Listar faturas.
 
@@ -572,7 +575,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### GET /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId}
+### GET /credit-cards/{cardId}/statements/{statementId}
 1) Summary / Purpose
 - Detalhe da fatura.
 
@@ -599,7 +602,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close
+### POST /credit-cards/{cardId}/statements/close
 1) Summary / Purpose
 - Fechar fatura do mes.
 
@@ -626,7 +629,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay
+### POST /credit-cards/{cardId}/statements/pay
 1) Summary / Purpose
 - Pagar fatura.
 
@@ -640,7 +643,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
   "statement_id": "uuid",
   "payment_date": "2026-03-10",
   "pay_amount_cents": 300000,
-  "cash_account_id": "uuid"
+  "paying_account_id": "uuid"
 }
 ```
 
@@ -653,7 +656,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 - 422 `CREDITCARD_PAYMENT_EXCEEDS_TOTAL`
 
 6) Semantics / Notes
-- Gera transaction de pagamento.
+- Gera transaction de pagamento (transfer para o passivo do cartao).
 
 7) Pagination
 - n/a.
@@ -663,7 +666,7 @@ Este modulo cobre bandeiras, cartoes, planos de parcelamento, parcelas e faturas
 
 ---
 
-### PATCH /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/{statementId}
+### PATCH /credit-cards/{cardId}/statements/{statementId}
 1) Summary / Purpose
 - Ajuste manual (restrito).
 

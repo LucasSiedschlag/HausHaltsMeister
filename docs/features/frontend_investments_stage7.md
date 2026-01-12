@@ -7,7 +7,7 @@
 ## Pre-requisitos (antes da UI funcionar corretamente)
 
 1. **Contas obrigatorias no ledger**
-   - `Pessoal` (`type=cash`)
+   - `Wallet/Pessoal` (`type=wallet`) ou `Conta Corrente` (`type=current`)
    - `Investimentos` (`type=investment`)
 
 2. **Categorias tecnicas recomendadas** (mesmo ledger)

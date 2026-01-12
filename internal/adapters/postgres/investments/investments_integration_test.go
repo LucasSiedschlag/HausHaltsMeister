@@ -51,11 +51,11 @@ func TestContributionCreatesTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	var cashAccountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'cash', true) RETURNING id`, ledgerID, "Pessoal").Scan(&cashAccountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'wallet', 'asset', true) RETURNING id`, ledgerID, "Pessoal").Scan(&cashAccountID)
 	require.NoError(t, err)
 
 	var investAccountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'investment', true) RETURNING id`, ledgerID, "Investimentos").Scan(&investAccountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'investment', 'asset', true) RETURNING id`, ledgerID, "Investimentos").Scan(&investAccountID)
 	require.NoError(t, err)
 
 	categories := []struct {

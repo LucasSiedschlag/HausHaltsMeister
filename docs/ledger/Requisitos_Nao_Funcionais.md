@@ -81,7 +81,7 @@ O sistema deve usar índices adequados e consultas orientadas a `ledger_id` + in
   - `entries(ledger_id, account_id)`
   - `entries(ledger_id, category_id)`
   - `installments(ledger_id, due_month, status)`
-  - `credit_card_statements(card_account_id, statement_month)`
+  - `credit_card_statements(credit_card_id, statement_month)`
 
 ---
 

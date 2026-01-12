@@ -52,10 +52,10 @@ func TestCreateAccountUniquePerLedger(t *testing.T) {
 	repo := NewRepository(store)
 	service := accounts.NewService(repo)
 
-	_, err = service.CreateAccount(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, "Conta", "cash", true)
+	_, err = service.CreateAccount(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, "Conta", "current", "asset", true)
 	require.NoError(t, err)
 
-	_, err = service.CreateAccount(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, "Conta", "cash", true)
+	_, err = service.CreateAccount(ctx, "00000000-0000-0000-0000-000000000001", ledgerID, "Conta", "current", "asset", true)
 	require.Error(t, err)
 	require.Equal(t, accounts.ErrDuplicateName, err)
 }
@@ -102,7 +102,7 @@ func TestGetAccountCrossLedgerNotFound(t *testing.T) {
 	require.NoError(t, err)
 
 	var accountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'cash', true) RETURNING id`, ledgerA, "Conta A").Scan(&accountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'current', 'asset', true) RETURNING id`, ledgerA, "Conta A").Scan(&accountID)
 	require.NoError(t, err)
 
 	repo := NewRepository(store)

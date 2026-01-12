@@ -51,7 +51,7 @@ func TestMonthlyBudgetSummary(t *testing.T) {
 	require.NoError(t, err)
 
 	var accountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, $3, true) RETURNING id`, ledgerID, "Pessoal", "cash").Scan(&accountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, $3, 'asset', true) RETURNING id`, ledgerID, "Pessoal", "wallet").Scan(&accountID)
 	require.NoError(t, err)
 
 	var incomeCategoryID string
@@ -130,7 +130,7 @@ func TestPeriodBudgetSummaryAggregates(t *testing.T) {
 	require.NoError(t, err)
 
 	var accountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, $3, true) RETURNING id`, ledgerID, "Pessoal", "cash").Scan(&accountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, $3, 'asset', true) RETURNING id`, ledgerID, "Pessoal", "wallet").Scan(&accountID)
 	require.NoError(t, err)
 
 	var incomeCategoryID string

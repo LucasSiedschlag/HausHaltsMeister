@@ -11,16 +11,20 @@ import (
 
 type fakeRepo struct {
 	role              string
-	accountType       string
+	account           AccountInfo
+	accountNature     string
 	categoryDirection string
 	categoryRelevant  bool
 	hasPosted         bool
 	networkErr        error
+	cardLookupErr     error
+	card              CreditCard
 	installments      []Installment
 	posted            []string
 	sumCharges        int64
 	statement         Statement
 	createdTxs        int
+	createdAccount    AccountInfo
 }
 
 func (f *fakeRepo) ListCardNetworks(ctx context.Context) ([]CardNetwork, error) {
@@ -39,12 +43,18 @@ func (f *fakeRepo) DeleteCardNetwork(ctx context.Context, code string) error {
 	return nil
 }
 
-func (f *fakeRepo) ListCreditCards(ctx context.Context, ledgerID string) ([]CreditCard, error) {
+func (f *fakeRepo) ListCreditCards(ctx context.Context, ledgerID, parentAccountID string) ([]CreditCard, error) {
 	return nil, nil
 }
 
-func (f *fakeRepo) GetCreditCard(ctx context.Context, ledgerID, cardAccountID string) (CreditCard, error) {
-	return CreditCard{}, nil
+func (f *fakeRepo) GetCreditCard(ctx context.Context, cardID string) (CreditCard, error) {
+	if f.cardLookupErr != nil {
+		return CreditCard{}, f.cardLookupErr
+	}
+	if f.card.ID == "" {
+		return CreditCard{}, ErrNotFound
+	}
+	return f.card, nil
 }
 
 func (f *fakeRepo) CreateCreditCard(ctx context.Context, params CreditCard) (CreditCard, error) {
@@ -55,12 +65,30 @@ func (f *fakeRepo) UpdateCreditCard(ctx context.Context, params CreditCard, upda
 	return params, nil
 }
 
-func (f *fakeRepo) DeleteCreditCard(ctx context.Context, ledgerID, cardAccountID string) error {
+func (f *fakeRepo) DeleteCreditCard(ctx context.Context, ledgerID, cardID string) error {
 	return nil
 }
 
-func (f *fakeRepo) GetAccountType(ctx context.Context, ledgerID, accountID string) (string, error) {
-	return f.accountType, nil
+func (f *fakeRepo) GetAccount(ctx context.Context, userID, accountID string) (AccountInfo, error) {
+	if f.account.ID == "" {
+		return AccountInfo{}, ErrNotFound
+	}
+	return f.account, nil
+}
+
+func (f *fakeRepo) CreateAccount(ctx context.Context, ledgerID, name, accountType, nature string, isActive bool) (AccountInfo, error) {
+	f.createdAccount = AccountInfo{
+		ID:       "liab-1",
+		LedgerID: ledgerID,
+		Type:     accountType,
+		Nature:   nature,
+		IsActive: isActive,
+	}
+	return f.createdAccount, nil
+}
+
+func (f *fakeRepo) GetAccountNature(ctx context.Context, ledgerID, accountID string) (string, error) {
+	return f.accountNature, nil
 }
 
 func (f *fakeRepo) GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error) {
@@ -93,12 +121,12 @@ func (f *fakeRepo) CreatePlanWithInstallments(ctx context.Context, plan Installm
 	return plan, nil
 }
 
-func (f *fakeRepo) ListPlans(ctx context.Context, ledgerID, cardAccountID string, status *string) ([]InstallmentPlan, error) {
+func (f *fakeRepo) ListPlans(ctx context.Context, ledgerID, cardID string, status *string) ([]InstallmentPlan, error) {
 	return nil, nil
 }
 
-func (f *fakeRepo) GetPlan(ctx context.Context, ledgerID, cardAccountID, planID string) (InstallmentPlan, error) {
-	return InstallmentPlan{ID: planID, LedgerID: ledgerID, CardAccountID: cardAccountID}, nil
+func (f *fakeRepo) GetPlan(ctx context.Context, ledgerID, cardID, planID string) (InstallmentPlan, error) {
+	return InstallmentPlan{ID: planID, LedgerID: ledgerID, CreditCardID: cardID}, nil
 }
 
 func (f *fakeRepo) UpdatePlanStatus(ctx context.Context, ledgerID, planID, status string, updatedAt time.Time) error {
@@ -109,7 +137,7 @@ func (f *fakeRepo) HasPostedInstallments(ctx context.Context, ledgerID, planID s
 	return f.hasPosted, nil
 }
 
-func (f *fakeRepo) ListInstallments(ctx context.Context, ledgerID, cardAccountID string, month *time.Time, status *string) ([]Installment, error) {
+func (f *fakeRepo) ListInstallments(ctx context.Context, ledgerID, cardID string, month *time.Time, status *string) ([]Installment, error) {
 	return nil, nil
 }
 
@@ -117,7 +145,7 @@ func (f *fakeRepo) UpdateInstallmentStatus(ctx context.Context, ledgerID, instal
 	return Installment{}, nil
 }
 
-func (f *fakeRepo) ListInstallmentsForPosting(ctx context.Context, ledgerID, cardAccountID string, month time.Time) ([]Installment, error) {
+func (f *fakeRepo) ListInstallmentsForPosting(ctx context.Context, ledgerID, cardID string, month time.Time) ([]Installment, error) {
 	return f.installments, nil
 }
 
@@ -130,11 +158,11 @@ func (f *fakeRepo) MarkInstallmentPosted(ctx context.Context, ledgerID, installm
 	return nil
 }
 
-func (f *fakeRepo) GetStatement(ctx context.Context, ledgerID, cardAccountID, statementID string) (Statement, error) {
+func (f *fakeRepo) GetStatement(ctx context.Context, ledgerID, cardID, statementID string) (Statement, error) {
 	return f.statement, nil
 }
 
-func (f *fakeRepo) GetStatementByMonth(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (Statement, error) {
+func (f *fakeRepo) GetStatementByMonth(ctx context.Context, ledgerID, cardID string, month time.Time) (Statement, error) {
 	if f.statement.ID == "" {
 		return Statement{}, ErrNotFound
 	}
@@ -145,23 +173,23 @@ func (f *fakeRepo) CreateStatement(ctx context.Context, statement Statement) (St
 	return statement, nil
 }
 
-func (f *fakeRepo) UpdateStatementTotals(ctx context.Context, ledgerID, cardAccountID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
+func (f *fakeRepo) UpdateStatementTotals(ctx context.Context, ledgerID, cardID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
 	return Statement{ID: statementID, TotalChargesCents: totalCharges, TotalPaymentsCents: totalPayments, Status: status}, nil
 }
 
-func (f *fakeRepo) ListStatements(ctx context.Context, ledgerID, cardAccountID string, month *time.Time) ([]Statement, error) {
+func (f *fakeRepo) ListStatements(ctx context.Context, ledgerID, cardID string, month *time.Time) ([]Statement, error) {
 	return nil, nil
 }
 
-func (f *fakeRepo) SetStatementPayment(ctx context.Context, ledgerID, cardAccountID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
+func (f *fakeRepo) SetStatementPayment(ctx context.Context, ledgerID, cardID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error) {
 	return Statement{}, nil
 }
 
-func (f *fakeRepo) MarkInstallmentsPaid(ctx context.Context, ledgerID, cardAccountID string, month time.Time, statementID string, updatedAt time.Time) error {
+func (f *fakeRepo) MarkInstallmentsPaid(ctx context.Context, ledgerID, cardID string, month time.Time, statementID string, updatedAt time.Time) error {
 	return nil
 }
 
-func (f *fakeRepo) SumStatementCharges(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (int64, error) {
+func (f *fakeRepo) SumStatementCharges(ctx context.Context, ledgerID, cardID string, month time.Time) (int64, error) {
 	return f.sumCharges, nil
 }
 
@@ -171,27 +199,78 @@ func (f *fakeRepo) CreateTransaction(ctx context.Context, params journal.CreateT
 }
 
 func TestCreateCreditCardRequiresEditor(t *testing.T) {
-	repo := &fakeRepo{role: "viewer"}
+	repo := &fakeRepo{
+		role: "viewer",
+		account: AccountInfo{
+			ID:       "acc-1",
+			LedgerID: "ledger-1",
+			Nature:   "asset",
+			IsActive: true,
+		},
+	}
 	service := NewService(repo)
 
-	_, err := service.CreateCreditCard(context.Background(), "user-1", "ledger-1", CreditCard{AccountID: "acc-1"})
+	_, err := service.CreateCreditCard(context.Background(), "user-1", "acc-1", CreditCard{ClosingDay: 10, DueDay: 20})
 	require.Equal(t, ErrAccessDenied, err)
 }
 
-func TestCancelPlanBlocksPostedInstallments(t *testing.T) {
-	repo := &fakeRepo{role: "editor", hasPosted: true}
+func TestCreateCreditCardRejectsLiabilityAccount(t *testing.T) {
+	repo := &fakeRepo{
+		role: "editor",
+		account: AccountInfo{
+			ID:       "acc-1",
+			LedgerID: "ledger-1",
+			Nature:   "liability",
+			IsActive: true,
+		},
+	}
 	service := NewService(repo)
 
-	err := service.CancelPlan(context.Background(), "user-1", "ledger-1", "card-1", "plan-1")
-	require.Equal(t, ErrTransactionReferenced, err)
+	_, err := service.CreateCreditCard(context.Background(), "user-1", "acc-1", CreditCard{ClosingDay: 10, DueDay: 20})
+	require.Error(t, err)
+	require.Equal(t, "VALIDATION_ERROR", err.(*Error).Code())
+}
+
+func TestCreateCreditCardSuccess(t *testing.T) {
+	repo := &fakeRepo{
+		role: "editor",
+		account: AccountInfo{
+			ID:       "acc-1",
+			LedgerID: "ledger-1",
+			Nature:   "asset",
+			IsActive: true,
+		},
+	}
+	service := NewService(repo)
+
+	card, err := service.CreateCreditCard(context.Background(), "user-1", "acc-1", CreditCard{
+		Brand:      "visa",
+		ClosingDay: 10,
+		DueDay:     20,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "acc-1", card.ParentAccountID)
+	require.Equal(t, "ledger-1", card.LedgerID)
+	require.Equal(t, "liab-1", card.LiabilityAccountID)
+	require.Equal(t, "current", repo.createdAccount.Type)
+	require.Equal(t, "liability", repo.createdAccount.Nature)
 }
 
 func TestCreatePlanRejectsNonBudgetCategory(t *testing.T) {
-	repo := &fakeRepo{role: "editor", accountType: "credit_card", categoryDirection: "in", categoryRelevant: true}
+	repo := &fakeRepo{
+		role:              "editor",
+		categoryDirection: "in",
+		categoryRelevant:  true,
+		card: CreditCard{
+			ID:                 "card-1",
+			LedgerID:           "ledger-1",
+			LiabilityAccountID: "liab-1",
+		},
+	}
 	service := NewService(repo)
 
 	firstDue := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err := service.CreatePlan(context.Background(), "user-1", "ledger-1", "card-1", InstallmentPlan{
+	_, err := service.CreatePlan(context.Background(), "user-1", "card-1", InstallmentPlan{
 		PurchaseOccurredAt: time.Now().UTC(),
 		Description:        "Compra",
 		CategoryID:         "cat-1",
@@ -204,38 +283,21 @@ func TestCreatePlanRejectsNonBudgetCategory(t *testing.T) {
 	require.Equal(t, "VALIDATION_ERROR", appErr.Code())
 }
 
-func TestCreateCreditCardValidatesAccountType(t *testing.T) {
-	repo := &fakeRepo{role: "editor", accountType: "cash"}
-	service := NewService(repo)
-
-	_, err := service.CreateCreditCard(context.Background(), "user-1", "ledger-1", CreditCard{AccountID: "acc-1", ClosingDay: 10, DueDay: 20})
-	require.Error(t, err)
-	require.Equal(t, "VALIDATION_ERROR", err.(*Error).Code())
-}
-
-func TestCreateCreditCardSuccess(t *testing.T) {
-	repo := &fakeRepo{role: "editor", accountType: "credit_card"}
-	service := NewService(repo)
-
-	limit := int64(500000)
-	card, err := service.CreateCreditCard(context.Background(), "user-1", "ledger-1", CreditCard{
-		AccountID:        "acc-1",
-		Network:          "visa",
-		ClosingDay:       10,
-		DueDay:           20,
-		CreditLimitCents: &limit,
-	})
-	require.NoError(t, err)
-	require.Equal(t, "acc-1", card.AccountID)
-	require.Equal(t, "ledger-1", card.LedgerID)
-}
-
 func TestCreatePlanSuccess(t *testing.T) {
-	repo := &fakeRepo{role: "editor", accountType: "credit_card", categoryDirection: "out", categoryRelevant: true}
+	repo := &fakeRepo{
+		role:              "editor",
+		categoryDirection: "out",
+		categoryRelevant:  true,
+		card: CreditCard{
+			ID:                 "card-1",
+			LedgerID:           "ledger-1",
+			LiabilityAccountID: "liab-1",
+		},
+	}
 	service := NewService(repo)
 
 	firstDue := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	plan, err := service.CreatePlan(context.Background(), "user-1", "ledger-1", "card-1", InstallmentPlan{
+	plan, err := service.CreatePlan(context.Background(), "user-1", "card-1", InstallmentPlan{
 		PurchaseOccurredAt: time.Now().UTC(),
 		Description:        "Compra",
 		CategoryID:         "cat-1",
@@ -243,19 +305,23 @@ func TestCreatePlanSuccess(t *testing.T) {
 		FirstDueMonth:      firstDue,
 	}, 2, 5000)
 	require.NoError(t, err)
-	require.Equal(t, "card-1", plan.CardAccountID)
+	require.Equal(t, "card-1", plan.CreditCardID)
 }
 
 func TestPostMonthCreatesTransactions(t *testing.T) {
 	repo := &fakeRepo{
-		role:         "editor",
-		accountType:  "credit_card",
-		installments: []Installment{{ID: "inst-1", AmountCents: 1000}},
+		role: "editor",
+		card: CreditCard{
+			ID:                 "card-1",
+			LedgerID:           "ledger-1",
+			LiabilityAccountID: "liab-1",
+		},
+		installments: []Installment{{ID: "inst-1", PlanID: "plan-1", AmountCents: 1000}},
 	}
 	service := NewService(repo)
 
 	month := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	result, err := service.PostMonth(context.Background(), "user-1", "ledger-1", "card-1", month)
+	result, err := service.PostMonth(context.Background(), "user-1", "card-1", month)
 	require.NoError(t, err)
 	require.Equal(t, 1, result.PostedCount)
 	require.Equal(t, 1, repo.createdTxs)
@@ -266,11 +332,16 @@ func TestCloseStatementCreatesAndCloses(t *testing.T) {
 	repo := &fakeRepo{
 		role:       "editor",
 		sumCharges: 12000,
+		card: CreditCard{
+			ID:                 "card-1",
+			LedgerID:           "ledger-1",
+			LiabilityAccountID: "liab-1",
+		},
 	}
 	service := NewService(repo)
 
 	month := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	statement, err := service.CloseStatement(context.Background(), "user-1", "ledger-1", "card-1", month)
+	statement, err := service.CloseStatement(context.Background(), "user-1", "card-1", month)
 	require.NoError(t, err)
 	require.Equal(t, "closed", statement.Status)
 	require.Equal(t, int64(12000), statement.TotalChargesCents)
@@ -278,12 +349,17 @@ func TestCloseStatementCreatesAndCloses(t *testing.T) {
 
 func TestPayStatementSuccess(t *testing.T) {
 	repo := &fakeRepo{
-		role:        "editor",
-		accountType: "cash",
+		role:          "editor",
+		accountNature: "asset",
+		card: CreditCard{
+			ID:                 "card-1",
+			LedgerID:           "ledger-1",
+			LiabilityAccountID: "liab-1",
+		},
 		statement: Statement{
 			ID:                "stmt-1",
 			LedgerID:          "ledger-1",
-			CardAccountID:     "card-1",
+			CreditCardID:      "card-1",
 			StatementMonth:    time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
 			TotalChargesCents: 10000,
 			Status:            "closed",
@@ -291,7 +367,7 @@ func TestPayStatementSuccess(t *testing.T) {
 	}
 	service := NewService(repo)
 
-	_, err := service.PayStatement(context.Background(), "user-1", "ledger-1", "card-1", "stmt-1", "cash-1", 10000, time.Now().UTC())
+	_, err := service.PayStatement(context.Background(), "user-1", "card-1", "stmt-1", "acc-1", 10000, time.Now().UTC())
 	require.NoError(t, err)
 	require.Equal(t, 1, repo.createdTxs)
 }

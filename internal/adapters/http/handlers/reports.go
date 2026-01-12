@@ -61,10 +61,11 @@ func (h *ReportsHandler) Balances(c echo.Context) error {
 	items := make([]balanceItemResponse, 0, len(report.Items))
 	for _, item := range report.Items {
 		items = append(items, balanceItemResponse{
-			AccountID:    item.AccountID,
-			AccountName:  item.AccountName,
-			AccountType:  item.AccountType,
-			BalanceCents: item.BalanceCents,
+			AccountID:     item.AccountID,
+			AccountName:   item.AccountName,
+			AccountType:   item.AccountType,
+			AccountNature: item.AccountNature,
+			BalanceCents:  item.BalanceCents,
 		})
 	}
 

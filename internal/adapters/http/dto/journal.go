@@ -25,14 +25,15 @@ type TransactionPatchRequest struct {
 }
 
 type TransactionResponse struct {
-	ID          string                     `json:"id"`
-	LedgerID    string                     `json:"ledger_id"`
-	OccurredAt  time.Time                  `json:"occurred_at"`
-	Description string                     `json:"description"`
-	Notes       *string                    `json:"notes,omitempty"`
-	CreatedAt   time.Time                  `json:"created_at"`
-	UpdatedAt   *time.Time                 `json:"updated_at,omitempty"`
-	Entries     []TransactionEntryResponse `json:"entries"`
+	ID           string                     `json:"id"`
+	LedgerID     string                     `json:"ledger_id"`
+	OccurredAt   time.Time                  `json:"occurred_at"`
+	Description  string                     `json:"description"`
+	Notes        *string                    `json:"notes,omitempty"`
+	CreditCardID *string                    `json:"credit_card_id,omitempty"`
+	CreatedAt    time.Time                  `json:"created_at"`
+	UpdatedAt    *time.Time                 `json:"updated_at,omitempty"`
+	Entries      []TransactionEntryResponse `json:"entries"`
 }
 
 type TransactionEntryResponse struct {

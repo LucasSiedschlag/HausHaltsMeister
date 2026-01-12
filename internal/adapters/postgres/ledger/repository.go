@@ -68,7 +68,32 @@ func (r *Repository) CreateLedger(ctx context.Context, params ledger.CreateLedge
 			INSERT INTO ledger_members (ledger_id, user_id, role)
 			VALUES ($1, $2, 'owner')
 		`, created.ID, params.OwnerUserID)
-		return err
+		if err != nil {
+			return err
+		}
+
+		if params.CreateDefaultAccounts {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+				VALUES
+					($1, 'Conta Corrente', 'current', 'asset', true),
+					($1, 'Wallet/Pessoal', 'wallet', 'asset', true)
+			`, created.ID)
+			if err != nil {
+				return err
+			}
+
+			if params.IncludeInvestment {
+				_, err := tx.Exec(ctx, `
+					INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+					VALUES ($1, 'Investimentos', 'investment', 'asset', true)
+				`, created.ID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return ledger.Ledger{}, err

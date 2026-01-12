@@ -75,16 +75,16 @@ func (r *Repository) CreateTransaction(ctx context.Context, params journal.Creat
 		var row pgx.Row
 		if transactionID != "" {
 			row = tx.QueryRow(ctx, `
-				INSERT INTO transactions (id, ledger_id, occurred_at, description, notes, created_by_user_id)
-				VALUES ($1, $2, $3, $4, $5, $6)
-				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
-			`, transactionID, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID)
+				INSERT INTO transactions (id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, created_at, updated_at
+			`, transactionID, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID, params.CreditCardID)
 		} else {
 			row = tx.QueryRow(ctx, `
-				INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id)
-				VALUES ($1, $2, $3, $4, $5)
-				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
-			`, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID)
+				INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id)
+				VALUES ($1, $2, $3, $4, $5, $6)
+				RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, created_at, updated_at
+			`, params.LedgerID, params.OccurredAt, params.Description, params.Notes, params.CreatedByUserID, params.CreditCardID)
 		}
 		if err := scanTransaction(row, &created); err != nil {
 			return err
@@ -227,7 +227,7 @@ func (r *Repository) listTransactionIDs(ctx context.Context, params journal.List
 
 func (r *Repository) getTransactionsWithEntries(ctx context.Context, ids []string) ([]journal.Transaction, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.created_at, t.updated_at,
+		SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.credit_card_id, t.created_at, t.updated_at,
 			e.id, e.ledger_id, e.transaction_id, e.account_id, e.category_id, e.kind, e.amount_cents, e.memo, e.created_at, e.updated_at
 		FROM transactions t
 		JOIN entries e ON e.transaction_id = t.id
@@ -251,6 +251,7 @@ func (r *Repository) getTransactionsWithEntries(ctx context.Context, ids []strin
 			&tx.Description,
 			&tx.Notes,
 			&tx.CreatedByUserID,
+			&tx.CreditCardID,
 			&tx.CreatedAt,
 			&tx.UpdatedAt,
 			&entry.ID,
@@ -286,7 +287,7 @@ func (r *Repository) GetTransaction(ctx context.Context, ledgerID, transactionID
 
 func (r *Repository) getTransactionWithEntries(ctx context.Context, q dbQuerier, ledgerID, transactionID string) (journal.Transaction, error) {
 	rows, err := q.Query(ctx, `
-		SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.created_at, t.updated_at,
+		SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.credit_card_id, t.created_at, t.updated_at,
 			e.id, e.ledger_id, e.transaction_id, e.account_id, e.category_id, e.kind, e.amount_cents, e.memo, e.created_at, e.updated_at
 		FROM transactions t
 		JOIN entries e ON e.transaction_id = t.id
@@ -309,6 +310,7 @@ func (r *Repository) getTransactionWithEntries(ctx context.Context, q dbQuerier,
 			&tx.Description,
 			&tx.Notes,
 			&tx.CreatedByUserID,
+			&tx.CreditCardID,
 			&tx.CreatedAt,
 			&tx.UpdatedAt,
 			&entry.ID,
@@ -369,7 +371,7 @@ func (r *Repository) UpdateTransaction(ctx context.Context, params journal.Updat
 			UPDATE transactions
 			SET ` + strings.Join(setParts, ", ") + `
 			WHERE ledger_id = $1 AND id = $2
-			RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+			RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, created_at, updated_at
 		`
 
 		row := tx.QueryRow(ctx, query, args...)
@@ -554,6 +556,7 @@ func scanTransaction(row pgx.Row, tx *journal.Transaction) error {
 		&tx.Description,
 		&tx.Notes,
 		&tx.CreatedByUserID,
+		&tx.CreditCardID,
 		&tx.CreatedAt,
 		&tx.UpdatedAt,
 	); err != nil {

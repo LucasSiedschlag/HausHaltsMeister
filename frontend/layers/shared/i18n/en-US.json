@@ -22,6 +22,12 @@
       "CONFLICT_DUPLICATE_NAME": "A record with this name already exists.",
       "CONFLICT_DUPLICATE_EMAIL": "This email is already in use.",
       "LEDGER_ACCESS_DENIED": "You do not have permission to access this ledger.",
+      "CREDITCARD_CARD_NOT_FOUND": "Card not found.",
+      "CREDITCARD_CARD_ALREADY_EXISTS": "This account already has a card. Create another credit card account to register a new card.",
+      "CREDITCARD_STATEMENT_NOT_FOUND": "Statement not found.",
+      "CREDITCARD_STATEMENT_ALREADY_PAID": "Statement already paid.",
+      "CREDITCARD_INSTALLMENT_ALREADY_POSTED": "Installment already posted.",
+      "CREDITCARD_PAYMENT_EXCEEDS_TOTAL": "Payment exceeds the statement total.",
       "AUTH_INVALID_CREDENTIALS": "Invalid email or password.",
       "AUTH_User_INACTIVE": "User inactive.",
       "default": "An unexpected error occurred."
@@ -310,6 +316,8 @@
       "namePlaceholder": "Ex: Personal",
       "currencyLabel": "Base currency",
       "currencyPlaceholder": "Select",
+      "includeInvestmentsLabel": "Create investments",
+      "includeInvestmentsHint": "Adds an investment account to the ledger.",
       "submit": "Create ledger",
       "submitting": "Creating...",
       "nameRequired": "Enter a name.",
@@ -318,7 +326,7 @@
   },
   "accounts": {
     "title": "Accounts",
-    "description": "Manage cash, investment, and card accounts.",
+    "description": "Manage current, business, investment, exchange, and wallet accounts.",
     "loading": "Loading accounts...",
     "empty": "No accounts found.",
     "readOnlyHint": "You have read-only access.",
@@ -340,9 +348,11 @@
       "actions": "Actions"
     },
     "types": {
-      "cash": "Cash",
+      "current": "Current",
+      "business": "Business",
       "investment": "Investment",
-      "credit_card": "Credit Card"
+      "exchange": "Exchange",
+      "wallet": "Wallet"
     },
     "status": {
       "active": "Active",
@@ -665,7 +675,7 @@
       "title": "Accounts",
       "inactive": "Inactive",
       "selectHint": "Select an account to view activity.",
-      "unsupportedHint": "Select a cash or investment account.",
+      "unsupportedHint": "Select a wallet/current or investment account.",
       "inactiveHint": "Inactive account. Activate it to record entries.",
       "earningsHint": "Select an investment account to record earnings."
     },
@@ -694,7 +704,7 @@
       "goCategories": "Go to categories",
       "blockedHint": "Finish setup before recording entries.",
       "accounts": {
-        "cash": "Cash account (type: cash)",
+        "cash": "Wallet account (type: wallet) or current account (type: current)",
         "investment": "Investment account (type: investment)"
       }
     },
@@ -709,11 +719,11 @@
     "forms": {
       "contribution": {
         "title": "Contribution",
-        "description": "Move funds from the cash account to investments."
+        "description": "Move funds from the wallet/current account to investments."
       },
       "redemption": {
         "title": "Redemption",
-        "description": "Move funds from investments back to cash."
+        "description": "Move funds from investments back to the wallet/current account."
       },
       "earnings": {
         "title": "Earnings",
@@ -739,6 +749,252 @@
       "earningsSuccess": "Earnings recorded.",
       "lossSuccess": "Loss recorded.",
       "error": "Could not record the entry."
+    }
+  },
+  "creditCards": {
+    "title": "Cards",
+    "description": "Manage credit cards and statements.",
+    "loading": "Loading cards...",
+    "empty": "No cards yet.",
+    "readOnlyHint": "You only have read access.",
+    "list": {
+      "title": "Credit cards",
+      "description": "Track cycles and installments.",
+      "emptyAccounts": "Create an account to link a card."
+    },
+    "table": {
+      "card": "Card",
+      "network": "Network",
+      "cycle": "Cycle",
+      "actions": "Actions",
+      "closingDay": "Closes day {day}",
+      "dueDay": "Due day {day}",
+      "noNickname": "No label"
+    },
+    "actions": {
+      "newCard": "New card",
+      "view": "Details",
+      "edit": "Edit",
+      "delete": "Remove",
+      "newPlan": "New plan",
+      "cancelPlan": "Cancel plan",
+      "skipInstallment": "Skip installment",
+      "postMonth": "Post month",
+      "closeStatement": "Close statement",
+      "payStatement": "Pay statement"
+    },
+    "header": {
+      "newCard": "New card",
+      "newPlan": "New plan"
+    },
+    "form": {
+      "createTitle": "New card",
+      "createDescription": "Link a card to an account.",
+      "editTitle": "Edit card",
+      "editDescription": "Update card details.",
+      "accountLabel": "Account",
+      "accountPlaceholder": "Select",
+      "networkLabel": "Network",
+      "networkPlaceholder": "Select",
+      "labelLabel": "Label",
+      "labelPlaceholder": "e.g. Primary card",
+      "holderLabel": "Holder name",
+      "holderPlaceholder": "e.g. Alex Doe",
+      "last4Label": "Last 4",
+      "last4Placeholder": "1234",
+      "closingDayLabel": "Closing day",
+      "closingDayPlaceholder": "25",
+      "dueDayLabel": "Due day",
+      "dueDayPlaceholder": "10",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "created": "Card created.",
+      "updated": "Card updated.",
+      "deleted": "Card removed.",
+      "last4Invalid": "Enter the last 4 digits.",
+      "postSuccess": "Posted installments: {count}.",
+      "postEmpty": "No installments to post.",
+      "error": "Could not complete the operation."
+    },
+    "confirm": {
+      "deleteTitle": "Remove card?",
+      "deleteMessage": "The card \"{name}\" will be removed.",
+      "confirmAction": "Remove",
+      "cancelAction": "Cancel"
+    },
+    "networks": {
+      "title": "Networks",
+      "description": "Global card network catalog.",
+      "loading": "Loading networks...",
+      "empty": "No networks yet.",
+      "readOnlyHint": "Only owners can manage networks.",
+      "actions": {
+        "new": "New network"
+      },
+      "codeLabel": "Code",
+      "codePlaceholder": "e.g. visa",
+      "displayNameLabel": "Name",
+      "displayNamePlaceholder": "e.g. Visa",
+      "createTitle": "New network",
+      "createDescription": "Add a network to the catalog.",
+      "editTitle": "Edit network",
+      "editDescription": "Update the display name.",
+      "messages": {
+        "created": "Network created.",
+        "updated": "Network updated.",
+        "deleted": "Network removed.",
+        "error": "Could not save the network."
+      },
+      "confirm": {
+        "deleteTitle": "Remove network?",
+        "deleteMessage": "The network \"{name}\" will be removed.",
+        "confirmAction": "Remove",
+        "cancelAction": "Cancel"
+      }
+    },
+    "detail": {
+      "unknownCard": "Card",
+      "limitLabel": "Limit",
+      "cycleLabel": "Cycle",
+      "closingDay": "Closes day {day}",
+      "dueDay": "Due day {day}",
+      "statementMonth": "Statement month",
+      "statementStatus": "Statement",
+      "actionsTitle": "Actions"
+    },
+    "plans": {
+      "title": "Plans",
+      "loading": "Loading plans...",
+      "empty": "No plans found.",
+      "filters": {
+        "status": "Status",
+        "placeholder": "Filter",
+        "all": "All",
+        "active": "Active",
+        "cancelled": "Cancelled"
+      },
+      "table": {
+        "description": "Description",
+        "category": "Category",
+        "amount": "Total",
+        "firstDue": "First statement",
+        "status": "Status",
+        "actions": "Actions",
+        "noMerchant": "No merchant"
+      },
+      "status": {
+        "active": "Active",
+        "cancelled": "Cancelled",
+        "finished": "Finished"
+      },
+      "form": {
+        "title": "New plan",
+        "description": "Register an installment purchase.",
+        "purchaseDateLabel": "Purchase date",
+        "firstDueLabel": "First statement",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "e.g. Laptop",
+        "merchantLabel": "Merchant",
+        "merchantPlaceholder": "Optional",
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select",
+        "totalAmountLabel": "Total amount",
+        "totalAmountPlaceholder": "0.00",
+        "installmentsLabel": "Installments",
+        "installmentsPlaceholder": "e.g. 6",
+        "submit": "Create plan"
+      },
+      "messages": {
+        "created": "Plan created.",
+        "cancelled": "Plan cancelled.",
+        "installmentTooSmall": "Installment amount is too small.",
+        "error": "Could not save the plan."
+      },
+      "confirm": {
+        "deleteTitle": "Cancel plan?",
+        "deleteMessage": "The plan \"{name}\" will be cancelled.",
+        "confirmAction": "Cancel",
+        "cancelAction": "Back"
+      }
+    },
+    "installments": {
+      "title": "Installments",
+      "loading": "Loading installments...",
+      "empty": "No installments found.",
+      "filters": {
+        "status": "Status",
+        "placeholder": "Filter",
+        "all": "All",
+        "scheduled": "Scheduled",
+        "posted": "Posted",
+        "paid": "Paid",
+        "skipped": "Skipped"
+      },
+      "table": {
+        "plan": "Plan",
+        "amount": "Amount",
+        "dueMonth": "Due month",
+        "status": "Status",
+        "actions": "Actions",
+        "installmentLabel": "Installment {number}/{total}"
+      },
+      "status": {
+        "scheduled": "Scheduled",
+        "posted": "Posted",
+        "paid": "Paid",
+        "skipped": "Skipped"
+      },
+      "period": "Month: {month}",
+      "messages": {
+        "skipped": "Installment marked as skipped.",
+        "error": "Could not update the installment."
+      },
+      "confirm": {
+        "skipTitle": "Skip installment?",
+        "skipMessage": "This installment will be skipped.",
+        "confirmAction": "Confirm",
+        "cancelAction": "Cancel"
+      }
+    },
+    "statements": {
+      "title": "Statements",
+      "loading": "Loading statements...",
+      "empty": "No statements found.",
+      "period": "Month: {month}",
+      "table": {
+        "month": "Month",
+        "closing": "Closing",
+        "due": "Due",
+        "total": "Total",
+        "payments": "Payments",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "open": "Open",
+        "closed": "Closed",
+        "paid": "Paid"
+      },
+      "messages": {
+        "closed": "Statement closed.",
+        "paid": "Statement paid.",
+        "error": "Could not update the statement."
+      },
+      "form": {
+        "title": "Pay statement",
+        "description": "Register the statement payment.",
+        "statementLabel": "Statement",
+        "statementPlaceholder": "Select",
+        "amountLabel": "Payment amount",
+        "amountPlaceholder": "0.00",
+        "dateLabel": "Payment date",
+        "cashAccountLabel": "Paying account",
+        "cashAccountPlaceholder": "Select",
+        "submit": "Record payment"
+      }
     }
   },
   "sidebar": {

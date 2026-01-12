@@ -42,7 +42,7 @@ oauth_states (standalone, short-lived)
 - `ledgers`: data boundary (owner + currency).
 - `ledger_members`: roles per ledger (soft removal via `removed_at`).
 - `audit_log`: immutable ledger audit trail.
-- `accounts`: internal accounts (cash/investment/credit_card).
+- `accounts`: internal accounts (current/business/investment/exchange/wallet) com `nature` (`asset`/`liability`).
 - `categories`: IN/OUT semantics + budget flags.
 - `transactions`: event header.
 - `entries`: transaction lines (amount + account + category + kind).
@@ -55,7 +55,7 @@ oauth_states (standalone, short-lived)
 
 **Credit card**
 - `card_networks`: catalog of card brands.
-- `credit_cards`: card metadata (linked to account).
+- `credit_cards`: card metadata (linked to `parent_account_id` e `liability_account_id`).
 - `installment_plans`: purchase plans.
 - `installments`: monthly items.
 - `credit_card_statements`: monthly statements.

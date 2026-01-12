@@ -54,6 +54,7 @@ type CreateTransactionParams struct {
 	Description     string
 	Notes           *string
 	CreatedByUserID string
+	CreditCardID    *string
 	Entries         []EntryInput
 	Idempotency     *IdempotencyParams
 }

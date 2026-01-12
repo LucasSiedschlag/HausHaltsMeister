@@ -100,32 +100,39 @@ O sistema deve permitir criar, listar, editar e desativar contas internas dentro
 
 Tipos obrigatórios
 
-- cash
+- current
+- business
 - investment
-- credit_card
+- exchange
+- wallet
 
 Critérios de aceitação
 
 - nome único por ledger
+- `nature` obrigatório (`asset`/`liability`)
 - contas desativadas não podem ser usadas em novos lançamentos
 
 ---
 
 ### RF-021 — Metadados de cartão de crédito
 
-O sistema deve permitir cadastrar e manter dados específicos do cartão para accounts do tipo `credit_card`, incluindo:
+O sistema deve permitir cadastrar e manter dados específicos do cartão como entidade própria, incluindo:
 
-- emissor
-- bandeira
+- conta pai (`parent_account_id`)
+- conta passivo (`liability_account_id`)
+- bandeira/brand
+- label
 - final (last4)
-- limite
+- cvv
+- holder_name
+- cor/estilo (color/style)
 - dia de fechamento
 - dia de vencimento
 
 Critérios de aceitação
 
-- deve ser 1:1 com a account
-- só pode existir para accounts do tipo credit_card
+- deve ser 1:N por conta
+- `liability_account_id` deve ter `nature=liability`
 
 ---
 
@@ -403,7 +410,7 @@ O sistema deve permitir cadastrar uma compra no cartão (inclusive parcelada) cr
 Critérios de aceitação
 
 - categoria da compra deve ser OUT (consumo real)
-- conta do cartão deve ser `type=credit_card`
+- `credit_card_id` deve existir no ledger
 
 ---
 
@@ -411,7 +418,7 @@ Critérios de aceitação
 
 O sistema deve permitir “postar” as parcelas do mês, criando para cada parcela:
 
-- transaction + entry no cartão com a categoria real
+- transaction + entry no passivo do cartao com a categoria real
 
 Critérios de aceitação
 
@@ -488,8 +495,8 @@ O sistema deve permitir agrupar e somar valores por categoria em um período.
 
 O sistema deve permitir exibir saldos por conta, derivados do journal:
 
-- cash/investment: IN - OUT
-- credit_card: OUT - IN (dívida)
+- nature=asset: IN - OUT
+- nature=liability: OUT - IN (dívida)
 
 ---
 
@@ -533,8 +540,9 @@ O sistema deve garantir que posting de parcelas e criação de faturas:
 
 O sistema deve oferecer (opcionalmente) seeds para:
 
-- account Pessoal (cash)
-- account Investimentos (investment)
+- account Conta Corrente (current)
+- account Wallet/Pessoal (wallet)
+- account Investimentos (investment) (opcional no onboarding)
 - categorias técnicas (pagamento fatura, rendimentos, aportes, etc.)
 
 ---

@@ -109,8 +109,9 @@ Referencias principais:
 2. Regras:
    - nome unico por ledger.
    - `type` validado via CHECK.
+   - `nature` (`asset`/`liability`) com default `asset`.
    - `is_active=false` bloqueia uso.
-3. Preparar `credit_cards` para accounts type=credit_card.
+3. Preparar `credit_cards` como entidade 1:N por conta (com passivo dedicado).
 
 **Entregaveis:**
 - Endpoints de contas.
@@ -200,7 +201,7 @@ Referencias principais:
 
 **Documento base:** `docs/ledger/Regras_Cartao_de_credito.md`.
 
-1. CRUD de `credit_cards`.
+1. CRUD de `credit_cards` (1:N por conta, com passivo dedicado).
 2. Catalogo `card_networks`.
 3. Fluxos:
    - criar installment_plans + installments.

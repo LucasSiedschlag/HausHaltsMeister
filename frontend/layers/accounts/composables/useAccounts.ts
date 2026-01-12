@@ -2,13 +2,15 @@ import { useApiClient } from '@shared/composables/useApiClient'
 import { useLedger } from '@shared/composables/useLedger'
 import { useAuth } from '#layers/auth/composables/useAuth'
 
-export type AccountType = 'cash' | 'investment' | 'credit_card'
+export type AccountType = 'current' | 'business' | 'investment' | 'exchange' | 'wallet'
+export type AccountNature = 'asset' | 'liability'
 
 export type Account = {
   id: string
   ledger_id: string
   name: string
   type: AccountType
+  nature: AccountNature
   is_active: boolean
   created_at?: string
   updated_at?: string | null
@@ -17,6 +19,7 @@ export type Account = {
 type AccountCreatePayload = {
   name: string
   type: AccountType
+  nature?: AccountNature
   is_active: boolean
 }
 
@@ -51,7 +54,7 @@ export const useAccounts = () => {
           Authorization: `Bearer ${accessToken.value}`
         }
       })
-      accounts.value = payload
+      accounts.value = payload.filter((account) => account.nature !== 'liability')
       return payload
     } catch (err) {
       error.value = (err as Error)?.message || 'Erro ao carregar contas'

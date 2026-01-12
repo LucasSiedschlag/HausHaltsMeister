@@ -46,7 +46,7 @@ func TestCreateLedgerCreatesOwnerMember(t *testing.T) {
 	_, err = conn.Exec(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)`, "00000000-0000-0000-0000-000000000001", "user@example.com")
 	require.NoError(t, err)
 
-	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL")
+	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL", true, false)
 	require.NoError(t, err)
 	require.NotEmpty(t, created.ID)
 
@@ -94,7 +94,7 @@ func TestListMembersIncludesProfile(t *testing.T) {
 	`, "00000000-0000-0000-0000-000000000001", "user@example.com", "User Name", "https://example.com/avatar.png")
 	require.NoError(t, err)
 
-	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL")
+	created, err := service.CreateLedger(ctx, "00000000-0000-0000-0000-000000000001", "Pessoal", "BRL", true, false)
 	require.NoError(t, err)
 
 	members, err := service.ListMembers(ctx, "00000000-0000-0000-0000-000000000001", created.ID)

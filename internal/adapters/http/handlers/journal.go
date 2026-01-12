@@ -314,13 +314,14 @@ func toTransactionResponse(item journal.Transaction) transactionResponse {
 	}
 
 	return transactionResponse{
-		ID:          item.ID,
-		LedgerID:    item.LedgerID,
-		OccurredAt:  item.OccurredAt,
-		Description: item.Description,
-		Notes:       item.Notes,
-		CreatedAt:   item.CreatedAt,
-		UpdatedAt:   item.UpdatedAt,
-		Entries:     entries,
+		ID:           item.ID,
+		LedgerID:     item.LedgerID,
+		OccurredAt:   item.OccurredAt,
+		Description:  item.Description,
+		Notes:        item.Notes,
+		CreditCardID: item.CreditCardID,
+		CreatedAt:    item.CreatedAt,
+		UpdatedAt:    item.UpdatedAt,
+		Entries:      entries,
 	}
 }

@@ -60,8 +60,9 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 1. cria `ledgers` (owner=user)
 2. cria `ledger_members` (role=owner) (opcional)
 3. cria contas padrão:
-   - “Pessoal” (cash)
-   - “Investimentos” (investment) (recomendado)
+   - “Conta Corrente” (current)
+   - “Wallet/Pessoal” (wallet)
+   - “Investimentos” (investment) (opcional no onboarding)
 4. cria categorias técnicas seed (opcional)  
    **Pós-condições:** ledger pronto para uso  
    **Tabelas:** `ledgers`, `ledger_members`, `accounts`, `categories`  
@@ -94,26 +95,26 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 **Pré-condições:** acesso ao ledger  
 **Fluxo principal:**
 
-1. usuário informa nome e type (cash/investment/credit_card)
+1. usuário informa nome e type (current/business/investment/exchange/wallet)
 2. sistema cria `accounts`
-3. se type=credit_card → criar `credit_cards` (UC-011)  
    **Pós-condições:** conta disponível para lançamentos  
-   **Tabelas:** `accounts`, `credit_cards`  
+   **Tabelas:** `accounts`  
    **Validações:** unique(ledger_id,name)
 
 ---
 
-### UC-011 — Cadastrar metadados do cartão (credit_cards)
+### UC-011 — Cadastrar cartao (credit_cards)
 
 **Ator:** Owner/Editor  
-**Pré-condições:** account type=credit_card existe  
+**Pré-condições:** conta pai (`parent_account_id`) existe  
 **Fluxo principal:**
 
-1. usuário informa emissor, bandeira, last4, limite, closing_day, due_day
-2. sistema salva `credit_cards` (1:1 com accounts)  
-   **Pós-condições:** cartão configurado para faturas e ciclos  
-   **Tabelas:** `credit_cards`  
-   **Validações:** account.type==credit_card; dias válidos
+1. usuário informa conta pai, bandeira/brand, label, last4, holder_name, closing_day, due_day, estilo/cores
+2. sistema cria conta passivo (`liability_account_id`) automaticamente (`type=current`, `nature=liability`)
+3. sistema salva `credit_cards` (1:N por conta)  
+   **Pós-condições:** cartao configurado para faturas e ciclos  
+   **Tabelas:** `accounts`, `credit_cards`  
+   **Validações:** ledger consistente; `liability_account_id` com `nature=liability`; dias válidos
 
 ---
 
@@ -275,13 +276,13 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 ### UC-050 — Aportar para investimentos (planejado no orçamento)
 
 **Ator:** Editor  
-**Pré-condições:** accounts Pessoal e Investimentos existem  
+**Pré-condições:** accounts Wallet/Pessoal e Investimentos existem  
 **Fluxo principal:**
 
 1. usuário informa valor e data
 2. sistema cria transaction “Aporte”
 3. cria 2 entries kind=transfer:
-   - OUT em Pessoal (categoria Aportes Investimentos, budget_relevant=true se orçado)
+   - OUT em Wallet/Pessoal (categoria Aportes Investimentos, budget_relevant=true se orçado)
    - IN em Investimentos (categoria Entrada Investimentos, budget_base=false)  
      **Pós-condições:** saldo migra para investimentos; orçamento pode refletir o aporte  
      **Tabelas:** `transactions`, `entries`, `accounts`, `categories`  
@@ -313,8 +314,8 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 2. transaction “Resgate”
 3. 2 entries kind=transfer:
    - OUT em Investimentos (Resgate Investimentos)
-   - IN em Pessoal (Entrada Resgate, budget_base=false)  
-     **Pós-condições:** saldo volta ao Pessoal sem inflar renda base  
+   - IN em Wallet/Pessoal (Entrada Resgate, budget_base=false)  
+     **Pós-condições:** saldo volta ao Wallet/Pessoal sem inflar renda base  
      **Tabelas:** `transactions`, `entries`
 
 ---
@@ -333,7 +334,7 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 4. cria N `installments` (scheduled)  
    **Pós-condições:** compra registrada e parcelas agendadas; ainda sem consumo de orçamento  
    **Tabelas:** `installment_plans`, `installments`  
-   **Validações:** category.direction=out; card_account.type=credit_card
+   **Validações:** category.direction=out; credit_card_id valido no ledger
 
 ---
 
@@ -373,13 +374,13 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 ### UC-063 — Pagar fatura
 
 **Ator:** Editor  
-**Pré-condições:** statement closed; conta Pessoal existe  
+**Pré-condições:** statement closed; conta pagadora (nature=asset) existe  
 **Fluxo principal:**
 
 1. usuário informa data e valor (normalmente total)
 2. cria transaction “Pagamento fatura”
 3. cria 2 entries kind=transfer:
-   - OUT em Pessoal (Pagamento Fatura Cartão, budget_relevant=false)
+   - OUT na conta pagadora (Pagamento Fatura Cartão, budget_relevant=false)
    - IN no Cartão (Entrada Pagamento Cartão, budget_base=false)
 4. marca statement como paid (se pagamento total)
 5. marca installments do mês como paid (paid_statement_id)  

@@ -41,7 +41,7 @@ Payload shape:
 | BUDGET_VERSION_CONFLICT | 409 | Versao de budget ja existe no mes | `{ "effective_from_month": "YYYY-MM-01" }` |
 | BUDGET_CATEGORY_NOT_ELIGIBLE | 422 | Categoria invalida para budget | `{ "category_id": "uuid" }` |
 | TRANSFER_NOT_BALANCED | 422 | Transferencia nao balanceada | `{ "out_total": 100, "in_total": 80 }` |
-| CREDITCARD_CARD_NOT_FOUND | 404 | Cartao nao encontrado | `{ "card_account_id": "uuid" }` |
+| CREDITCARD_CARD_NOT_FOUND | 404 | Cartao nao encontrado | `{ "credit_card_id": "uuid" }` |
 | CREDITCARD_INSTALLMENT_ALREADY_POSTED | 409 | Parcela ja postada | `{ "installment_id": "uuid" }` |
 | CREDITCARD_STATEMENT_NOT_FOUND | 404 | Fatura nao encontrada | `{ "statement_id": "uuid" }` |
 | CREDITCARD_STATEMENT_ALREADY_PAID | 409 | Fatura ja paga | `{ "statement_id": "uuid" }` |

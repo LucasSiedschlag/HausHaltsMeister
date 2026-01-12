@@ -27,7 +27,7 @@ func (f fakeLedgerService) GetMembership(ctx context.Context, userID, ledgerID s
 	return "viewer", nil
 }
 
-func (f fakeLedgerService) CreateLedger(ctx context.Context, userID, name, currencyCode string) (ledger.Ledger, error) {
+func (f fakeLedgerService) CreateLedger(ctx context.Context, userID, name, currencyCode string, createDefaultAccounts, includeInvestment bool) (ledger.Ledger, error) {
 	return ledger.Ledger{}, nil
 }
 

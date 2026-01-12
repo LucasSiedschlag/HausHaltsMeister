@@ -16,6 +16,7 @@ type Account struct {
 	IsActive  bool
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+	Nature    string
 }
 
 type AuditLog struct {
@@ -114,22 +115,27 @@ type Category struct {
 }
 
 type CreditCard struct {
-	AccountID        pgtype.UUID
-	IssuerName       pgtype.Text
-	Network          string
-	Nickname         pgtype.Text
-	Last4            pgtype.Text
-	CreditLimitCents pgtype.Int8
-	ClosingDay       int32
-	DueDay           int32
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
+	ID                 pgtype.UUID
+	LedgerID           pgtype.UUID
+	ParentAccountID    pgtype.UUID
+	LiabilityAccountID pgtype.UUID
+	Label              pgtype.Text
+	Brand              string
+	Last4              pgtype.Text
+	Cvv                pgtype.Text
+	HolderName         pgtype.Text
+	Active             bool
+	Color              pgtype.Text
+	Style              pgtype.Text
+	ClosingDay         int32
+	DueDay             int32
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
 }
 
 type CreditCardStatement struct {
 	ID                   pgtype.UUID
 	LedgerID             pgtype.UUID
-	CardAccountID        pgtype.UUID
 	StatementMonth       pgtype.Date
 	ClosingDate          pgtype.Date
 	DueDate              pgtype.Date
@@ -139,6 +145,7 @@ type CreditCardStatement struct {
 	PaymentTransactionID pgtype.UUID
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
+	CreditCardID         pgtype.UUID
 }
 
 type Entry struct {
@@ -182,7 +189,6 @@ type Installment struct {
 type InstallmentPlan struct {
 	ID                     pgtype.UUID
 	LedgerID               pgtype.UUID
-	CardAccountID          pgtype.UUID
 	PurchaseOccurredAt     pgtype.Timestamptz
 	Merchant               pgtype.Text
 	Description            string
@@ -195,6 +201,7 @@ type InstallmentPlan struct {
 	CreatedByUserID        pgtype.UUID
 	CreatedAt              pgtype.Timestamptz
 	UpdatedAt              pgtype.Timestamptz
+	CreditCardID           pgtype.UUID
 }
 
 type Ledger struct {
@@ -238,6 +245,7 @@ type Transaction struct {
 	ExternalID      pgtype.Text
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	CreditCardID    pgtype.UUID
 }
 
 type User struct {

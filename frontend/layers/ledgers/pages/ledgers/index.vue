@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shar
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
+import { Switch } from '@shared/components/ui/switch'
 import { useLedger } from '@shared/composables/useLedger'
 import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { useAuth } from '#layers/auth/composables/useAuth'
@@ -20,7 +21,8 @@ const { setHeaderAction } = useHeaderAction()
 
 const form = reactive({
   name: '',
-  currency_code: 'BRL'
+  currency_code: 'BRL',
+  include_investment: false
 })
 const isCreating = ref(false)
 const createCard = ref<{ $el: HTMLElement } | null>(null)
@@ -69,7 +71,12 @@ const handleCreate = async () => {
   }
   isCreating.value = true
   try {
-    const created = await createLedger({ name: form.name.trim(), currency_code: form.currency_code })
+    const created = await createLedger({
+      name: form.name.trim(),
+      currency_code: form.currency_code,
+      create_default_accounts: true,
+      include_investment: form.include_investment
+    })
     if (created) {
       await router.push('/')
       return
@@ -227,6 +234,15 @@ watch(
                 <SelectItem value="EUR">EUR</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div class="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-4 py-3">
+            <div class="space-y-1">
+              <Label>{{ t('ledgers.create.includeInvestmentsLabel') }}</Label>
+              <p class="text-xs text-muted-foreground">
+                {{ t('ledgers.create.includeInvestmentsHint') }}
+              </p>
+            </div>
+            <Switch v-model:checked="form.include_investment" />
           </div>
           <Button class="w-full" :disabled="isCreating" @click="handleCreate">
             {{ isCreating ? t('ledgers.create.submitting') : t('ledgers.create.submit') }}

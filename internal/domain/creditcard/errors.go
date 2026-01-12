@@ -33,6 +33,7 @@ var (
 	ErrAccessDenied             = NewError("LEDGER_ACCESS_DENIED", "Acesso negado ao ledger", nil)
 	ErrLedgerNotFound           = NewError("LEDGER_NOT_FOUND", "Ledger nao encontrado", nil)
 	ErrCardNotFound             = NewError("CREDITCARD_CARD_NOT_FOUND", "Cartao nao encontrado", nil)
+	ErrCardAlreadyExists        = NewError("CREDITCARD_CARD_ALREADY_EXISTS", "Cartao ja cadastrado", nil)
 	ErrStatementNotFound        = NewError("CREDITCARD_STATEMENT_NOT_FOUND", "Fatura nao encontrada", nil)
 	ErrStatementAlreadyPaid     = NewError("CREDITCARD_STATEMENT_ALREADY_PAID", "Fatura ja paga", nil)
 	ErrInstallmentAlreadyPosted = NewError("CREDITCARD_INSTALLMENT_ALREADY_POSTED", "Parcela ja postada", nil)

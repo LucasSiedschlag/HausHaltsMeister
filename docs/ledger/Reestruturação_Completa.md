@@ -52,7 +52,7 @@ Referência: `docs/ledger/Documento_de_Arquitetura.md`.
 - **Orçamento é percentual** e calculado a partir da **renda base do mês**.
 - **Orçamento é versionado** e não reescreve o passado.
 - **Cartão consome orçamento na parcela postada**, não no ato da compra.
-- **Contas são internas** (cash/investment/credit_card), não bancos externos.
+- **Contas são internas** (`current`, `business`, `investment`, `exchange`, `wallet`), não bancos externos.
 
 ---
 
@@ -73,7 +73,7 @@ Referência: `docs/ledger/Regras_Core_Ledger.md`.
 
 ### 3.3 Accounts (contas internas)
 
-- `cash` (Pessoal), `investment` (Investimentos), `credit_card` (Cartão).
+- `current` (Conta Corrente), `wallet` (Pessoal), `investment` (Investimentos).
 - Saldos são derivados do journal, não armazenados.
 
 ### 3.4 Categories
@@ -130,9 +130,9 @@ Referência: `docs/ledger/Regras_Cartão_de_crédito.md`.
 
 ### 6.1 Entidades
 
-- `credit_cards` (metadados do cartão).
+- `credit_cards` (cartoes 1:N por conta, com passivo dedicado).
 - `installment_plans` + `installments` (parcelamento).
-- `credit_card_statements` (fatura mensal).
+- `credit_card_statements` (fatura mensal por `credit_card_id`).
 
 ### 6.2 Regra-chave
 
@@ -152,9 +152,16 @@ Referência: `docs/ledger/Regras_Cartão_de_crédito.md`.
 // Enums
 // =====================
 Enum account_type {
-  cash
+  current
+  business
   investment
-  credit_card
+  exchange
+  wallet
+}
+
+Enum account_nature {
+  asset
+  liability
 }
 
 Enum category_direction {
@@ -337,6 +344,7 @@ Table accounts {
   ledger_id   uuid [not null, ref: > ledgers.id]
   name        varchar [not null]
   type        account_type [not null]
+  nature      account_nature [not null, default: asset]
   is_active   boolean [not null, default: true]
   created_at  timestamptz [not null]
   updated_at  timestamptz
@@ -369,6 +377,7 @@ Table categories {
 Table transactions {
   id                 uuid [pk]
   ledger_id           uuid [not null, ref: > ledgers.id]
+  credit_card_id      uuid [ref: > credit_cards.id]
   occurred_at         timestamptz [not null]
   description         varchar [not null]
   notes               text
@@ -461,7 +470,7 @@ Table budget_plan_lines {
 }
 
 // =====================
-// Credit Card metadata (1:1)
+// Credit Card metadata (1:N por conta)
 // =====================
 Table card_networks {
   code        varchar [pk]
@@ -471,16 +480,22 @@ Table card_networks {
 }
 
 Table credit_cards {
-  account_id         uuid [pk, ref: > accounts.id]
-  issuer_name        varchar
-  network            varchar [not null, default: "other", ref: > card_networks.code]
-  nickname           varchar
-  last4              char(4)
-  credit_limit_cents bigint
-  closing_day        int [not null]
-  due_day            int [not null]
-  created_at         timestamptz [not null]
-  updated_at         timestamptz
+  id                  uuid [pk]
+  ledger_id            uuid [not null, ref: > ledgers.id]
+  parent_account_id    uuid [not null, ref: > accounts.id]
+  liability_account_id uuid [not null, ref: > accounts.id]
+  label                varchar
+  brand                varchar [not null, default: "other", ref: > card_networks.code]
+  last4                char(4)
+  cvv                  char(3)
+  holder_name          varchar
+  active               boolean [not null, default: true]
+  color                varchar
+  style                varchar
+  closing_day          int [not null]
+  due_day              int [not null]
+  created_at           timestamptz [not null]
+  updated_at           timestamptz
 }
 
 // =====================
@@ -489,7 +504,7 @@ Table credit_cards {
 Table installment_plans {
   id                   uuid [pk]
   ledger_id            uuid [not null, ref: > ledgers.id]
-  card_account_id      uuid [not null, ref: > accounts.id] // type=credit_card
+  credit_card_id       uuid [not null, ref: > credit_cards.id]
 
   purchase_occurred_at timestamptz [not null]
   merchant             varchar
@@ -510,7 +525,7 @@ Table installment_plans {
 
   Indexes {
     (ledger_id)
-    (card_account_id)
+    (credit_card_id)
     (ledger_id, first_due_month)
   }
 }
@@ -518,7 +533,7 @@ Table installment_plans {
 Table credit_card_statements {
   id                   uuid [pk]
   ledger_id            uuid [not null, ref: > ledgers.id]
-  card_account_id      uuid [not null, ref: > accounts.id]
+  credit_card_id       uuid [not null, ref: > credit_cards.id]
 
   statement_month      date [not null] // YYYY-MM-01
   closing_date         date [not null]
@@ -534,7 +549,7 @@ Table credit_card_statements {
   updated_at           timestamptz
 
   Indexes {
-    (card_account_id, statement_month) [unique]
+    (credit_card_id, statement_month) [unique]
     (ledger_id)
   }
 }
@@ -577,15 +592,15 @@ Referência: `docs/ledger/Regras_Core_Ledger.md` e `docs/ledger/Regras_Cartão_d
 - `oauth_states`: estados temporários de OAuth (PKCE + anti-CSRF).
 - `ledgers`: escopo de dados; moeda e owner.
 - `ledger_members`: compartilhamento com roles.
-- `accounts`: contas internas (`cash`, `investment`, `credit_card`).
+- `accounts`: contas internas (`current`, `business`, `investment`, `exchange`, `wallet`) com `nature`.
 - `categories`: direção IN/OUT e flags do orçamento.
 - `transactions`: cabeçalho do evento.
 - `entries`: linhas financeiras; kind `normal`, `transfer`, `adjust`.
 - `budget_*`: plano, versões e linhas por categoria.
 - `card_networks`: catálogo de bandeiras de cartão.
-- `credit_cards`: metadados 1:1 com conta de cartão.
+- `credit_cards`: cartoes 1:N por conta, com passivo dedicado.
 - `installment_plans` + `installments`: compras parceladas e parcelas.
-- `credit_card_statements`: fatura mensal e pagamento.
+- `credit_card_statements`: fatura mensal e pagamento por `credit_card_id`.
 
 ---
 
@@ -615,7 +630,7 @@ Referência: `docs/ledger/Casos_de_uso.md`.
 ### 9.4 Parcelas do cartão
 
 1. Compra cria `installment_plan` + `installments` (scheduled).
-2. No mês alvo, postar parcelas -> `transactions` + `entries` no cartão.
+2. No mês alvo, postar parcelas -> `transactions` + `entries` no passivo do cartao.
 3. Pagamento de fatura é transferência com categorias técnicas.
 
 ---

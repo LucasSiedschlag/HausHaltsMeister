@@ -5,7 +5,7 @@ Este documento define as regras e os fluxos centrais do sistema:
 - Autenticação/Usuários (conceitual)
 - Ledgers (multiusuário presente/futuro)
 - Membership e permissões
-- Accounts (Pessoal / Investimentos / Cartão)
+- Accounts (Conta Corrente / Wallet / Investimentos)
 - Journal (transactions + entries)
 - Regras de integridade e consistência (ledger isolation)
 - Padrões de lançamento (normal / transfer / adjust)
@@ -73,16 +73,25 @@ Papéis (role):
 ### 1.4. Accounts
 
 “Caixinhas” internas dentro do ledger.
-Tipos:
 
-- cash (Pessoal)
+Tipos (`accounts.type`):
+
+- current (Conta Corrente)
+- business (Empresarial)
 - investment (Investimentos)
-- credit_card (Cartão)
+- exchange (Exchange)
+- wallet (Wallet/Pessoal)
+
+Natureza (`accounts.nature`):
+
+- asset (padrao)
+- liability
 
 Responsabilidades:
 
 - segmentar saldo e relatórios
 - permitir transferências internas
+- definir sinal/normal balance via `nature`
 
 ### 1.5. Journal (Transactions + Entries)
 
@@ -216,9 +225,9 @@ Uso:
 Uso:
 
 - movimentação entre contas internas do mesmo ledger
-  - Pessoal -> Investimentos (aporte interno)
-  - Pessoal -> Cartão (pagamento fatura)
-  - Investimentos -> Pessoal (resgate)
+  - Wallet/Pessoal -> Investimentos (aporte interno)
+  - Conta pagadora -> Passivo do cartão (pagamento fatura)
+  - Investimentos -> Wallet/Pessoal (resgate)
     Regras recomendadas:
 - deve haver pelo menos:
   - 1 entry OUT (categoria direction=out)
@@ -247,12 +256,12 @@ Uso:
 
 Saldo pode ser derivado do journal:
 
-- Para accounts do tipo `cash` e `investment`:
+- Para accounts com `nature=asset`:
   - saldo = SUM(IN) - SUM(OUT)
-- Para `credit_card`:
+- Para accounts com `nature=liability`:
   - saldo interpretado como “dívida”:
-    - dívida = SUM(OUT) - SUM(IN)
-      (porque OUT no cartão representa compras/débito; IN representa pagamento)
+    - saldo = SUM(OUT) - SUM(IN)
+      (OUT aumenta a divida; IN reduz)
 
 > Isso é regra de apresentação/relatório. O banco não precisa armazenar saldo.
 
@@ -290,8 +299,9 @@ Em transação:
    - currency_code = "BRL"
 2. create ledger_members (opcional) com role owner
 3. create accounts padrão:
-   - Pessoal (cash)
-   - Investimentos (investment) (opcional, mas recomendado)
+   - Conta Corrente (current, asset)
+   - Wallet/Pessoal (wallet, asset)
+   - (opcional no onboarding) Investimentos (investment, asset)
    - (cartões são adicionados depois)
 4. create categorias seed (mínimo) (opcional)
 5. create budget_plan inicial (opcional)
@@ -316,10 +326,6 @@ Input: user_id, ledger_id, name, type
 - verify user has role owner/editor
 - validate unique name per ledger
 - insert accounts
-
-Se type=credit_card:
-
-- create credit_cards record (ou exigir preenchimento completo na UI)
 
 ---
 
@@ -429,8 +435,9 @@ Input: user_id, ledger_id, transaction_id
 
 ### 8.1. Accounts seed
 
-- Pessoal (cash)
-- Investimentos (investment)
+- Conta Corrente (current, asset)
+- Wallet/Pessoal (wallet, asset)
+- Investimentos (investment, asset) (opcional no onboarding)
 
 ### 8.2. Categorias técnicas seed (mínimo útil)
 

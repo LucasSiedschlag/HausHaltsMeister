@@ -77,8 +77,8 @@ Escopo:
 Tarefas:
 1. Garantir account `investment` e categorias tecnicas.
 2. Implementar fluxos:
-   - Aporte: transferencia Pessoal -> Investimentos
-   - Resgate: transferencia Investimentos -> Pessoal
+   - Aporte: transferencia Wallet/Pessoal -> Investimentos
+   - Resgate: transferencia Investimentos -> Wallet/Pessoal
    - Rendimento: entry IN com `kind=adjust`
 
 Validacao:
@@ -93,10 +93,10 @@ Escopo:
 - Implementar ciclo completo do cartao no modelo final.
 
 Tarefas:
-1. CRUD de `credit_cards` (1:1 com account credit_card).
+1. CRUD de `credit_cards` (1:N por conta, com passivo dedicado).
 2. Criar `installment_plans` + `installments` (scheduled).
 3. Implementar posting mensal:
-   - cria `transactions` + `entries` no cartao
+   - cria `transactions` + `entries` no passivo do cartao
    - marca parcelas como `posted`
 4. Implementar `credit_card_statements`:
    - fechamento e pagamento

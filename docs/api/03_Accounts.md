@@ -1,6 +1,6 @@
 # API — Accounts
 
-Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas no modulo de cartao.
+Este modulo cobre todas as contas internas. Cartoes de credito sao tratados no modulo de cartao.
 
 ## Padroes globais aplicados
 
@@ -52,7 +52,8 @@ Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas 
     "id": "uuid",
     "ledger_id": "uuid",
     "name": "Pessoal",
-    "type": "cash",
+    "type": "wallet",
+    "nature": "asset",
     "is_active": true,
     "created_at": "...",
     "updated_at": "..."
@@ -91,7 +92,8 @@ Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas 
   "id": "uuid",
   "ledger_id": "uuid",
   "name": "Pessoal",
-  "type": "cash",
+  "type": "wallet",
+  "nature": "asset",
   "is_active": true,
   "created_at": "...",
   "updated_at": "..."
@@ -125,7 +127,8 @@ Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas 
 ```json
 {
   "name": "Pessoal",
-  "type": "cash",
+  "type": "wallet",
+  "nature": "asset",
   "is_active": true
 }
 ```
@@ -137,7 +140,8 @@ Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas 
   "id": "uuid",
   "ledger_id": "uuid",
   "name": "Pessoal",
-  "type": "cash",
+  "type": "wallet",
+  "nature": "asset",
   "is_active": true,
   "created_at": "...",
   "updated_at": "..."
@@ -149,7 +153,8 @@ Este modulo cobre contas de caixa e investimento. Contas de cartao sao tratadas 
 - 422 `VALIDATION_ERROR`
 
 6) Semantics / Notes
-- `type` aceito: `cash`, `investment`, `credit_card` (por enquanto).
+- `type` aceito: `current`, `business`, `investment`, `exchange`, `wallet`.
+- `nature` aceito: `asset` (padrao) ou `liability`.
 
 7) Pagination
 - n/a.

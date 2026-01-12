@@ -7,6 +7,7 @@ type Account struct {
 	LedgerID  string
 	Name      string
 	Type      string
+	Nature    string
 	IsActive  bool
 	CreatedAt time.Time
 	UpdatedAt *time.Time

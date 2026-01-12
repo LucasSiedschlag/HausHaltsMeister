@@ -75,9 +75,9 @@ func (q *Queries) CreateEntry(ctx context.Context, arg CreateEntryParams) (Entry
 
 const createTransaction = `-- name: CreateTransaction :one
 
-INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id, external_source, external_id, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+INSERT INTO transactions (ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, external_source, external_id, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, created_at, updated_at
 `
 
 type CreateTransactionParams struct {
@@ -86,6 +86,7 @@ type CreateTransactionParams struct {
 	Description     string
 	Notes           pgtype.Text
 	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
 	ExternalSource  pgtype.Text
 	ExternalID      pgtype.Text
 	UpdatedAt       pgtype.Timestamptz
@@ -98,6 +99,7 @@ type CreateTransactionRow struct {
 	Description     string
 	Notes           pgtype.Text
 	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
 }
@@ -110,6 +112,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.Description,
 		arg.Notes,
 		arg.CreatedByUserID,
+		arg.CreditCardID,
 		arg.ExternalSource,
 		arg.ExternalID,
 		arg.UpdatedAt,
@@ -122,6 +125,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		&i.Description,
 		&i.Notes,
 		&i.CreatedByUserID,
+		&i.CreditCardID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -159,7 +163,7 @@ func (q *Queries) DeleteTransaction(ctx context.Context, arg DeleteTransactionPa
 }
 
 const getTransactionByExternal = `-- name: GetTransactionByExternal :one
-SELECT id, ledger_id, occurred_at, description, notes, created_by_user_id, external_source, external_id, created_at, updated_at
+SELECT id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, external_source, external_id, created_at, updated_at
 FROM transactions
 WHERE ledger_id = $1 AND external_source = $2 AND external_id = $3
 `
@@ -170,9 +174,23 @@ type GetTransactionByExternalParams struct {
 	ExternalID     pgtype.Text
 }
 
-func (q *Queries) GetTransactionByExternal(ctx context.Context, arg GetTransactionByExternalParams) (Transaction, error) {
+type GetTransactionByExternalRow struct {
+	ID              pgtype.UUID
+	LedgerID        pgtype.UUID
+	OccurredAt      pgtype.Timestamptz
+	Description     string
+	Notes           pgtype.Text
+	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
+	ExternalSource  pgtype.Text
+	ExternalID      pgtype.Text
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+func (q *Queries) GetTransactionByExternal(ctx context.Context, arg GetTransactionByExternalParams) (GetTransactionByExternalRow, error) {
 	row := q.db.QueryRow(ctx, getTransactionByExternal, arg.LedgerID, arg.ExternalSource, arg.ExternalID)
-	var i Transaction
+	var i GetTransactionByExternalRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
@@ -180,6 +198,7 @@ func (q *Queries) GetTransactionByExternal(ctx context.Context, arg GetTransacti
 		&i.Description,
 		&i.Notes,
 		&i.CreatedByUserID,
+		&i.CreditCardID,
 		&i.ExternalSource,
 		&i.ExternalID,
 		&i.CreatedAt,
@@ -189,7 +208,7 @@ func (q *Queries) GetTransactionByExternal(ctx context.Context, arg GetTransacti
 }
 
 const getTransactionWithEntries = `-- name: GetTransactionWithEntries :many
-SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.created_at, t.updated_at,
+SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.credit_card_id, t.created_at, t.updated_at,
   e.id, e.ledger_id, e.transaction_id, e.account_id, e.category_id, e.kind, e.amount_cents, e.memo, e.created_at, e.updated_at
 FROM transactions t
 JOIN entries e ON e.transaction_id = t.id
@@ -209,6 +228,7 @@ type GetTransactionWithEntriesRow struct {
 	Description     string
 	Notes           pgtype.Text
 	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
 	ID_2            pgtype.UUID
@@ -239,6 +259,7 @@ func (q *Queries) GetTransactionWithEntries(ctx context.Context, arg GetTransact
 			&i.Description,
 			&i.Notes,
 			&i.CreatedByUserID,
+			&i.CreditCardID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ID_2,
@@ -373,7 +394,7 @@ func (q *Queries) ListTransactionIDs(ctx context.Context, arg ListTransactionIDs
 }
 
 const listTransactionsWithEntries = `-- name: ListTransactionsWithEntries :many
-SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.created_at, t.updated_at,
+SELECT t.id, t.ledger_id, t.occurred_at, t.description, t.notes, t.created_by_user_id, t.credit_card_id, t.created_at, t.updated_at,
   e.id, e.ledger_id, e.transaction_id, e.account_id, e.category_id, e.kind, e.amount_cents, e.memo, e.created_at, e.updated_at
 FROM transactions t
 JOIN entries e ON e.transaction_id = t.id
@@ -388,6 +409,7 @@ type ListTransactionsWithEntriesRow struct {
 	Description     string
 	Notes           pgtype.Text
 	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
 	ID_2            pgtype.UUID
@@ -418,6 +440,7 @@ func (q *Queries) ListTransactionsWithEntries(ctx context.Context, dollar_1 []pg
 			&i.Description,
 			&i.Notes,
 			&i.CreatedByUserID,
+			&i.CreditCardID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ID_2,
@@ -445,7 +468,7 @@ const updateTransaction = `-- name: UpdateTransaction :one
 UPDATE transactions
 SET occurred_at = $3, description = $4, notes = $5, updated_at = $6
 WHERE ledger_id = $1 AND id = $2
-RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, created_at, updated_at
+RETURNING id, ledger_id, occurred_at, description, notes, created_by_user_id, credit_card_id, created_at, updated_at
 `
 
 type UpdateTransactionParams struct {
@@ -464,6 +487,7 @@ type UpdateTransactionRow struct {
 	Description     string
 	Notes           pgtype.Text
 	CreatedByUserID pgtype.UUID
+	CreditCardID    pgtype.UUID
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
 }
@@ -485,6 +509,7 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 		&i.Description,
 		&i.Notes,
 		&i.CreatedByUserID,
+		&i.CreditCardID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

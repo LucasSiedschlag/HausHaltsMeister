@@ -26,7 +26,7 @@ func (f fakeAccountsService) GetAccount(ctx context.Context, userID, ledgerID, a
 	return accounts.Account{}, nil
 }
 
-func (f fakeAccountsService) CreateAccount(ctx context.Context, userID, ledgerID, name, accountType string, isActive bool) (accounts.Account, error) {
+func (f fakeAccountsService) CreateAccount(ctx context.Context, userID, ledgerID, name, accountType, nature string, isActive bool) (accounts.Account, error) {
 	return accounts.Account{}, f.createErr
 }
 
@@ -40,7 +40,7 @@ func (f fakeAccountsService) DeleteAccount(ctx context.Context, userID, ledgerID
 
 func TestCreateAccountAccessDenied(t *testing.T) {
 	e := echo.New()
-	payload := map[string]interface{}{"name": "Conta", "type": "cash"}
+	payload := map[string]interface{}{"name": "Conta", "type": "current"}
 	body, err := json.Marshal(payload)
 	require.NoError(t, err)
 

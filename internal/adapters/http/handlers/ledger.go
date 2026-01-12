@@ -20,7 +20,7 @@ type LedgerHandler struct {
 type LedgerService interface {
 	ListLedgers(ctx context.Context, userID string) ([]ledger.LedgerWithRole, error)
 	GetMembership(ctx context.Context, userID, ledgerID string) (string, error)
-	CreateLedger(ctx context.Context, userID, name, currencyCode string) (ledger.Ledger, error)
+	CreateLedger(ctx context.Context, userID, name, currencyCode string, createDefaultAccounts, includeInvestment bool) (ledger.Ledger, error)
 	GetLedger(ctx context.Context, userID, ledgerID string) (ledger.LedgerWithRole, error)
 	UpdateLedger(ctx context.Context, userID, ledgerID, name string) (ledger.Ledger, error)
 	DeleteLedger(ctx context.Context, userID, ledgerID string) error
@@ -118,7 +118,16 @@ func (h *LedgerHandler) CreateLedger(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	created, err := h.Service.CreateLedger(c.Request().Context(), user.ID, req.Name, req.CurrencyCode)
+	createDefaultAccounts := true
+	if req.CreateDefaultAccounts != nil {
+		createDefaultAccounts = *req.CreateDefaultAccounts
+	}
+	includeInvestment := false
+	if req.IncludeInvestment != nil {
+		includeInvestment = *req.IncludeInvestment
+	}
+
+	created, err := h.Service.CreateLedger(c.Request().Context(), user.ID, req.Name, req.CurrencyCode, createDefaultAccounts, includeInvestment)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}

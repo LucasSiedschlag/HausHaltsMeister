@@ -369,11 +369,13 @@ Política:
 
 - `unique(ledger_id, name)`
 - `type` obrigatório
+- `nature` obrigatório (`asset`/`liability`, default `asset`)
 - `is_active` para soft-disable sem apagar histórico
 
 ### 8.2. Credit card metadata (credit_cards)
 
-- apenas 1:1 com account tipo credit_card (account_id é PK)
+- 1:N por conta pai (`parent_account_id`)
+- `liability_account_id` obrigatoria e com `nature=liability`
 - `closing_day` e `due_day` devem estar em intervalos válidos (1..31)
   Recomendação de UX:
 - limitar para 1..28 para evitar meses curtos
@@ -381,7 +383,8 @@ Política:
 Validação de integridade:
 
 - ao criar `credit_cards`, verificar:
-  - `accounts.type == credit_card`
+  - `parent_account_id` e `liability_account_id` pertencem ao mesmo `ledger_id`
+  - `liability_account_id` com `nature=liability`
 
 ---
 
@@ -393,7 +396,7 @@ Validação de integridade:
 - `installment_amount_cents > 0`
 - `total_amount_cents > 0`
 - categoria do plano deve ser `direction=out` (consumo)
-- `card_account_id` deve ser `type=credit_card`
+- `credit_card_id` deve existir no ledger
 - `first_due_month` deve ser 1º dia do mês
 
 Se o total não bater exatamente:
@@ -426,13 +429,13 @@ Pseudo:
 1. select installments where due_month=M and status=scheduled
 2. for each:
    - begin tx
-   - create transaction + entry (cartão, categoria real, amount)
+   - create transaction + entry (passivo do cartao, categoria real, amount)
    - update installment status=posted, posted_transaction_id=...
    - commit
 
 ### 9.4. Statements (faturas)
 
-- `unique(card_account_id, statement_month)`
+- `unique(credit_card_id, statement_month)`
 - statement_month sempre 1º dia do mês
 
 Fechamento:

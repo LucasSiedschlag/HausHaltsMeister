@@ -171,9 +171,14 @@ func (s *Service) Summary(ctx context.Context, userID, ledgerID string, from, to
 }
 
 func (s *Service) loadDefaults(ctx context.Context, ledgerID string) (string, string, FlowCategoryIDs, error) {
-	cashAccount, err := s.repo.FindAccountByType(ctx, ledgerID, "cash")
+	cashAccount, err := s.repo.FindAccountByType(ctx, ledgerID, "wallet")
 	if err != nil {
-		return "", "", FlowCategoryIDs{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account": "cash"})
+		if errors.Is(err, ErrNotFound) {
+			cashAccount, err = s.repo.FindAccountByType(ctx, ledgerID, "current")
+		}
+		if err != nil {
+			return "", "", FlowCategoryIDs{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account": "wallet"})
+		}
 	}
 	investAccount, err := s.repo.FindAccountByType(ctx, ledgerID, "investment")
 	if err != nil {

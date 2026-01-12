@@ -51,7 +51,7 @@ func TestCreateAndListTransactions(t *testing.T) {
 	require.NoError(t, err)
 
 	var accountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, $3, true) RETURNING id`, ledgerID, "Pessoal", "cash").Scan(&accountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, $3, 'asset', true) RETURNING id`, ledgerID, "Pessoal", "wallet").Scan(&accountID)
 	require.NoError(t, err)
 
 	var categoryID string
@@ -119,7 +119,7 @@ func TestGetTransactionCrossLedgerNotFound(t *testing.T) {
 	require.NoError(t, err)
 
 	var accountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'cash', true) RETURNING id`, ledgerA, "Conta A").Scan(&accountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'wallet', 'asset', true) RETURNING id`, ledgerA, "Conta A").Scan(&accountID)
 	require.NoError(t, err)
 
 	var categoryID string

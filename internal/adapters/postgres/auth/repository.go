@@ -66,6 +66,16 @@ func (r *Repository) CreateUserWithPassword(ctx context.Context, email, displayN
 			INSERT INTO ledger_members (ledger_id, user_id, role)
 			VALUES ($1, $2, 'owner')
 		`, ledgerID, user.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(ctx, `
+			INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+			VALUES
+				($1, 'Conta Corrente', 'current', 'asset', true),
+				($1, 'Wallet/Pessoal', 'wallet', 'asset', true)
+		`, ledgerID)
 		return err
 	})
 
@@ -116,6 +126,16 @@ func (r *Repository) CreateUserWithIdentity(ctx context.Context, params auth.Cre
 			INSERT INTO ledger_members (ledger_id, user_id, role)
 			VALUES ($1, $2, 'owner')
 		`, ledgerID, user.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(ctx, `
+			INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+			VALUES
+				($1, 'Conta Corrente', 'current', 'asset', true),
+				($1, 'Wallet/Pessoal', 'wallet', 'asset', true)
+		`, ledgerID)
 		return err
 	})
 
@@ -281,7 +301,7 @@ func (r *Repository) RotateAuthSession(ctx context.Context, params auth.RotateSe
 			return err
 		}
 
-	_, err := tx.Exec(ctx, `
+		_, err := tx.Exec(ctx, `
 			UPDATE auth_sessions
 			SET revoked_at = now(), updated_at = now()
 			WHERE id = $1

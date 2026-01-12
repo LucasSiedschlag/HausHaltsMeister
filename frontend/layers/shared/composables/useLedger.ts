@@ -6,6 +6,8 @@ import { useAuth } from '#layers/auth/composables/useAuth'
 type LedgerCreatePayload = {
   name: string
   currency_code: string
+  create_default_accounts?: boolean
+  include_investment?: boolean
 }
 
 export const useLedger = () => {

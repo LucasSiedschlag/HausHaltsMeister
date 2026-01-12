@@ -3,10 +3,11 @@ package reports
 import "time"
 
 type AccountBalance struct {
-	AccountID    string
-	AccountName  string
-	AccountType  string
-	BalanceCents int64
+	AccountID     string
+	AccountName   string
+	AccountType   string
+	AccountNature string
+	BalanceCents  int64
 }
 
 type BalanceReport struct {

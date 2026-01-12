@@ -15,28 +15,35 @@ type CardNetworkResponse struct {
 }
 
 type CreditCardRequest struct {
-	AccountID        string  `json:"account_id"`
-	IssuerName       *string `json:"issuer_name"`
-	Network          string  `json:"network"`
-	Nickname         *string `json:"nickname"`
-	Last4            *string `json:"last4"`
-	CreditLimitCents *int64  `json:"credit_limit_cents"`
-	ClosingDay       int     `json:"closing_day"`
-	DueDay           int     `json:"due_day"`
+	Label      *string `json:"label"`
+	Brand      string  `json:"brand"`
+	Last4      *string `json:"last4"`
+	CVV        *string `json:"cvv"`
+	HolderName *string `json:"holder_name"`
+	Active     *bool   `json:"active"`
+	Color      *string `json:"color"`
+	Style      *string `json:"style"`
+	ClosingDay int     `json:"closing_day"`
+	DueDay     int     `json:"due_day"`
 }
 
 type CreditCardResponse struct {
-	AccountID        string     `json:"account_id"`
-	LedgerID         string     `json:"ledger_id"`
-	IssuerName       *string    `json:"issuer_name,omitempty"`
-	Network          string     `json:"network"`
-	Nickname         *string    `json:"nickname,omitempty"`
-	Last4            *string    `json:"last4,omitempty"`
-	CreditLimitCents *int64     `json:"credit_limit_cents,omitempty"`
-	ClosingDay       int        `json:"closing_day"`
-	DueDay           int        `json:"due_day"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
+	ID                 string     `json:"id"`
+	LedgerID           string     `json:"ledger_id"`
+	ParentAccountID    string     `json:"parent_account_id"`
+	LiabilityAccountID string     `json:"liability_account_id"`
+	Label              *string    `json:"label,omitempty"`
+	Brand              string     `json:"brand"`
+	Last4              *string    `json:"last4,omitempty"`
+	CVV                *string    `json:"cvv,omitempty"`
+	HolderName         *string    `json:"holder_name,omitempty"`
+	Active             bool       `json:"active"`
+	Color              *string    `json:"color,omitempty"`
+	Style              *string    `json:"style,omitempty"`
+	ClosingDay         int        `json:"closing_day"`
+	DueDay             int        `json:"due_day"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          *time.Time `json:"updated_at,omitempty"`
 }
 
 type InstallmentPlanRequest struct {
@@ -57,7 +64,7 @@ type InstallmentPlanPatchRequest struct {
 type InstallmentPlanResponse struct {
 	ID                     string     `json:"id"`
 	LedgerID               string     `json:"ledger_id"`
-	CardAccountID          string     `json:"card_account_id"`
+	CreditCardID           string     `json:"credit_card_id"`
 	PurchaseOccurredAt     time.Time  `json:"purchase_occurred_at"`
 	Merchant               *string    `json:"merchant,omitempty"`
 	Description            string     `json:"description"`
@@ -98,7 +105,7 @@ type PostingResponse struct {
 type StatementResponse struct {
 	ID                   string     `json:"id"`
 	LedgerID             string     `json:"ledger_id"`
-	CardAccountID        string     `json:"card_account_id"`
+	CreditCardID         string     `json:"credit_card_id"`
 	StatementMonth       time.Time  `json:"statement_month"`
 	ClosingDate          time.Time  `json:"closing_date"`
 	DueDate              time.Time  `json:"due_date"`
@@ -111,8 +118,8 @@ type StatementResponse struct {
 }
 
 type StatementPayRequest struct {
-	StatementID    string `json:"statement_id"`
-	PaymentDate    string `json:"payment_date"`
-	PayAmountCents int64  `json:"pay_amount_cents"`
-	CashAccountID  string `json:"cash_account_id"`
+	StatementID     string `json:"statement_id"`
+	PaymentDate     string `json:"payment_date"`
+	PayAmountCents  int64  `json:"pay_amount_cents"`
+	PayingAccountID string `json:"paying_account_id"`
 }

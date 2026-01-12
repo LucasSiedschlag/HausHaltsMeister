@@ -12,7 +12,7 @@ import (
 type Repository interface {
 	ListAccounts(ctx context.Context, ledgerID string) ([]Account, error)
 	GetAccount(ctx context.Context, ledgerID, accountID string) (Account, error)
-	CreateAccount(ctx context.Context, ledgerID, name, accountType string, isActive bool) (Account, error)
+	CreateAccount(ctx context.Context, ledgerID, name, accountType, nature string, isActive bool) (Account, error)
 	UpdateAccount(ctx context.Context, ledgerID, accountID, name string, isActive bool, updatedAt time.Time) (Account, error)
 	DeactivateAccount(ctx context.Context, ledgerID, accountID string, updatedAt time.Time) error
 	LedgerExists(ctx context.Context, ledgerID string) (bool, error)
@@ -49,7 +49,7 @@ func (s *Service) GetAccount(ctx context.Context, userID, ledgerID, accountID st
 	return account, nil
 }
 
-func (s *Service) CreateAccount(ctx context.Context, userID, ledgerID, name, accountType string, isActive bool) (Account, error) {
+func (s *Service) CreateAccount(ctx context.Context, userID, ledgerID, name, accountType, nature string, isActive bool) (Account, error) {
 	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
 		return Account{}, err
 	}
@@ -62,8 +62,15 @@ func (s *Service) CreateAccount(ctx context.Context, userID, ledgerID, name, acc
 	if !isValidType(accountType) {
 		return Account{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"type": "invalid"})
 	}
+	nature = strings.TrimSpace(nature)
+	if nature == "" {
+		nature = "asset"
+	}
+	if !isValidNature(nature) {
+		return Account{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"nature": "invalid"})
+	}
 
-	account, err := s.repo.CreateAccount(ctx, ledgerID, name, accountType, isActive)
+	account, err := s.repo.CreateAccount(ctx, ledgerID, name, accountType, nature, isActive)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateName) {
 			return Account{}, ErrDuplicateName
@@ -136,7 +143,16 @@ func (s *Service) mapAccessError(ctx context.Context, ledgerID string, err error
 
 func isValidType(accountType string) bool {
 	switch accountType {
-	case "cash", "investment", "credit_card":
+	case "current", "business", "investment", "exchange", "wallet":
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidNature(nature string) bool {
+	switch nature {
+	case "asset", "liability":
 		return true
 	default:
 		return false

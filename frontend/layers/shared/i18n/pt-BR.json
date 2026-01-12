@@ -22,6 +22,12 @@
       "CONFLICT_DUPLICATE_NAME": "Já existe um registro com este nome.",
       "CONFLICT_DUPLICATE_EMAIL": "Este e-mail já está em uso.",
       "LEDGER_ACCESS_DENIED": "Você não tem permissão para acessar este ledger.",
+      "CREDITCARD_CARD_NOT_FOUND": "Cartão não encontrado.",
+      "CREDITCARD_CARD_ALREADY_EXISTS": "Esta conta já possui um cartão cadastrado. Crie outra conta de cartão de crédito para registrar um novo cartão.",
+      "CREDITCARD_STATEMENT_NOT_FOUND": "Fatura não encontrada.",
+      "CREDITCARD_STATEMENT_ALREADY_PAID": "A fatura já foi paga.",
+      "CREDITCARD_INSTALLMENT_ALREADY_POSTED": "Parcela já foi postada.",
+      "CREDITCARD_PAYMENT_EXCEEDS_TOTAL": "Pagamento excede o total da fatura.",
       "AUTH_INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
       "AUTH_User_INACTIVE": "Usuário inativo.",
       "default": "Ocorreu um erro inesperado."
@@ -310,6 +316,8 @@
       "namePlaceholder": "Ex: Pessoal",
       "currencyLabel": "Moeda base",
       "currencyPlaceholder": "Selecione",
+      "includeInvestmentsLabel": "Criar investimentos",
+      "includeInvestmentsHint": "Adiciona uma conta de investimentos ao ledger.",
       "submit": "Criar ledger",
       "submitting": "Criando...",
       "nameRequired": "Informe um nome.",
@@ -318,7 +326,7 @@
   },
   "accounts": {
     "title": "Contas",
-    "description": "Gerencie contas de caixa, investimento e cartão.",
+    "description": "Gerencie contas corrente, empresarial, investimento, exchange e wallet.",
     "loading": "Carregando contas...",
     "empty": "Nenhuma conta encontrada.",
     "readOnlyHint": "Você possui acesso apenas de leitura.",
@@ -340,9 +348,11 @@
       "actions": "Ações"
     },
     "types": {
-      "cash": "Caixa",
+      "current": "Corrente",
+      "business": "Empresarial",
       "investment": "Investimento",
-      "credit_card": "Cartão"
+      "exchange": "Exchange",
+      "wallet": "Wallet"
     },
     "status": {
       "active": "Ativa",
@@ -665,7 +675,7 @@
       "title": "Contas",
       "inactive": "Inativa",
       "selectHint": "Selecione uma conta para visualizar movimentações.",
-      "unsupportedHint": "Selecione uma conta do tipo caixa ou investimento.",
+      "unsupportedHint": "Selecione uma conta wallet/corrente ou investimento.",
       "inactiveHint": "Conta inativa. Ative para registrar movimentações.",
       "earningsHint": "Selecione uma conta de investimento para registrar rendimentos."
     },
@@ -694,7 +704,7 @@
       "goCategories": "Ir para categorias",
       "blockedHint": "Finalize a configuração antes de registrar movimentações.",
       "accounts": {
-        "cash": "Conta tipo caixa (cash)",
+        "cash": "Conta wallet (wallet) ou corrente (current)",
         "investment": "Conta tipo investimento (investment)"
       }
     },
@@ -709,11 +719,11 @@
     "forms": {
       "contribution": {
         "title": "Aporte",
-        "description": "Transfira recursos da conta pessoal para investimentos."
+        "description": "Transfira recursos da conta wallet/corrente para investimentos."
       },
       "redemption": {
         "title": "Resgate",
-        "description": "Traga recursos de investimentos para a conta pessoal."
+        "description": "Traga recursos de investimentos para a conta wallet/corrente."
       },
       "earnings": {
         "title": "Rendimento",
@@ -739,6 +749,252 @@
       "earningsSuccess": "Rendimento registrado.",
       "lossSuccess": "Perda registrada.",
       "error": "Não foi possível registrar a movimentação."
+    }
+  },
+  "creditCards": {
+    "title": "Cartões",
+    "description": "Gerencie cartões e faturas.",
+    "loading": "Carregando cartões...",
+    "empty": "Nenhum cartão cadastrado.",
+    "readOnlyHint": "Você possui acesso apenas de leitura.",
+    "list": {
+      "title": "Cartões do ledger",
+      "description": "Acompanhe ciclos e parcelas.",
+      "emptyAccounts": "Crie uma conta para vincular um cartão."
+    },
+    "table": {
+      "card": "Cartão",
+      "network": "Bandeira",
+      "cycle": "Ciclo",
+      "actions": "Ações",
+      "closingDay": "Fecha dia {day}",
+      "dueDay": "Vence dia {day}",
+      "noNickname": "Sem rótulo"
+    },
+    "actions": {
+      "newCard": "Novo cartão",
+      "view": "Detalhes",
+      "edit": "Editar",
+      "delete": "Remover",
+      "newPlan": "Novo plano",
+      "cancelPlan": "Cancelar plano",
+      "skipInstallment": "Pular parcela",
+      "postMonth": "Postar mês",
+      "closeStatement": "Fechar fatura",
+      "payStatement": "Pagar fatura"
+    },
+    "header": {
+      "newCard": "Novo cartão",
+      "newPlan": "Novo plano"
+    },
+    "form": {
+      "createTitle": "Novo cartão",
+      "createDescription": "Vincule um cartão a uma conta.",
+      "editTitle": "Editar cartão",
+      "editDescription": "Atualize dados do cartão.",
+      "accountLabel": "Conta",
+      "accountPlaceholder": "Selecione",
+      "networkLabel": "Bandeira",
+      "networkPlaceholder": "Selecione",
+      "labelLabel": "Rótulo",
+      "labelPlaceholder": "Ex: Cartão principal",
+      "holderLabel": "Titular",
+      "holderPlaceholder": "Ex: Nome Sobrenome",
+      "last4Label": "Final",
+      "last4Placeholder": "1234",
+      "closingDayLabel": "Dia de fechamento",
+      "closingDayPlaceholder": "25",
+      "dueDayLabel": "Dia de vencimento",
+      "dueDayPlaceholder": "10",
+      "cancel": "Cancelar",
+      "submit": "Salvar",
+      "saving": "Salvando..."
+    },
+    "messages": {
+      "created": "Cartão criado.",
+      "updated": "Cartão atualizado.",
+      "deleted": "Cartão removido.",
+      "last4Invalid": "Informe os 4 dígitos finais.",
+      "postSuccess": "Parcelas postadas: {count}.",
+      "postEmpty": "Nenhuma parcela para postar.",
+      "error": "Não foi possível concluir a operação."
+    },
+    "confirm": {
+      "deleteTitle": "Remover cartão?",
+      "deleteMessage": "O cartão \"{name}\" será removido.",
+      "confirmAction": "Remover",
+      "cancelAction": "Cancelar"
+    },
+    "networks": {
+      "title": "Bandeiras",
+      "description": "Catálogo global de bandeiras.",
+      "loading": "Carregando bandeiras...",
+      "empty": "Nenhuma bandeira cadastrada.",
+      "readOnlyHint": "Somente proprietários podem editar bandeiras.",
+      "actions": {
+        "new": "Nova bandeira"
+      },
+      "codeLabel": "Código",
+      "codePlaceholder": "ex: visa",
+      "displayNameLabel": "Nome",
+      "displayNamePlaceholder": "ex: Visa",
+      "createTitle": "Nova bandeira",
+      "createDescription": "Adicione uma bandeira ao catálogo.",
+      "editTitle": "Editar bandeira",
+      "editDescription": "Atualize o nome exibido.",
+      "messages": {
+        "created": "Bandeira criada.",
+        "updated": "Bandeira atualizada.",
+        "deleted": "Bandeira removida.",
+        "error": "Não foi possível salvar a bandeira."
+      },
+      "confirm": {
+        "deleteTitle": "Remover bandeira?",
+        "deleteMessage": "A bandeira \"{name}\" será removida.",
+        "confirmAction": "Remover",
+        "cancelAction": "Cancelar"
+      }
+    },
+    "detail": {
+      "unknownCard": "Cartão",
+      "limitLabel": "Limite",
+      "cycleLabel": "Ciclo",
+      "closingDay": "Fecha dia {day}",
+      "dueDay": "Vence dia {day}",
+      "statementMonth": "Competência",
+      "statementStatus": "Fatura",
+      "actionsTitle": "Ações"
+    },
+    "plans": {
+      "title": "Planos",
+      "loading": "Carregando planos...",
+      "empty": "Nenhum plano encontrado.",
+      "filters": {
+        "status": "Status",
+        "placeholder": "Filtrar",
+        "all": "Todos",
+        "active": "Ativos",
+        "cancelled": "Cancelados"
+      },
+      "table": {
+        "description": "Descrição",
+        "category": "Categoria",
+        "amount": "Total",
+        "firstDue": "Primeira fatura",
+        "status": "Status",
+        "actions": "Ações",
+        "noMerchant": "Sem lojista"
+      },
+      "status": {
+        "active": "Ativo",
+        "cancelled": "Cancelado",
+        "finished": "Finalizado"
+      },
+      "form": {
+        "title": "Novo plano",
+        "description": "Registre uma compra parcelada.",
+        "purchaseDateLabel": "Data da compra",
+        "firstDueLabel": "Primeira fatura",
+        "descriptionLabel": "Descrição",
+        "descriptionPlaceholder": "Ex: Notebook",
+        "merchantLabel": "Lojista",
+        "merchantPlaceholder": "Opcional",
+        "categoryLabel": "Categoria",
+        "categoryPlaceholder": "Selecione",
+        "totalAmountLabel": "Valor total",
+        "totalAmountPlaceholder": "0,00",
+        "installmentsLabel": "Parcelas",
+        "installmentsPlaceholder": "Ex: 6",
+        "submit": "Criar plano"
+      },
+      "messages": {
+        "created": "Plano criado.",
+        "cancelled": "Plano cancelado.",
+        "installmentTooSmall": "O valor da parcela ficou muito pequeno.",
+        "error": "Não foi possível salvar o plano."
+      },
+      "confirm": {
+        "deleteTitle": "Cancelar plano?",
+        "deleteMessage": "O plano \"{name}\" será cancelado.",
+        "confirmAction": "Cancelar",
+        "cancelAction": "Voltar"
+      }
+    },
+    "installments": {
+      "title": "Parcelas",
+      "loading": "Carregando parcelas...",
+      "empty": "Nenhuma parcela encontrada.",
+      "filters": {
+        "status": "Status",
+        "placeholder": "Filtrar",
+        "all": "Todas",
+        "scheduled": "Agendadas",
+        "posted": "Postadas",
+        "paid": "Pagas",
+        "skipped": "Puladas"
+      },
+      "table": {
+        "plan": "Plano",
+        "amount": "Valor",
+        "dueMonth": "Competência",
+        "status": "Status",
+        "actions": "Ações",
+        "installmentLabel": "Parcela {number}/{total}"
+      },
+      "status": {
+        "scheduled": "Agendada",
+        "posted": "Postada",
+        "paid": "Paga",
+        "skipped": "Pulada"
+      },
+      "period": "Mês: {month}",
+      "messages": {
+        "skipped": "Parcela marcada como pulada.",
+        "error": "Não foi possível atualizar a parcela."
+      },
+      "confirm": {
+        "skipTitle": "Pular parcela?",
+        "skipMessage": "Essa parcela será ignorada.",
+        "confirmAction": "Confirmar",
+        "cancelAction": "Cancelar"
+      }
+    },
+    "statements": {
+      "title": "Faturas",
+      "loading": "Carregando faturas...",
+      "empty": "Nenhuma fatura encontrada.",
+      "period": "Mês: {month}",
+      "table": {
+        "month": "Competência",
+        "closing": "Fechamento",
+        "due": "Vencimento",
+        "total": "Total",
+        "payments": "Pagamentos",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "status": {
+        "open": "Aberta",
+        "closed": "Fechada",
+        "paid": "Paga"
+      },
+      "messages": {
+        "closed": "Fatura fechada.",
+        "paid": "Fatura paga.",
+        "error": "Não foi possível atualizar a fatura."
+      },
+      "form": {
+        "title": "Pagar fatura",
+        "description": "Registre o pagamento da fatura.",
+        "statementLabel": "Fatura",
+        "statementPlaceholder": "Selecione",
+        "amountLabel": "Valor do pagamento",
+        "amountPlaceholder": "0,00",
+        "dateLabel": "Data de pagamento",
+        "cashAccountLabel": "Conta de pagamento",
+        "cashAccountPlaceholder": "Selecione",
+        "submit": "Registrar pagamento"
+      }
     }
   },
   "sidebar": {

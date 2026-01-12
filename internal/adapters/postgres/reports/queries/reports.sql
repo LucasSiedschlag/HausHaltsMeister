@@ -1,7 +1,7 @@
 -- Reports
 
 -- name: ListAccountBalances :many
-SELECT a.id, a.name, a.type,
+SELECT a.id, a.name, a.type, a.nature,
   COALESCE(SUM(
     CASE
       WHEN t.id IS NULL THEN 0
@@ -15,7 +15,7 @@ LEFT JOIN entries e ON e.account_id = a.id AND e.ledger_id = a.ledger_id
 LEFT JOIN transactions t ON t.id = e.transaction_id AND t.occurred_at < $2
 LEFT JOIN categories c ON c.id = e.category_id
 WHERE a.ledger_id = $1
-GROUP BY a.id, a.name, a.type
+GROUP BY a.id, a.name, a.type, a.nature
 ORDER BY a.created_at;
 
 -- name: ListCategorySummary :many

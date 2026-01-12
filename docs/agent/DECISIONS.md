@@ -91,3 +91,16 @@ Move to append-only policy with adjustments instead of edits.
 - Editor-level actions (transactions, card posting, ledger writes) must disable when `hasRole('editor')` is false and explain the restriction to the user.
 - Ledger selectors should show the live role badge and call `ensureLedger`/`setActiveLedger` to hydrate the context before rendering ledger-aware screens.
 - Frontend code must never bypass `useLedgerContext`; all ledger data for navigation, guards, and UI hints must flow through it.
+
+## 8) Accounts type/nature and credit card entity v2
+
+**Decision**
+Accounts now use the types `current`, `business`, `investment`, `exchange`, `wallet` and include `accounts.nature` (`asset` or `liability`, default `asset`).
+Credit cards are standalone entities with `credit_cards.id` as the primary reference for statements and installment plans.
+
+**Implications**
+- No logic depends on `accounts.type=credit_card` or `cash`.
+- Reports and balances use `accounts.nature` to determine normal balance/sign.
+- Credit cards are 1:N under accounts via `parent_account_id` and always have a dedicated `liability_account_id` with `nature=liability`.
+- Card flows and endpoints use `card_id` (not `cardAccountId`).
+- Listagem de cartoes e feita por `account_id`; faturas/parcelas/planos sempre por `card_id`.

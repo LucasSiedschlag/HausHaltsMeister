@@ -99,11 +99,58 @@ export const amountSchema = (label = 'Valor') =>
     }
   })
 
+export const integerSchema = (
+  label = 'Numero',
+  options: { min?: number; max?: number } = {}
+) =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    const trimmed = value.trim()
+    if (!/^\d+$/.test(trimmed)) {
+      add('invalid_number', messages.invalidNumber(label))
+      return
+    }
+    const parsed = Number(trimmed)
+    if (options.min !== undefined && parsed < options.min) {
+      add('min_value', messages.minValue(label, options.min))
+    }
+    if (options.max !== undefined && parsed > options.max) {
+      add('max_value', messages.maxValue(label, options.max))
+    }
+  })
+
+export const monthSchema = (label = 'Mes') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(value)) {
+      add('invalid_date', messages.invalidDate(label))
+    }
+  })
+
+export const codeSchema = (label = 'Codigo') =>
+  z.string().superRefine((value, ctx) => {
+    const add: AddIssue = (code, message) => issue(ctx, code, message)
+    if (handleRequired(value, add, label)) return
+    if (value.trim().length < 2) {
+      add('min_length', messages.minLength(label, 2))
+      return
+    }
+    if (value.trim().length > 20) {
+      add('max_length', messages.maxLength(label, 20))
+      return
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
+      add('invalid_code', messages.invalidCode(label))
+    }
+  })
+
 export const accountTypeSchema = (label = 'Tipo') =>
   z.string().superRefine((value, ctx) => {
     const add: AddIssue = (code, message) => issue(ctx, code, message)
     if (handleRequired(value, add, label)) return
-    if (!['cash', 'investment', 'credit_card'].includes(value)) {
+    if (!['current', 'business', 'investment', 'exchange', 'wallet'].includes(value)) {
       add('invalid', messages.invalidOption(label))
     }
   })

@@ -19,7 +19,7 @@ func NewRepository(store *postgres.Store) *Repository {
 
 func (r *Repository) ListAccountBalances(ctx context.Context, ledgerID string, cutoff time.Time) ([]reports.AccountBalance, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT a.id, a.name, a.type,
+		SELECT a.id, a.name, a.type, a.nature,
 			COALESCE(SUM(
 				CASE
 					WHEN t.id IS NULL THEN 0
@@ -33,7 +33,7 @@ func (r *Repository) ListAccountBalances(ctx context.Context, ledgerID string, c
 		LEFT JOIN transactions t ON t.id = e.transaction_id AND t.occurred_at < $2
 		LEFT JOIN categories c ON c.id = e.category_id
 		WHERE a.ledger_id = $1
-		GROUP BY a.id, a.name, a.type
+		GROUP BY a.id, a.name, a.type, a.nature
 		ORDER BY a.created_at
 	`, ledgerID, cutoff)
 	if err != nil {
@@ -44,10 +44,10 @@ func (r *Repository) ListAccountBalances(ctx context.Context, ledgerID string, c
 	items := []reports.AccountBalance{}
 	for rows.Next() {
 		var item reports.AccountBalance
-		if err := rows.Scan(&item.AccountID, &item.AccountName, &item.AccountType, &item.BalanceCents); err != nil {
+		if err := rows.Scan(&item.AccountID, &item.AccountName, &item.AccountType, &item.AccountNature, &item.BalanceCents); err != nil {
 			return nil, err
 		}
-		if item.AccountType == "credit_card" {
+		if item.AccountNature == "liability" {
 			item.BalanceCents = -item.BalanceCents
 		}
 		items = append(items, item)

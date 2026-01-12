@@ -34,7 +34,7 @@ const confirmOpen = ref(false)
 const confirmAccount = ref<Account | null>(null)
 
 const name = ref('')
-const type = ref<AccountType>('cash')
+const type = ref<AccountType>('current')
 const isActive = ref(true)
 
 const { touched, errors, touchField, validateAll } = useInlineValidation(
@@ -66,7 +66,7 @@ const resetValidation = () => {
 
 const resetForm = () => {
   name.value = ''
-  type.value = 'cash'
+  type.value = 'current'
   isActive.value = true
   formError.value = ''
   resetValidation()
@@ -293,9 +293,11 @@ watch(
                 <SelectValue :placeholder="t('accounts.form.typePlaceholder')" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">{{ t('accounts.types.cash') }}</SelectItem>
+                <SelectItem value="current">{{ t('accounts.types.current') }}</SelectItem>
+                <SelectItem value="business">{{ t('accounts.types.business') }}</SelectItem>
                 <SelectItem value="investment">{{ t('accounts.types.investment') }}</SelectItem>
-                <SelectItem value="credit_card">{{ t('accounts.types.credit_card') }}</SelectItem>
+                <SelectItem value="exchange">{{ t('accounts.types.exchange') }}</SelectItem>
+                <SelectItem value="wallet">{{ t('accounts.types.wallet') }}</SelectItem>
               </SelectContent>
             </Select>
             <p v-if="touched.type && errors.type[0]" class="text-xs text-destructive">

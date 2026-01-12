@@ -3,22 +3,23 @@ package dto
 import "time"
 
 type BalanceResponse struct {
-	LedgerID string              `json:"ledger_id"`
-	Month time.Time             `json:"month"`
-	Items []BalanceItemResponse `json:"items"`
+	LedgerID string                `json:"ledger_id"`
+	Month    time.Time             `json:"month"`
+	Items    []BalanceItemResponse `json:"items"`
 }
 
 type BalanceItemResponse struct {
-	AccountID    string `json:"account_id"`
-	AccountName  string `json:"account_name"`
-	AccountType  string `json:"account_type"`
-	BalanceCents int64  `json:"balance_cents"`
+	AccountID     string `json:"account_id"`
+	AccountName   string `json:"account_name"`
+	AccountType   string `json:"account_type"`
+	AccountNature string `json:"account_nature"`
+	BalanceCents  int64  `json:"balance_cents"`
 }
 
 type CategorySummaryResponse struct {
-	LedgerID string                      `json:"ledger_id"`
-	From     time.Time                   `json:"from"`
-	To       time.Time                   `json:"to"`
+	LedgerID string                        `json:"ledger_id"`
+	From     time.Time                     `json:"from"`
+	To       time.Time                     `json:"to"`
 	Items    []CategorySummaryItemResponse `json:"items"`
 }
 
@@ -30,9 +31,9 @@ type CategorySummaryItemResponse struct {
 }
 
 type CashflowResponse struct {
-	LedgerID string                `json:"ledger_id"`
-	From     time.Time             `json:"from"`
-	To       time.Time             `json:"to"`
+	LedgerID string                 `json:"ledger_id"`
+	From     time.Time              `json:"from"`
+	To       time.Time              `json:"to"`
 	Items    []CashflowItemResponse `json:"items"`
 }
 

@@ -22,26 +22,26 @@ type CreditCardService interface {
 	UpdateCardNetwork(ctx context.Context, code, displayName string) (creditcard.CardNetwork, error)
 	DeleteCardNetwork(ctx context.Context, code string) error
 
-	ListCreditCards(ctx context.Context, userID, ledgerID string) ([]creditcard.CreditCard, error)
-	GetCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string) (creditcard.CreditCard, error)
-	CreateCreditCard(ctx context.Context, userID, ledgerID string, card creditcard.CreditCard) (creditcard.CreditCard, error)
-	UpdateCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string, card creditcard.CreditCard) (creditcard.CreditCard, error)
-	DeleteCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string) error
+	ListCreditCards(ctx context.Context, userID, accountID string) ([]creditcard.CreditCard, error)
+	GetCreditCard(ctx context.Context, userID, cardID string) (creditcard.CreditCard, error)
+	CreateCreditCard(ctx context.Context, userID, accountID string, card creditcard.CreditCard) (creditcard.CreditCard, error)
+	UpdateCreditCard(ctx context.Context, userID, cardID string, card creditcard.CreditCard) (creditcard.CreditCard, error)
+	DeleteCreditCard(ctx context.Context, userID, cardID string) error
 
-	CreatePlan(ctx context.Context, userID, ledgerID, cardAccountID string, input creditcard.InstallmentPlan, installmentsCount int, installmentAmount int64) (creditcard.InstallmentPlan, error)
-	ListPlans(ctx context.Context, userID, ledgerID, cardAccountID string, status *string) ([]creditcard.InstallmentPlan, error)
-	GetPlan(ctx context.Context, userID, ledgerID, cardAccountID, planID string) (creditcard.InstallmentPlan, error)
-	CancelPlan(ctx context.Context, userID, ledgerID, cardAccountID, planID string) error
+	CreatePlan(ctx context.Context, userID, cardID string, input creditcard.InstallmentPlan, installmentsCount int, installmentAmount int64) (creditcard.InstallmentPlan, error)
+	ListPlans(ctx context.Context, userID, cardID string, status *string) ([]creditcard.InstallmentPlan, error)
+	GetPlan(ctx context.Context, userID, cardID, planID string) (creditcard.InstallmentPlan, error)
+	CancelPlan(ctx context.Context, userID, cardID, planID string) error
 
-	ListInstallments(ctx context.Context, userID, ledgerID, cardAccountID string, month *time.Time, status *string) ([]creditcard.Installment, error)
-	UpdateInstallment(ctx context.Context, userID, ledgerID, installmentID, status string) (creditcard.Installment, error)
+	ListInstallments(ctx context.Context, userID, cardID string, month *time.Time, status *string) ([]creditcard.Installment, error)
+	UpdateInstallment(ctx context.Context, userID, cardID, installmentID, status string) (creditcard.Installment, error)
 
-	PostMonth(ctx context.Context, userID, ledgerID, cardAccountID string, month time.Time) (creditcard.PostingResult, error)
+	PostMonth(ctx context.Context, userID, cardID string, month time.Time) (creditcard.PostingResult, error)
 
-	ListStatements(ctx context.Context, userID, ledgerID, cardAccountID string, month *time.Time) ([]creditcard.Statement, error)
-	GetStatement(ctx context.Context, userID, ledgerID, cardAccountID, statementID string) (creditcard.Statement, error)
-	CloseStatement(ctx context.Context, userID, ledgerID, cardAccountID string, month time.Time) (creditcard.Statement, error)
-	PayStatement(ctx context.Context, userID, ledgerID, cardAccountID, statementID, cashAccountID string, payAmount int64, paymentDate time.Time) (creditcard.Statement, error)
+	ListStatements(ctx context.Context, userID, cardID string, month *time.Time) ([]creditcard.Statement, error)
+	GetStatement(ctx context.Context, userID, cardID, statementID string) (creditcard.Statement, error)
+	CloseStatement(ctx context.Context, userID, cardID string, month time.Time) (creditcard.Statement, error)
+	PayStatement(ctx context.Context, userID, cardID, statementID, payingAccountID string, payAmount int64, paymentDate time.Time) (creditcard.Statement, error)
 }
 
 type cardNetworkRequest = dto.CardNetworkRequest
@@ -57,32 +57,35 @@ type postingResponse = dto.PostingResponse
 type statementResponse = dto.StatementResponse
 type statementPayRequest = dto.StatementPayRequest
 
-func (h *CreditCardHandler) Register(base *echo.Group) {
-	plans := base.Group("/:cardAccountId/plans")
+func (h *CreditCardHandler) RegisterAccountCards(base *echo.Group) {
+	base.GET("", h.ListCards)
+	base.POST("", h.CreateCard)
+}
+
+func (h *CreditCardHandler) RegisterCards(base *echo.Group) {
+	plans := base.Group("/plans")
 	plans.POST("", h.CreatePlan)
 	plans.GET("", h.ListPlans)
 	plans.GET("/:planId", h.GetPlan)
 	plans.PATCH("/:planId", h.UpdatePlan)
 	plans.DELETE("/:planId", h.DeletePlan)
 
-	installments := base.Group("/:cardAccountId/installments")
+	installments := base.Group("/installments")
 	installments.GET("", h.ListInstallments)
 	installments.PATCH("/:installmentId", h.UpdateInstallment)
 
-	base.POST("/:cardAccountId/post", h.PostMonth)
+	base.POST("/post", h.PostMonth)
 
-	statements := base.Group("/:cardAccountId/statements")
+	statements := base.Group("/statements")
 	statements.GET("", h.ListStatements)
 	statements.GET("/:statementId", h.GetStatement)
 	statements.POST("/close", h.CloseStatement)
 	statements.POST("/pay", h.PayStatement)
 	statements.PATCH("/:statementId", h.UpdateStatement)
 
-	base.GET("", h.ListCards)
-	base.POST("", h.CreateCard)
-	base.GET("/:cardAccountId", h.GetCard)
-	base.PATCH("/:cardAccountId", h.UpdateCard)
-	base.DELETE("/:cardAccountId", h.DeleteCard)
+	base.GET("", h.GetCard)
+	base.PATCH("", h.UpdateCard)
+	base.DELETE("", h.DeleteCard)
 }
 
 func (h *CreditCardHandler) RegisterNetworks(base *echo.Group) {
@@ -169,12 +172,12 @@ func (h *CreditCardHandler) ListCards(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	accountID, err := httpx.RequireUUIDParam(c, "accountId")
+	if err != nil {
+		return err
 	}
 
-	items, err := h.Service.ListCreditCards(c.Request().Context(), user.ID, ledgerID)
+	items, err := h.Service.ListCreditCards(c.Request().Context(), user.ID, accountID)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -191,13 +194,12 @@ func (h *CreditCardHandler) GetCard(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
 
-	card, err := h.Service.GetCreditCard(c.Request().Context(), user.ID, ledgerID, cardAccountID)
+	card, err := h.Service.GetCreditCard(c.Request().Context(), user.ID, cardID)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -209,9 +211,9 @@ func (h *CreditCardHandler) CreateCard(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	if ledgerID == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	accountID, err := httpx.RequireUUIDParam(c, "accountId")
+	if err != nil {
+		return err
 	}
 
 	var req creditCardRequest
@@ -219,15 +221,22 @@ func (h *CreditCardHandler) CreateCard(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	created, err := h.Service.CreateCreditCard(c.Request().Context(), user.ID, ledgerID, creditcard.CreditCard{
-		AccountID:        req.AccountID,
-		IssuerName:       req.IssuerName,
-		Network:          req.Network,
-		Nickname:         req.Nickname,
-		Last4:            req.Last4,
-		CreditLimitCents: req.CreditLimitCents,
-		ClosingDay:       req.ClosingDay,
-		DueDay:           req.DueDay,
+	active := true
+	if req.Active != nil {
+		active = *req.Active
+	}
+
+	created, err := h.Service.CreateCreditCard(c.Request().Context(), user.ID, accountID, creditcard.CreditCard{
+		Label:      req.Label,
+		Brand:      req.Brand,
+		Last4:      req.Last4,
+		CVV:        req.CVV,
+		HolderName: req.HolderName,
+		Active:     active,
+		Color:      req.Color,
+		Style:      req.Style,
+		ClosingDay: req.ClosingDay,
+		DueDay:     req.DueDay,
 	})
 	if err != nil {
 		return httpx.WriteAppError(c, err)
@@ -241,8 +250,7 @@ func (h *CreditCardHandler) UpdateCard(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -252,15 +260,22 @@ func (h *CreditCardHandler) UpdateCard(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	updated, err := h.Service.UpdateCreditCard(c.Request().Context(), user.ID, ledgerID, cardAccountID, creditcard.CreditCard{
-		AccountID:        cardAccountID,
-		IssuerName:       req.IssuerName,
-		Network:          req.Network,
-		Nickname:         req.Nickname,
-		Last4:            req.Last4,
-		CreditLimitCents: req.CreditLimitCents,
-		ClosingDay:       req.ClosingDay,
-		DueDay:           req.DueDay,
+	active := true
+	if req.Active != nil {
+		active = *req.Active
+	}
+
+	updated, err := h.Service.UpdateCreditCard(c.Request().Context(), user.ID, cardID, creditcard.CreditCard{
+		Label:      req.Label,
+		Brand:      req.Brand,
+		Last4:      req.Last4,
+		CVV:        req.CVV,
+		HolderName: req.HolderName,
+		Active:     active,
+		Color:      req.Color,
+		Style:      req.Style,
+		ClosingDay: req.ClosingDay,
+		DueDay:     req.DueDay,
 	})
 	if err != nil {
 		return httpx.WriteAppError(c, err)
@@ -274,13 +289,12 @@ func (h *CreditCardHandler) DeleteCard(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
 
-	if err := h.Service.DeleteCreditCard(c.Request().Context(), user.ID, ledgerID, cardAccountID); err != nil {
+	if err := h.Service.DeleteCreditCard(c.Request().Context(), user.ID, cardID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -291,8 +305,7 @@ func (h *CreditCardHandler) CreatePlan(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -310,7 +323,7 @@ func (h *CreditCardHandler) CreatePlan(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"first_due_month": "invalid"})
 	}
 
-	created, err := h.Service.CreatePlan(c.Request().Context(), user.ID, ledgerID, cardAccountID, creditcard.InstallmentPlan{
+	created, err := h.Service.CreatePlan(c.Request().Context(), user.ID, cardID, creditcard.InstallmentPlan{
 		PurchaseOccurredAt: purchaseAt,
 		Merchant:           req.Merchant,
 		Description:        req.Description,
@@ -329,8 +342,7 @@ func (h *CreditCardHandler) ListPlans(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -340,7 +352,7 @@ func (h *CreditCardHandler) ListPlans(c echo.Context) error {
 		status = &value
 	}
 
-	items, err := h.Service.ListPlans(c.Request().Context(), user.ID, ledgerID, cardAccountID, status)
+	items, err := h.Service.ListPlans(c.Request().Context(), user.ID, cardID, status)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -357,8 +369,7 @@ func (h *CreditCardHandler) GetPlan(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -367,7 +378,7 @@ func (h *CreditCardHandler) GetPlan(c echo.Context) error {
 		return err
 	}
 
-	plan, err := h.Service.GetPlan(c.Request().Context(), user.ID, ledgerID, cardAccountID, planID)
+	plan, err := h.Service.GetPlan(c.Request().Context(), user.ID, cardID, planID)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -379,8 +390,7 @@ func (h *CreditCardHandler) UpdatePlan(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -397,7 +407,7 @@ func (h *CreditCardHandler) UpdatePlan(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"status": "invalid"})
 	}
 
-	if err := h.Service.CancelPlan(c.Request().Context(), user.ID, ledgerID, cardAccountID, planID); err != nil {
+	if err := h.Service.CancelPlan(c.Request().Context(), user.ID, cardID, planID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -408,8 +418,7 @@ func (h *CreditCardHandler) DeletePlan(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -418,7 +427,7 @@ func (h *CreditCardHandler) DeletePlan(c echo.Context) error {
 		return err
 	}
 
-	if err := h.Service.CancelPlan(c.Request().Context(), user.ID, ledgerID, cardAccountID, planID); err != nil {
+	if err := h.Service.CancelPlan(c.Request().Context(), user.ID, cardID, planID); err != nil {
 		return httpx.WriteAppError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -429,8 +438,7 @@ func (h *CreditCardHandler) ListInstallments(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -448,7 +456,7 @@ func (h *CreditCardHandler) ListInstallments(c echo.Context) error {
 		status = &value
 	}
 
-	items, err := h.Service.ListInstallments(c.Request().Context(), user.ID, ledgerID, cardAccountID, month, status)
+	items, err := h.Service.ListInstallments(c.Request().Context(), user.ID, cardID, month, status)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -465,7 +473,10 @@ func (h *CreditCardHandler) UpdateInstallment(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
+	if err != nil {
+		return err
+	}
 	installmentID, err := httpx.RequireUUIDParam(c, "installmentId")
 	if err != nil {
 		return err
@@ -476,7 +487,7 @@ func (h *CreditCardHandler) UpdateInstallment(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
 	}
 
-	updated, err := h.Service.UpdateInstallment(c.Request().Context(), user.ID, ledgerID, installmentID, req.Status)
+	updated, err := h.Service.UpdateInstallment(c.Request().Context(), user.ID, cardID, installmentID, req.Status)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -488,8 +499,7 @@ func (h *CreditCardHandler) PostMonth(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -502,7 +512,7 @@ func (h *CreditCardHandler) PostMonth(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "invalid"})
 	}
 
-	result, err := h.Service.PostMonth(c.Request().Context(), user.ID, ledgerID, cardAccountID, month)
+	result, err := h.Service.PostMonth(c.Request().Context(), user.ID, cardID, month)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -514,8 +524,7 @@ func (h *CreditCardHandler) ListStatements(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -529,7 +538,7 @@ func (h *CreditCardHandler) ListStatements(c echo.Context) error {
 		month = &parsed
 	}
 
-	items, err := h.Service.ListStatements(c.Request().Context(), user.ID, ledgerID, cardAccountID, month)
+	items, err := h.Service.ListStatements(c.Request().Context(), user.ID, cardID, month)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -546,8 +555,7 @@ func (h *CreditCardHandler) GetStatement(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -556,7 +564,7 @@ func (h *CreditCardHandler) GetStatement(c echo.Context) error {
 		return err
 	}
 
-	statement, err := h.Service.GetStatement(c.Request().Context(), user.ID, ledgerID, cardAccountID, statementID)
+	statement, err := h.Service.GetStatement(c.Request().Context(), user.ID, cardID, statementID)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -568,8 +576,7 @@ func (h *CreditCardHandler) CloseStatement(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -582,7 +589,7 @@ func (h *CreditCardHandler) CloseStatement(c echo.Context) error {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"month": "invalid"})
 	}
 
-	statement, err := h.Service.CloseStatement(c.Request().Context(), user.ID, ledgerID, cardAccountID, month)
+	statement, err := h.Service.CloseStatement(c.Request().Context(), user.ID, cardID, month)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -594,8 +601,7 @@ func (h *CreditCardHandler) PayStatement(c echo.Context) error {
 	if !ok {
 		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
 	}
-	ledgerID := c.Param("ledgerId")
-	cardAccountID, err := httpx.RequireUUIDParam(c, "cardAccountId")
+	cardID, err := httpx.RequireUUIDParam(c, "cardId")
 	if err != nil {
 		return err
 	}
@@ -607,15 +613,15 @@ func (h *CreditCardHandler) PayStatement(c echo.Context) error {
 	if strings.TrimSpace(req.StatementID) == "" {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"statement_id": "required"})
 	}
-	if strings.TrimSpace(req.CashAccountID) == "" {
-		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"cash_account_id": "required"})
+	if strings.TrimSpace(req.PayingAccountID) == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"paying_account_id": "required"})
 	}
 	paymentDate, err := httpx.ParseDateTime(req.PaymentDate)
 	if err != nil {
 		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"payment_date": "invalid"})
 	}
 
-	statement, err := h.Service.PayStatement(c.Request().Context(), user.ID, ledgerID, cardAccountID, req.StatementID, req.CashAccountID, req.PayAmountCents, paymentDate)
+	statement, err := h.Service.PayStatement(c.Request().Context(), user.ID, cardID, req.StatementID, req.PayingAccountID, req.PayAmountCents, paymentDate)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -637,17 +643,22 @@ func toCardNetworkResponse(item creditcard.CardNetwork) cardNetworkResponse {
 
 func toCreditCardResponse(card creditcard.CreditCard) creditCardResponse {
 	return creditCardResponse{
-		AccountID:        card.AccountID,
-		LedgerID:         card.LedgerID,
-		IssuerName:       card.IssuerName,
-		Network:          card.Network,
-		Nickname:         card.Nickname,
-		Last4:            card.Last4,
-		CreditLimitCents: card.CreditLimitCents,
-		ClosingDay:       card.ClosingDay,
-		DueDay:           card.DueDay,
-		CreatedAt:        card.CreatedAt,
-		UpdatedAt:        card.UpdatedAt,
+		ID:                 card.ID,
+		LedgerID:           card.LedgerID,
+		ParentAccountID:    card.ParentAccountID,
+		LiabilityAccountID: card.LiabilityAccountID,
+		Label:              card.Label,
+		Brand:              card.Brand,
+		Last4:              card.Last4,
+		CVV:                card.CVV,
+		HolderName:         card.HolderName,
+		Active:             card.Active,
+		Color:              card.Color,
+		Style:              card.Style,
+		ClosingDay:         card.ClosingDay,
+		DueDay:             card.DueDay,
+		CreatedAt:          card.CreatedAt,
+		UpdatedAt:          card.UpdatedAt,
 	}
 }
 
@@ -655,7 +666,7 @@ func toInstallmentPlanResponse(plan creditcard.InstallmentPlan) installmentPlanR
 	return installmentPlanResponse{
 		ID:                     plan.ID,
 		LedgerID:               plan.LedgerID,
-		CardAccountID:          plan.CardAccountID,
+		CreditCardID:           plan.CreditCardID,
 		PurchaseOccurredAt:     plan.PurchaseOccurredAt,
 		Merchant:               plan.Merchant,
 		Description:            plan.Description,
@@ -691,7 +702,7 @@ func toStatementResponse(statement creditcard.Statement) statementResponse {
 	return statementResponse{
 		ID:                   statement.ID,
 		LedgerID:             statement.LedgerID,
-		CardAccountID:        statement.CardAccountID,
+		CreditCardID:         statement.CreditCardID,
 		StatementMonth:       statement.StatementMonth,
 		ClosingDate:          statement.ClosingDate,
 		DueDate:              statement.DueDate,

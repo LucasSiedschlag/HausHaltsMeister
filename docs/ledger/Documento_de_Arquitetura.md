@@ -117,7 +117,7 @@ Qualquer UI (web/desktop) pode consumir a API. O domínio foi desenhado para ser
 - **User**: identidade.
 - **Ledger**: espaço financeiro (boundary).
 - **LedgerMember**: vínculo e permissões (roles).
-- **Account**: caixinha interna do ledger (`cash`, `investment`, `credit_card`).
+- **Account**: caixinha interna do ledger (`current`, `business`, `investment`, `exchange`, `wallet`) com `nature` (`asset`/`liability`).
 - **Category**: classificação e semântica (IN/OUT + flags).
 - **Transaction**: evento (data/descrição/autor).
 - **Entry**: linha de valor (conta + categoria + amount + kind + memo).
@@ -130,7 +130,7 @@ Qualquer UI (web/desktop) pode consumir a API. O domínio foi desenhado para ser
 
 ### 5.3 Cartão (auxiliar + converge no journal)
 
-- **CreditCard** (metadados 1:1 com account do tipo `credit_card`)
+- **CreditCard** (entidade 1:N por conta, com `parent_account_id` + `liability_account_id`)
 - **InstallmentPlan** (compra parcelada)
 - **Installment** (parcela mensal)
 - **CreditCardStatement** (fatura do mês)
@@ -194,12 +194,14 @@ A API deve ser organizada por `ledger_id` como primeiro-class:
 - `GET /ledgers/{ledgerId}/transactions?from=&to=&account=&category=`
 - `GET /ledgers/{ledgerId}/budget/monthly?month=YYYY-MM`
 - `POST /ledgers/{ledgerId}/budget/versions` (criar nova versão)
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans` (parcelas)
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post?month=YYYY-MM`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close?month=YYYY-MM`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay?month=YYYY-MM`
+- `GET /accounts/{accountId}/credit-cards`
+- `POST /accounts/{accountId}/credit-cards`
+- `POST /credit-cards/{cardId}/plans` (parcelas)
+- `POST /credit-cards/{cardId}/post?month=YYYY-MM`
+- `POST /credit-cards/{cardId}/statements/close?month=YYYY-MM`
+- `POST /credit-cards/{cardId}/statements/pay`
 
-**Regra de segurança**: endpoints sempre incluem `ledgerId` e sempre validam membership.
+**Regra de segurança**: endpoints sempre validam membership; quando o `ledgerId` nao estiver no path, a validacao ocorre via `account_id` ou `card_id`.
 
 ---
 
@@ -303,7 +305,7 @@ A API deve ser organizada por `ledger_id` como primeiro-class:
 3. Investimentos:
    - aporte/resgate/rendimento (em cima do journal)
 4. Cartão:
-   - credit_cards metadata
+   - credit_cards (card_id, parent + liability)
    - installment_plans/installments
    - posting mensal
    - statements + pagamento

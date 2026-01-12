@@ -99,7 +99,7 @@ Referencias:
 
 ### 4.1 Core
 - `users`, `ledgers`, `ledger_members`
-- `accounts` (`cash`, `investment`, `credit_card`)
+- `accounts` (`current`, `business`, `investment`, `exchange`, `wallet`) + `nature`
 - `categories` (direction + flags)
 - `transactions` + `entries`
 
@@ -108,7 +108,7 @@ Referencias:
 - `effective_from_month` sempre no 1o dia do mes
 
 ### 4.3 Cartao
-- `credit_cards` (metadados)
+- `credit_cards` (card_id, parent + liability)
 - `installment_plans`, `installments`
 - `credit_card_statements`
 
@@ -165,10 +165,12 @@ Referencia: `docs/ledger/Documento_de_Arquitetura.md`.
 - `POST /ledgers/{ledgerId}/accounts`
 - `GET /ledgers/{ledgerId}/budget/monthly?month=YYYY-MM`
 - `POST /ledgers/{ledgerId}/budget/versions`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/plans`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/post?month=YYYY-MM`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/close?month=YYYY-MM`
-- `POST /ledgers/{ledgerId}/credit-cards/{cardAccountId}/statements/pay?month=YYYY-MM`
+- `GET /accounts/{accountId}/credit-cards`
+- `POST /accounts/{accountId}/credit-cards`
+- `POST /credit-cards/{cardId}/plans`
+- `POST /credit-cards/{cardId}/post?month=YYYY-MM`
+- `POST /credit-cards/{cardId}/statements/close?month=YYYY-MM`
+- `POST /credit-cards/{cardId}/statements/pay`
 
 ---
 

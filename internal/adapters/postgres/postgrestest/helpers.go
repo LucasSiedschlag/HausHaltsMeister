@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -21,24 +22,42 @@ func ApplyMigrations(ctx context.Context, connStr string) error {
 	}
 	defer conn.Close(ctx)
 
-	migrationPath, err := migrationFilePath("001_init.sql")
+	migrationsDir, err := migrationsDirPath()
 	if err != nil {
 		return err
 	}
 
-	sqlBytes, err := os.ReadFile(migrationPath)
+	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return err
 	}
 
-	statements := strings.Split(string(sqlBytes), ";")
-	for _, stmt := range statements {
-		trimmed := strings.TrimSpace(stmt)
-		if trimmed == "" {
+	var files []string
+	for _, entry := range entries {
+		if entry.IsDir() {
 			continue
 		}
-		if _, err := conn.Exec(ctx, trimmed); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
+		name := entry.Name()
+		if strings.HasSuffix(name, ".sql") {
+			files = append(files, filepath.Join(migrationsDir, name))
+		}
+	}
+	sort.Strings(files)
+
+	for _, file := range files {
+		sqlBytes, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		statements := strings.Split(string(sqlBytes), ";")
+		for _, stmt := range statements {
+			trimmed := strings.TrimSpace(stmt)
+			if trimmed == "" {
+				continue
+			}
+			if _, err := conn.Exec(ctx, trimmed); err != nil {
+				return fmt.Errorf("migration failed: %w", err)
+			}
 		}
 	}
 	return nil
@@ -89,6 +108,22 @@ func SkipIfDockerUnavailable(t *testing.T) {
 }
 
 func migrationFilePath(name string) (string, error) {
+	root, err := repoRootPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "migrations", name), nil
+}
+
+func migrationsDirPath() (string, error) {
+	root, err := repoRootPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "migrations"), nil
+}
+
+func repoRootPath() (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		return "", fmt.Errorf("unable to resolve helper path")
@@ -96,5 +131,5 @@ func migrationFilePath(name string) (string, error) {
 
 	base := filepath.Dir(currentFile)
 	root := filepath.Clean(filepath.Join(base, "..", "..", "..", ".."))
-	return filepath.Join(root, "migrations", name), nil
+	return root, nil
 }

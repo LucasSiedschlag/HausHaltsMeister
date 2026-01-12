@@ -21,7 +21,7 @@ func NewRepository(store *postgres.Store) *Repository {
 
 func (r *Repository) ListAccounts(ctx context.Context, ledgerID string) ([]accounts.Account, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, ledger_id, name, type, is_active, created_at, updated_at
+		SELECT id, ledger_id, name, type, nature, is_active, created_at, updated_at
 		FROM accounts
 		WHERE ledger_id = $1
 		ORDER BY created_at
@@ -39,6 +39,7 @@ func (r *Repository) ListAccounts(ctx context.Context, ledgerID string) ([]accou
 			&account.LedgerID,
 			&account.Name,
 			&account.Type,
+			&account.Nature,
 			&account.IsActive,
 			&account.CreatedAt,
 			&account.UpdatedAt,
@@ -53,7 +54,7 @@ func (r *Repository) ListAccounts(ctx context.Context, ledgerID string) ([]accou
 func (r *Repository) GetAccount(ctx context.Context, ledgerID, accountID string) (accounts.Account, error) {
 	var account accounts.Account
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, ledger_id, name, type, is_active, created_at, updated_at
+		SELECT id, ledger_id, name, type, nature, is_active, created_at, updated_at
 		FROM accounts
 		WHERE ledger_id = $1 AND id = $2
 	`, ledgerID, accountID)
@@ -62,6 +63,7 @@ func (r *Repository) GetAccount(ctx context.Context, ledgerID, accountID string)
 		&account.LedgerID,
 		&account.Name,
 		&account.Type,
+		&account.Nature,
 		&account.IsActive,
 		&account.CreatedAt,
 		&account.UpdatedAt,
@@ -74,18 +76,19 @@ func (r *Repository) GetAccount(ctx context.Context, ledgerID, accountID string)
 	return account, nil
 }
 
-func (r *Repository) CreateAccount(ctx context.Context, ledgerID, name, accountType string, isActive bool) (accounts.Account, error) {
+func (r *Repository) CreateAccount(ctx context.Context, ledgerID, name, accountType, nature string, isActive bool) (accounts.Account, error) {
 	var account accounts.Account
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO accounts (ledger_id, name, type, is_active)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, ledger_id, name, type, is_active, created_at, updated_at
-	`, ledgerID, name, accountType, isActive)
+		INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, ledger_id, name, type, nature, is_active, created_at, updated_at
+	`, ledgerID, name, accountType, nature, isActive)
 	if err := row.Scan(
 		&account.ID,
 		&account.LedgerID,
 		&account.Name,
 		&account.Type,
+		&account.Nature,
 		&account.IsActive,
 		&account.CreatedAt,
 		&account.UpdatedAt,
@@ -104,13 +107,14 @@ func (r *Repository) UpdateAccount(ctx context.Context, ledgerID, accountID, nam
 		UPDATE accounts
 		SET name = $3, is_active = $4, updated_at = $5
 		WHERE ledger_id = $1 AND id = $2
-		RETURNING id, ledger_id, name, type, is_active, created_at, updated_at
+		RETURNING id, ledger_id, name, type, nature, is_active, created_at, updated_at
 	`, ledgerID, accountID, name, isActive, updatedAt)
 	if err := row.Scan(
 		&account.ID,
 		&account.LedgerID,
 		&account.Name,
 		&account.Type,
+		&account.Nature,
 		&account.IsActive,
 		&account.CreatedAt,
 		&account.UpdatedAt,

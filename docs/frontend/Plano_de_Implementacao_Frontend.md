@@ -199,6 +199,8 @@ Passos:
 4. Posting mensal com idempotency key.
 5. Gestao de faturas (close, pay).
 
+Status: concluida.
+
 ---
 
 ## Etapa 9 — Relatorios

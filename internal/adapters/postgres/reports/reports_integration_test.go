@@ -51,11 +51,11 @@ func TestListAccountBalances(t *testing.T) {
 	require.NoError(t, err)
 
 	var cashAccountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'cash', true) RETURNING id`, ledgerID, "Pessoal").Scan(&cashAccountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'wallet', 'asset', true) RETURNING id`, ledgerID, "Pessoal").Scan(&cashAccountID)
 	require.NoError(t, err)
 
 	var cardAccountID string
-	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, is_active) VALUES ($1, $2, 'credit_card', true) RETURNING id`, ledgerID, "Cartao").Scan(&cardAccountID)
+	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'current', 'liability', true) RETURNING id`, ledgerID, "Cartao").Scan(&cardAccountID)
 	require.NoError(t, err)
 
 	var catInID string

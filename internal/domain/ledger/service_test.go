@@ -135,7 +135,7 @@ func TestCreateLedgerSuccess(t *testing.T) {
 	repo := &fakeRepo{role: "owner"}
 	service := NewService(repo)
 
-	ledger, err := service.CreateLedger(context.Background(), "user-1", "Pessoal", "BRL")
+	ledger, err := service.CreateLedger(context.Background(), "user-1", "Pessoal", "BRL", true, false)
 	require.NoError(t, err)
 	require.Equal(t, "Pessoal", ledger.Name)
 	require.Equal(t, "BRL", ledger.CurrencyCode)

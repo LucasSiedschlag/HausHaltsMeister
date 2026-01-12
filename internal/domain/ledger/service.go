@@ -24,9 +24,11 @@ type Repository interface {
 }
 
 type CreateLedgerParams struct {
-	OwnerUserID  string
-	Name         string
-	CurrencyCode string
+	OwnerUserID           string
+	Name                  string
+	CurrencyCode          string
+	CreateDefaultAccounts bool
+	IncludeInvestment     bool
 }
 
 type Service struct {
@@ -50,7 +52,7 @@ func (s *Service) GetMembership(ctx context.Context, userID, ledgerID string) (s
 	return role, nil
 }
 
-func (s *Service) CreateLedger(ctx context.Context, userID, name, currencyCode string) (Ledger, error) {
+func (s *Service) CreateLedger(ctx context.Context, userID, name, currencyCode string, createDefaultAccounts, includeInvestment bool) (Ledger, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return Ledger{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"name": "required"})
@@ -60,9 +62,11 @@ func (s *Service) CreateLedger(ctx context.Context, userID, name, currencyCode s
 		currencyCode = "BRL"
 	}
 	return s.repo.CreateLedger(ctx, CreateLedgerParams{
-		OwnerUserID:  userID,
-		Name:         name,
-		CurrencyCode: currencyCode,
+		OwnerUserID:           userID,
+		Name:                  name,
+		CurrencyCode:          currencyCode,
+		CreateDefaultAccounts: createDefaultAccounts,
+		IncludeInvestment:     includeInvestment,
 	})
 }
 

@@ -11,6 +11,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createAccount = `-- name: CreateAccount :one
+INSERT INTO accounts (ledger_id, name, type, nature, is_active)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, ledger_id, type, nature, is_active
+`
+
+type CreateAccountParams struct {
+	LedgerID pgtype.UUID
+	Name     string
+	Type     string
+	Nature   string
+	IsActive bool
+}
+
+type CreateAccountRow struct {
+	ID       pgtype.UUID
+	LedgerID pgtype.UUID
+	Type     string
+	Nature   string
+	IsActive bool
+}
+
+func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error) {
+	row := q.db.QueryRow(ctx, createAccount,
+		arg.LedgerID,
+		arg.Name,
+		arg.Type,
+		arg.Nature,
+		arg.IsActive,
+	)
+	var i CreateAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.LedgerID,
+		&i.Type,
+		&i.Nature,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const createCardNetwork = `-- name: CreateCardNetwork :one
 INSERT INTO card_networks (code, display_name)
 VALUES ($1, $2)
@@ -35,41 +76,72 @@ func (q *Queries) CreateCardNetwork(ctx context.Context, arg CreateCardNetworkPa
 }
 
 const createCreditCard = `-- name: CreateCreditCard :one
-INSERT INTO credit_cards (account_id, issuer_name, network, nickname, last4, credit_limit_cents, closing_day, due_day)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING account_id, issuer_name, network, nickname, last4, credit_limit_cents, closing_day, due_day, created_at, updated_at
+INSERT INTO credit_cards (
+  ledger_id,
+  parent_account_id,
+  liability_account_id,
+  label,
+  brand,
+  last4,
+  cvv,
+  holder_name,
+  active,
+  color,
+  style,
+  closing_day,
+  due_day
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, ledger_id, parent_account_id, liability_account_id, label, brand, last4, cvv, holder_name,
+  active, color, style, closing_day, due_day, created_at, updated_at
 `
 
 type CreateCreditCardParams struct {
-	AccountID        pgtype.UUID
-	IssuerName       pgtype.Text
-	Network          string
-	Nickname         pgtype.Text
-	Last4            pgtype.Text
-	CreditLimitCents pgtype.Int8
-	ClosingDay       int32
-	DueDay           int32
+	LedgerID           pgtype.UUID
+	ParentAccountID    pgtype.UUID
+	LiabilityAccountID pgtype.UUID
+	Label              pgtype.Text
+	Brand              string
+	Last4              pgtype.Text
+	Cvv                pgtype.Text
+	HolderName         pgtype.Text
+	Active             bool
+	Color              pgtype.Text
+	Style              pgtype.Text
+	ClosingDay         int32
+	DueDay             int32
 }
 
 func (q *Queries) CreateCreditCard(ctx context.Context, arg CreateCreditCardParams) (CreditCard, error) {
 	row := q.db.QueryRow(ctx, createCreditCard,
-		arg.AccountID,
-		arg.IssuerName,
-		arg.Network,
-		arg.Nickname,
+		arg.LedgerID,
+		arg.ParentAccountID,
+		arg.LiabilityAccountID,
+		arg.Label,
+		arg.Brand,
 		arg.Last4,
-		arg.CreditLimitCents,
+		arg.Cvv,
+		arg.HolderName,
+		arg.Active,
+		arg.Color,
+		arg.Style,
 		arg.ClosingDay,
 		arg.DueDay,
 	)
 	var i CreditCard
 	err := row.Scan(
-		&i.AccountID,
-		&i.IssuerName,
-		&i.Network,
-		&i.Nickname,
+		&i.ID,
+		&i.LedgerID,
+		&i.ParentAccountID,
+		&i.LiabilityAccountID,
+		&i.Label,
+		&i.Brand,
 		&i.Last4,
-		&i.CreditLimitCents,
+		&i.Cvv,
+		&i.HolderName,
+		&i.Active,
+		&i.Color,
+		&i.Style,
 		&i.ClosingDay,
 		&i.DueDay,
 		&i.CreatedAt,
@@ -106,14 +178,14 @@ func (q *Queries) CreateInstallment(ctx context.Context, arg CreateInstallmentPa
 
 const createInstallmentPlan = `-- name: CreateInstallmentPlan :one
 
-INSERT INTO installment_plans (ledger_id, card_account_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id)
+INSERT INTO installment_plans (ledger_id, credit_card_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, ledger_id, card_account_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
+RETURNING id, ledger_id, credit_card_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
 `
 
 type CreateInstallmentPlanParams struct {
 	LedgerID               pgtype.UUID
-	CardAccountID          pgtype.UUID
+	CreditCardID           pgtype.UUID
 	PurchaseOccurredAt     pgtype.Timestamptz
 	Merchant               pgtype.Text
 	Description            string
@@ -126,11 +198,29 @@ type CreateInstallmentPlanParams struct {
 	CreatedByUserID        pgtype.UUID
 }
 
+type CreateInstallmentPlanRow struct {
+	ID                     pgtype.UUID
+	LedgerID               pgtype.UUID
+	CreditCardID           pgtype.UUID
+	PurchaseOccurredAt     pgtype.Timestamptz
+	Merchant               pgtype.Text
+	Description            string
+	CategoryID             pgtype.UUID
+	TotalAmountCents       int64
+	InstallmentsCount      int32
+	InstallmentAmountCents int64
+	FirstDueMonth          pgtype.Date
+	Status                 string
+	CreatedByUserID        pgtype.UUID
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+}
+
 // Installment plans
-func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallmentPlanParams) (InstallmentPlan, error) {
+func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallmentPlanParams) (CreateInstallmentPlanRow, error) {
 	row := q.db.QueryRow(ctx, createInstallmentPlan,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.PurchaseOccurredAt,
 		arg.Merchant,
 		arg.Description,
@@ -142,11 +232,11 @@ func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallme
 		arg.Status,
 		arg.CreatedByUserID,
 	)
-	var i InstallmentPlan
+	var i CreateInstallmentPlanRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.PurchaseOccurredAt,
 		&i.Merchant,
 		&i.Description,
@@ -164,14 +254,14 @@ func (q *Queries) CreateInstallmentPlan(ctx context.Context, arg CreateInstallme
 }
 
 const createStatement = `-- name: CreateStatement :one
-INSERT INTO credit_card_statements (ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id)
+INSERT INTO credit_card_statements (ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+RETURNING id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 `
 
 type CreateStatementParams struct {
 	LedgerID             pgtype.UUID
-	CardAccountID        pgtype.UUID
+	CreditCardID         pgtype.UUID
 	StatementMonth       pgtype.Date
 	ClosingDate          pgtype.Date
 	DueDate              pgtype.Date
@@ -181,10 +271,25 @@ type CreateStatementParams struct {
 	PaymentTransactionID pgtype.UUID
 }
 
-func (q *Queries) CreateStatement(ctx context.Context, arg CreateStatementParams) (CreditCardStatement, error) {
+type CreateStatementRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+}
+
+func (q *Queries) CreateStatement(ctx context.Context, arg CreateStatementParams) (CreateStatementRow, error) {
 	row := q.db.QueryRow(ctx, createStatement,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.StatementMonth,
 		arg.ClosingDate,
 		arg.DueDate,
@@ -193,11 +298,11 @@ func (q *Queries) CreateStatement(ctx context.Context, arg CreateStatementParams
 		arg.Status,
 		arg.PaymentTransactionID,
 	)
-	var i CreditCardStatement
+	var i CreateStatementRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.StatementMonth,
 		&i.ClosingDate,
 		&i.DueDate,
@@ -222,18 +327,17 @@ func (q *Queries) DeleteCardNetwork(ctx context.Context, code string) error {
 }
 
 const deleteCreditCard = `-- name: DeleteCreditCard :exec
-DELETE FROM credit_cards c
-USING accounts a
-WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2
+DELETE FROM credit_cards
+WHERE ledger_id = $1 AND id = $2
 `
 
 type DeleteCreditCardParams struct {
-	LedgerID  pgtype.UUID
-	AccountID pgtype.UUID
+	LedgerID pgtype.UUID
+	ID       pgtype.UUID
 }
 
 func (q *Queries) DeleteCreditCard(ctx context.Context, arg DeleteCreditCardParams) error {
-	_, err := q.db.Exec(ctx, deleteCreditCard, arg.LedgerID, arg.AccountID)
+	_, err := q.db.Exec(ctx, deleteCreditCard, arg.LedgerID, arg.ID)
 	return err
 }
 
@@ -271,24 +375,57 @@ func (q *Queries) FindCategoryByName(ctx context.Context, arg FindCategoryByName
 	return id, err
 }
 
-const getAccountType = `-- name: GetAccountType :one
+const getAccount = `-- name: GetAccount :one
 
-SELECT type
+SELECT a.id, a.ledger_id, a.type, a.nature, a.is_active
+FROM accounts a
+JOIN ledger_members lm ON lm.ledger_id = a.ledger_id AND lm.user_id = $2 AND lm.removed_at IS NULL
+WHERE a.id = $1
+`
+
+type GetAccountParams struct {
+	ID     pgtype.UUID
+	UserID pgtype.UUID
+}
+
+type GetAccountRow struct {
+	ID       pgtype.UUID
+	LedgerID pgtype.UUID
+	Type     string
+	Nature   string
+	IsActive bool
+}
+
+// Accounts lookup
+func (q *Queries) GetAccount(ctx context.Context, arg GetAccountParams) (GetAccountRow, error) {
+	row := q.db.QueryRow(ctx, getAccount, arg.ID, arg.UserID)
+	var i GetAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.LedgerID,
+		&i.Type,
+		&i.Nature,
+		&i.IsActive,
+	)
+	return i, err
+}
+
+const getAccountNature = `-- name: GetAccountNature :one
+SELECT nature
 FROM accounts
 WHERE ledger_id = $1 AND id = $2
 `
 
-type GetAccountTypeParams struct {
+type GetAccountNatureParams struct {
 	LedgerID pgtype.UUID
 	ID       pgtype.UUID
 }
 
-// Accounts lookup
-func (q *Queries) GetAccountType(ctx context.Context, arg GetAccountTypeParams) (string, error) {
-	row := q.db.QueryRow(ctx, getAccountType, arg.LedgerID, arg.ID)
-	var type_ string
-	err := row.Scan(&type_)
-	return type_, err
+func (q *Queries) GetAccountNature(ctx context.Context, arg GetAccountNatureParams) (string, error) {
+	row := q.db.QueryRow(ctx, getAccountNature, arg.LedgerID, arg.ID)
+	var nature string
+	err := row.Scan(&nature)
+	return nature, err
 }
 
 const getCardNetwork = `-- name: GetCardNetwork :one
@@ -335,42 +472,28 @@ func (q *Queries) GetCategoryBudgetInfo(ctx context.Context, arg GetCategoryBudg
 }
 
 const getCreditCard = `-- name: GetCreditCard :one
-SELECT c.account_id, a.ledger_id, c.issuer_name, c.network, c.nickname, c.last4, c.credit_limit_cents, c.closing_day, c.due_day, c.created_at, c.updated_at
+SELECT c.id, c.ledger_id, c.parent_account_id, c.liability_account_id, c.label, c.brand, c.last4, c.cvv, c.holder_name,
+       c.active, c.color, c.style, c.closing_day, c.due_day, c.created_at, c.updated_at
 FROM credit_cards c
-JOIN accounts a ON a.id = c.account_id
-WHERE a.ledger_id = $1 AND c.account_id = $2
+WHERE c.id = $1
 `
 
-type GetCreditCardParams struct {
-	LedgerID  pgtype.UUID
-	AccountID pgtype.UUID
-}
-
-type GetCreditCardRow struct {
-	AccountID        pgtype.UUID
-	LedgerID         pgtype.UUID
-	IssuerName       pgtype.Text
-	Network          string
-	Nickname         pgtype.Text
-	Last4            pgtype.Text
-	CreditLimitCents pgtype.Int8
-	ClosingDay       int32
-	DueDay           int32
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-}
-
-func (q *Queries) GetCreditCard(ctx context.Context, arg GetCreditCardParams) (GetCreditCardRow, error) {
-	row := q.db.QueryRow(ctx, getCreditCard, arg.LedgerID, arg.AccountID)
-	var i GetCreditCardRow
+func (q *Queries) GetCreditCard(ctx context.Context, id pgtype.UUID) (CreditCard, error) {
+	row := q.db.QueryRow(ctx, getCreditCard, id)
+	var i CreditCard
 	err := row.Scan(
-		&i.AccountID,
+		&i.ID,
 		&i.LedgerID,
-		&i.IssuerName,
-		&i.Network,
-		&i.Nickname,
+		&i.ParentAccountID,
+		&i.LiabilityAccountID,
+		&i.Label,
+		&i.Brand,
 		&i.Last4,
-		&i.CreditLimitCents,
+		&i.Cvv,
+		&i.HolderName,
+		&i.Active,
+		&i.Color,
+		&i.Style,
 		&i.ClosingDay,
 		&i.DueDay,
 		&i.CreatedAt,
@@ -380,24 +503,42 @@ func (q *Queries) GetCreditCard(ctx context.Context, arg GetCreditCardParams) (G
 }
 
 const getPlan = `-- name: GetPlan :one
-SELECT id, ledger_id, card_account_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
+SELECT id, ledger_id, credit_card_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
 FROM installment_plans
-WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
+WHERE ledger_id = $1 AND credit_card_id = $2 AND id = $3
 `
 
 type GetPlanParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	ID            pgtype.UUID
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	ID           pgtype.UUID
 }
 
-func (q *Queries) GetPlan(ctx context.Context, arg GetPlanParams) (InstallmentPlan, error) {
-	row := q.db.QueryRow(ctx, getPlan, arg.LedgerID, arg.CardAccountID, arg.ID)
-	var i InstallmentPlan
+type GetPlanRow struct {
+	ID                     pgtype.UUID
+	LedgerID               pgtype.UUID
+	CreditCardID           pgtype.UUID
+	PurchaseOccurredAt     pgtype.Timestamptz
+	Merchant               pgtype.Text
+	Description            string
+	CategoryID             pgtype.UUID
+	TotalAmountCents       int64
+	InstallmentsCount      int32
+	InstallmentAmountCents int64
+	FirstDueMonth          pgtype.Date
+	Status                 string
+	CreatedByUserID        pgtype.UUID
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+}
+
+func (q *Queries) GetPlan(ctx context.Context, arg GetPlanParams) (GetPlanRow, error) {
+	row := q.db.QueryRow(ctx, getPlan, arg.LedgerID, arg.CreditCardID, arg.ID)
+	var i GetPlanRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.PurchaseOccurredAt,
 		&i.Merchant,
 		&i.Description,
@@ -434,25 +575,40 @@ func (q *Queries) GetPlanCategory(ctx context.Context, arg GetPlanCategoryParams
 
 const getStatement = `-- name: GetStatement :one
 
-SELECT id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+SELECT id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 FROM credit_card_statements
-WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
+WHERE ledger_id = $1 AND credit_card_id = $2 AND id = $3
 `
 
 type GetStatementParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	ID            pgtype.UUID
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	ID           pgtype.UUID
+}
+
+type GetStatementRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
 }
 
 // Statements
-func (q *Queries) GetStatement(ctx context.Context, arg GetStatementParams) (CreditCardStatement, error) {
-	row := q.db.QueryRow(ctx, getStatement, arg.LedgerID, arg.CardAccountID, arg.ID)
-	var i CreditCardStatement
+func (q *Queries) GetStatement(ctx context.Context, arg GetStatementParams) (GetStatementRow, error) {
+	row := q.db.QueryRow(ctx, getStatement, arg.LedgerID, arg.CreditCardID, arg.ID)
+	var i GetStatementRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.StatementMonth,
 		&i.ClosingDate,
 		&i.DueDate,
@@ -467,24 +623,39 @@ func (q *Queries) GetStatement(ctx context.Context, arg GetStatementParams) (Cre
 }
 
 const getStatementByMonth = `-- name: GetStatementByMonth :one
-SELECT id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+SELECT id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 FROM credit_card_statements
-WHERE ledger_id = $1 AND card_account_id = $2 AND statement_month = $3
+WHERE ledger_id = $1 AND credit_card_id = $2 AND statement_month = $3
 `
 
 type GetStatementByMonthParams struct {
 	LedgerID       pgtype.UUID
-	CardAccountID  pgtype.UUID
+	CreditCardID   pgtype.UUID
 	StatementMonth pgtype.Date
 }
 
-func (q *Queries) GetStatementByMonth(ctx context.Context, arg GetStatementByMonthParams) (CreditCardStatement, error) {
-	row := q.db.QueryRow(ctx, getStatementByMonth, arg.LedgerID, arg.CardAccountID, arg.StatementMonth)
-	var i CreditCardStatement
+type GetStatementByMonthRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+}
+
+func (q *Queries) GetStatementByMonth(ctx context.Context, arg GetStatementByMonthParams) (GetStatementByMonthRow, error) {
+	row := q.db.QueryRow(ctx, getStatementByMonth, arg.LedgerID, arg.CreditCardID, arg.StatementMonth)
+	var i GetStatementByMonthRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.StatementMonth,
 		&i.ClosingDate,
 		&i.DueDate,
@@ -553,45 +724,41 @@ func (q *Queries) ListCardNetworks(ctx context.Context) ([]CardNetwork, error) {
 
 const listCreditCards = `-- name: ListCreditCards :many
 
-SELECT c.account_id, a.ledger_id, c.issuer_name, c.network, c.nickname, c.last4, c.credit_limit_cents, c.closing_day, c.due_day, c.created_at, c.updated_at
+SELECT c.id, c.ledger_id, c.parent_account_id, c.liability_account_id, c.label, c.brand, c.last4, c.cvv, c.holder_name,
+       c.active, c.color, c.style, c.closing_day, c.due_day, c.created_at, c.updated_at
 FROM credit_cards c
-JOIN accounts a ON a.id = c.account_id
-WHERE a.ledger_id = $1
+WHERE c.ledger_id = $1 AND c.parent_account_id = $2
 ORDER BY c.created_at
 `
 
-type ListCreditCardsRow struct {
-	AccountID        pgtype.UUID
-	LedgerID         pgtype.UUID
-	IssuerName       pgtype.Text
-	Network          string
-	Nickname         pgtype.Text
-	Last4            pgtype.Text
-	CreditLimitCents pgtype.Int8
-	ClosingDay       int32
-	DueDay           int32
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
+type ListCreditCardsParams struct {
+	LedgerID        pgtype.UUID
+	ParentAccountID pgtype.UUID
 }
 
 // Credit cards
-func (q *Queries) ListCreditCards(ctx context.Context, ledgerID pgtype.UUID) ([]ListCreditCardsRow, error) {
-	rows, err := q.db.Query(ctx, listCreditCards, ledgerID)
+func (q *Queries) ListCreditCards(ctx context.Context, arg ListCreditCardsParams) ([]CreditCard, error) {
+	rows, err := q.db.Query(ctx, listCreditCards, arg.LedgerID, arg.ParentAccountID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListCreditCardsRow
+	var items []CreditCard
 	for rows.Next() {
-		var i ListCreditCardsRow
+		var i CreditCard
 		if err := rows.Scan(
-			&i.AccountID,
+			&i.ID,
 			&i.LedgerID,
-			&i.IssuerName,
-			&i.Network,
-			&i.Nickname,
+			&i.ParentAccountID,
+			&i.LiabilityAccountID,
+			&i.Label,
+			&i.Brand,
 			&i.Last4,
-			&i.CreditLimitCents,
+			&i.Cvv,
+			&i.HolderName,
+			&i.Active,
+			&i.Color,
+			&i.Style,
 			&i.ClosingDay,
 			&i.DueDay,
 			&i.CreatedAt,
@@ -612,24 +779,24 @@ const listInstallments = `-- name: ListInstallments :many
 SELECT i.id, i.ledger_id, i.plan_id, i.installment_no, i.due_month, i.amount_cents, i.status, i.posted_transaction_id, i.paid_statement_id, i.created_at, i.updated_at
 FROM installments i
 JOIN installment_plans p ON p.id = i.plan_id
-WHERE i.ledger_id = $1 AND p.card_account_id = $2
+WHERE i.ledger_id = $1 AND p.credit_card_id = $2
   AND ($3::date IS NULL OR i.due_month = $3)
   AND ($4::text IS NULL OR i.status = $4)
 ORDER BY i.due_month, i.installment_no
 `
 
 type ListInstallmentsParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	Column3       pgtype.Date
-	Column4       string
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	Column3      pgtype.Date
+	Column4      string
 }
 
 // Installments
 func (q *Queries) ListInstallments(ctx context.Context, arg ListInstallmentsParams) ([]Installment, error) {
 	rows, err := q.db.Query(ctx, listInstallments,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.Column3,
 		arg.Column4,
 	)
@@ -668,20 +835,20 @@ SELECT i.id, i.ledger_id, i.plan_id, i.installment_no, i.due_month, i.amount_cen
 FROM installments i
 JOIN installment_plans p ON p.id = i.plan_id
 WHERE i.ledger_id = $1
-  AND p.card_account_id = $2
+  AND p.credit_card_id = $2
   AND i.due_month = $3
   AND i.status = 'scheduled'
 ORDER BY i.installment_no
 `
 
 type ListInstallmentsForPostingParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	DueMonth      pgtype.Date
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	DueMonth     pgtype.Date
 }
 
 func (q *Queries) ListInstallmentsForPosting(ctx context.Context, arg ListInstallmentsForPostingParams) ([]Installment, error) {
-	rows, err := q.db.Query(ctx, listInstallmentsForPosting, arg.LedgerID, arg.CardAccountID, arg.DueMonth)
+	rows, err := q.db.Query(ctx, listInstallmentsForPosting, arg.LedgerID, arg.CreditCardID, arg.DueMonth)
 	if err != nil {
 		return nil, err
 	}
@@ -713,32 +880,50 @@ func (q *Queries) ListInstallmentsForPosting(ctx context.Context, arg ListInstal
 }
 
 const listPlans = `-- name: ListPlans :many
-SELECT id, ledger_id, card_account_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
+SELECT id, ledger_id, credit_card_id, purchase_occurred_at, merchant, description, category_id, total_amount_cents, installments_count, installment_amount_cents, first_due_month, status, created_by_user_id, created_at, updated_at
 FROM installment_plans
-WHERE ledger_id = $1 AND card_account_id = $2
+WHERE ledger_id = $1 AND credit_card_id = $2
   AND ($3::text IS NULL OR status = $3)
 ORDER BY created_at DESC
 `
 
 type ListPlansParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	Column3       string
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	Column3      string
 }
 
-func (q *Queries) ListPlans(ctx context.Context, arg ListPlansParams) ([]InstallmentPlan, error) {
-	rows, err := q.db.Query(ctx, listPlans, arg.LedgerID, arg.CardAccountID, arg.Column3)
+type ListPlansRow struct {
+	ID                     pgtype.UUID
+	LedgerID               pgtype.UUID
+	CreditCardID           pgtype.UUID
+	PurchaseOccurredAt     pgtype.Timestamptz
+	Merchant               pgtype.Text
+	Description            string
+	CategoryID             pgtype.UUID
+	TotalAmountCents       int64
+	InstallmentsCount      int32
+	InstallmentAmountCents int64
+	FirstDueMonth          pgtype.Date
+	Status                 string
+	CreatedByUserID        pgtype.UUID
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+}
+
+func (q *Queries) ListPlans(ctx context.Context, arg ListPlansParams) ([]ListPlansRow, error) {
+	rows, err := q.db.Query(ctx, listPlans, arg.LedgerID, arg.CreditCardID, arg.Column3)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []InstallmentPlan
+	var items []ListPlansRow
 	for rows.Next() {
-		var i InstallmentPlan
+		var i ListPlansRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.LedgerID,
-			&i.CardAccountID,
+			&i.CreditCardID,
 			&i.PurchaseOccurredAt,
 			&i.Merchant,
 			&i.Description,
@@ -763,32 +948,47 @@ func (q *Queries) ListPlans(ctx context.Context, arg ListPlansParams) ([]Install
 }
 
 const listStatements = `-- name: ListStatements :many
-SELECT id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+SELECT id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 FROM credit_card_statements
-WHERE ledger_id = $1 AND card_account_id = $2
+WHERE ledger_id = $1 AND credit_card_id = $2
   AND ($3::date IS NULL OR statement_month = $3)
 ORDER BY statement_month DESC
 `
 
 type ListStatementsParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	Column3       pgtype.Date
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	Column3      pgtype.Date
 }
 
-func (q *Queries) ListStatements(ctx context.Context, arg ListStatementsParams) ([]CreditCardStatement, error) {
-	rows, err := q.db.Query(ctx, listStatements, arg.LedgerID, arg.CardAccountID, arg.Column3)
+type ListStatementsRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+}
+
+func (q *Queries) ListStatements(ctx context.Context, arg ListStatementsParams) ([]ListStatementsRow, error) {
+	rows, err := q.db.Query(ctx, listStatements, arg.LedgerID, arg.CreditCardID, arg.Column3)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CreditCardStatement
+	var items []ListStatementsRow
 	for rows.Next() {
-		var i CreditCardStatement
+		var i ListStatementsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.LedgerID,
-			&i.CardAccountID,
+			&i.CreditCardID,
 			&i.StatementMonth,
 			&i.ClosingDate,
 			&i.DueDate,
@@ -838,14 +1038,14 @@ SET status = 'paid', paid_statement_id = $4, updated_at = $5
 FROM installment_plans p
 WHERE i.plan_id = p.id
   AND i.ledger_id = $1
-  AND p.card_account_id = $2
+  AND p.credit_card_id = $2
   AND i.due_month = $3
   AND i.status = 'posted'
 `
 
 type MarkInstallmentsPaidParams struct {
 	LedgerID        pgtype.UUID
-	CardAccountID   pgtype.UUID
+	CreditCardID    pgtype.UUID
 	DueMonth        pgtype.Date
 	PaidStatementID pgtype.UUID
 	UpdatedAt       pgtype.Timestamptz
@@ -854,7 +1054,7 @@ type MarkInstallmentsPaidParams struct {
 func (q *Queries) MarkInstallmentsPaid(ctx context.Context, arg MarkInstallmentsPaidParams) error {
 	_, err := q.db.Exec(ctx, markInstallmentsPaid,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.DueMonth,
 		arg.PaidStatementID,
 		arg.UpdatedAt,
@@ -865,13 +1065,13 @@ func (q *Queries) MarkInstallmentsPaid(ctx context.Context, arg MarkInstallments
 const setStatementPayment = `-- name: SetStatementPayment :one
 UPDATE credit_card_statements
 SET payment_transaction_id = $4, total_payments_cents = $5, status = $6, updated_at = $7
-WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
-RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+WHERE ledger_id = $1 AND credit_card_id = $2 AND id = $3
+RETURNING id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 `
 
 type SetStatementPaymentParams struct {
 	LedgerID             pgtype.UUID
-	CardAccountID        pgtype.UUID
+	CreditCardID         pgtype.UUID
 	ID                   pgtype.UUID
 	PaymentTransactionID pgtype.UUID
 	TotalPaymentsCents   int64
@@ -879,21 +1079,36 @@ type SetStatementPaymentParams struct {
 	UpdatedAt            pgtype.Timestamptz
 }
 
-func (q *Queries) SetStatementPayment(ctx context.Context, arg SetStatementPaymentParams) (CreditCardStatement, error) {
+type SetStatementPaymentRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+}
+
+func (q *Queries) SetStatementPayment(ctx context.Context, arg SetStatementPaymentParams) (SetStatementPaymentRow, error) {
 	row := q.db.QueryRow(ctx, setStatementPayment,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.ID,
 		arg.PaymentTransactionID,
 		arg.TotalPaymentsCents,
 		arg.Status,
 		arg.UpdatedAt,
 	)
-	var i CreditCardStatement
+	var i SetStatementPaymentRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.StatementMonth,
 		&i.ClosingDate,
 		&i.DueDate,
@@ -912,19 +1127,19 @@ SELECT COALESCE(SUM(i.amount_cents), 0)
 FROM installments i
 JOIN installment_plans p ON p.id = i.plan_id
 WHERE i.ledger_id = $1
-  AND p.card_account_id = $2
+  AND p.credit_card_id = $2
   AND i.due_month = $3
   AND i.status IN ('posted', 'paid')
 `
 
 type SumStatementChargesParams struct {
-	LedgerID      pgtype.UUID
-	CardAccountID pgtype.UUID
-	DueMonth      pgtype.Date
+	LedgerID     pgtype.UUID
+	CreditCardID pgtype.UUID
+	DueMonth     pgtype.Date
 }
 
 func (q *Queries) SumStatementCharges(ctx context.Context, arg SumStatementChargesParams) (interface{}, error) {
-	row := q.db.QueryRow(ctx, sumStatementCharges, arg.LedgerID, arg.CardAccountID, arg.DueMonth)
+	row := q.db.QueryRow(ctx, sumStatementCharges, arg.LedgerID, arg.CreditCardID, arg.DueMonth)
 	var coalesce interface{}
 	err := row.Scan(&coalesce)
 	return coalesce, err
@@ -957,46 +1172,68 @@ func (q *Queries) UpdateCardNetwork(ctx context.Context, arg UpdateCardNetworkPa
 
 const updateCreditCard = `-- name: UpdateCreditCard :one
 UPDATE credit_cards c
-SET issuer_name = $3, network = $4, nickname = $5, last4 = $6, credit_limit_cents = $7, closing_day = $8, due_day = $9, updated_at = $10
-FROM accounts a
-WHERE c.account_id = a.id AND a.ledger_id = $1 AND c.account_id = $2
-RETURNING c.account_id, c.issuer_name, c.network, c.nickname, c.last4, c.credit_limit_cents, c.closing_day, c.due_day, c.created_at, c.updated_at
+SET label = $3,
+    brand = $4,
+    last4 = $5,
+    cvv = $6,
+    holder_name = $7,
+    active = $8,
+    color = $9,
+    style = $10,
+    closing_day = $11,
+    due_day = $12,
+    updated_at = $13
+WHERE c.ledger_id = $1 AND c.id = $2
+RETURNING c.id, c.ledger_id, c.parent_account_id, c.liability_account_id, c.label, c.brand, c.last4, c.cvv, c.holder_name,
+  c.active, c.color, c.style, c.closing_day, c.due_day, c.created_at, c.updated_at
 `
 
 type UpdateCreditCardParams struct {
-	LedgerID         pgtype.UUID
-	AccountID        pgtype.UUID
-	IssuerName       pgtype.Text
-	Network          string
-	Nickname         pgtype.Text
-	Last4            pgtype.Text
-	CreditLimitCents pgtype.Int8
-	ClosingDay       int32
-	DueDay           int32
-	UpdatedAt        pgtype.Timestamptz
+	LedgerID   pgtype.UUID
+	ID         pgtype.UUID
+	Label      pgtype.Text
+	Brand      string
+	Last4      pgtype.Text
+	Cvv        pgtype.Text
+	HolderName pgtype.Text
+	Active     bool
+	Color      pgtype.Text
+	Style      pgtype.Text
+	ClosingDay int32
+	DueDay     int32
+	UpdatedAt  pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateCreditCard(ctx context.Context, arg UpdateCreditCardParams) (CreditCard, error) {
 	row := q.db.QueryRow(ctx, updateCreditCard,
 		arg.LedgerID,
-		arg.AccountID,
-		arg.IssuerName,
-		arg.Network,
-		arg.Nickname,
+		arg.ID,
+		arg.Label,
+		arg.Brand,
 		arg.Last4,
-		arg.CreditLimitCents,
+		arg.Cvv,
+		arg.HolderName,
+		arg.Active,
+		arg.Color,
+		arg.Style,
 		arg.ClosingDay,
 		arg.DueDay,
 		arg.UpdatedAt,
 	)
 	var i CreditCard
 	err := row.Scan(
-		&i.AccountID,
-		&i.IssuerName,
-		&i.Network,
-		&i.Nickname,
+		&i.ID,
+		&i.LedgerID,
+		&i.ParentAccountID,
+		&i.LiabilityAccountID,
+		&i.Label,
+		&i.Brand,
 		&i.Last4,
-		&i.CreditLimitCents,
+		&i.Cvv,
+		&i.HolderName,
+		&i.Active,
+		&i.Color,
+		&i.Style,
 		&i.ClosingDay,
 		&i.DueDay,
 		&i.CreatedAt,
@@ -1069,13 +1306,13 @@ func (q *Queries) UpdatePlanStatus(ctx context.Context, arg UpdatePlanStatusPara
 const updateStatementTotals = `-- name: UpdateStatementTotals :one
 UPDATE credit_card_statements
 SET total_charges_cents = $4, total_payments_cents = $5, status = $6, updated_at = $7
-WHERE ledger_id = $1 AND card_account_id = $2 AND id = $3
-RETURNING id, ledger_id, card_account_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
+WHERE ledger_id = $1 AND credit_card_id = $2 AND id = $3
+RETURNING id, ledger_id, credit_card_id, statement_month, closing_date, due_date, total_charges_cents, total_payments_cents, status, payment_transaction_id, created_at, updated_at
 `
 
 type UpdateStatementTotalsParams struct {
 	LedgerID           pgtype.UUID
-	CardAccountID      pgtype.UUID
+	CreditCardID       pgtype.UUID
 	ID                 pgtype.UUID
 	TotalChargesCents  int64
 	TotalPaymentsCents int64
@@ -1083,21 +1320,36 @@ type UpdateStatementTotalsParams struct {
 	UpdatedAt          pgtype.Timestamptz
 }
 
-func (q *Queries) UpdateStatementTotals(ctx context.Context, arg UpdateStatementTotalsParams) (CreditCardStatement, error) {
+type UpdateStatementTotalsRow struct {
+	ID                   pgtype.UUID
+	LedgerID             pgtype.UUID
+	CreditCardID         pgtype.UUID
+	StatementMonth       pgtype.Date
+	ClosingDate          pgtype.Date
+	DueDate              pgtype.Date
+	TotalChargesCents    int64
+	TotalPaymentsCents   int64
+	Status               string
+	PaymentTransactionID pgtype.UUID
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateStatementTotals(ctx context.Context, arg UpdateStatementTotalsParams) (UpdateStatementTotalsRow, error) {
 	row := q.db.QueryRow(ctx, updateStatementTotals,
 		arg.LedgerID,
-		arg.CardAccountID,
+		arg.CreditCardID,
 		arg.ID,
 		arg.TotalChargesCents,
 		arg.TotalPaymentsCents,
 		arg.Status,
 		arg.UpdatedAt,
 	)
-	var i CreditCardStatement
+	var i UpdateStatementTotalsRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
-		&i.CardAccountID,
+		&i.CreditCardID,
 		&i.StatementMonth,
 		&i.ClosingDate,
 		&i.DueDate,

@@ -73,6 +73,8 @@ func errorStatus(code string) int {
 		return nethttp.StatusNotFound
 	case "CREDITCARD_CARD_NOT_FOUND":
 		return nethttp.StatusNotFound
+	case "CREDITCARD_CARD_ALREADY_EXISTS":
+		return nethttp.StatusConflict
 	case "CREDITCARD_STATEMENT_NOT_FOUND":
 		return nethttp.StatusNotFound
 	case "CREDITCARD_STATEMENT_ALREADY_PAID":

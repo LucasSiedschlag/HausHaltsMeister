@@ -52,7 +52,7 @@ const hasActiveAccount = (type: string) =>
 
 const missingAccountTypes = computed(() => {
   const missing: string[] = []
-  if (!hasActiveAccount('cash')) missing.push('cash')
+  if (!hasActiveAccount('wallet') && !hasActiveAccount('current')) missing.push('cash')
   if (!hasActiveAccount('investment')) missing.push('investment')
   return missing
 })
@@ -190,12 +190,10 @@ const accountTypeClass = (accountId: string) =>
 const accountBadgeClass = (accountId: string) =>
   selectedAccountId.value === accountId ? 'border-primary-foreground/50 text-primary-foreground' : ''
 
-const primaryCashAccount = computed(() =>
-  accounts.value.find((account) => account.type === 'cash' && account.is_active)
-)
-
-const primaryInvestmentAccount = computed(() =>
-  accounts.value.find((account) => account.type === 'investment' && account.is_active)
+const primaryCashAccount = computed(
+  () =>
+    accounts.value.find((account) => account.type === 'wallet' && account.is_active) ||
+    accounts.value.find((account) => account.type === 'current' && account.is_active)
 )
 
 const balanceMap = computed(() => {
@@ -318,8 +316,8 @@ const resolveFlowAccounts = () => {
   const selected = selectedAccount.value
   if (!selected) return null
 
-  const cashAccount = selected.type === 'cash' ? selected : primaryCashAccount.value
-  const investmentAccount = selected.type === 'investment' ? selected : primaryInvestmentAccount.value
+  const cashAccount = primaryCashAccount.value
+  const investmentAccount = selected
   if (!cashAccount || !investmentAccount) return null
 
   return { cashAccount, investmentAccount }
@@ -330,11 +328,8 @@ const actionDisabledReason = computed(() => {
   if (!setupReady.value) return t('investments.setup.blockedHint')
   if (!selectedAccount.value) return t('investments.accounts.selectHint')
   if (!selectedAccount.value.is_active) return t('investments.accounts.inactiveHint')
-  if (!['cash', 'investment'].includes(selectedAccount.value.type)) {
+  if (selectedAccount.value.type !== 'investment') {
     return t('investments.accounts.unsupportedHint')
-  }
-  if (activeAction.value === 'earnings' && selectedAccount.value.type !== 'investment') {
-    return t('investments.accounts.earningsHint')
   }
   if (activeAction.value === 'loss' && !hasLossCategory.value) {
     return t('investments.setup.lossCategoryHint')

@@ -9,6 +9,7 @@ type Transaction struct {
 	Description     string
 	Notes           *string
 	CreatedByUserID string
+	CreditCardID    *string
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
 	Entries         []Entry

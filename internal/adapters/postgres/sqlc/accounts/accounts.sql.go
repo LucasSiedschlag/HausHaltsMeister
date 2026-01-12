@@ -12,33 +12,47 @@ import (
 )
 
 const createAccount = `-- name: CreateAccount :one
-INSERT INTO accounts (ledger_id, name, type, is_active, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, ledger_id, name, type, is_active, created_at, updated_at
+INSERT INTO accounts (ledger_id, name, type, nature, is_active, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, ledger_id, name, type, nature, is_active, created_at, updated_at
 `
 
 type CreateAccountParams struct {
 	LedgerID  pgtype.UUID
 	Name      string
 	Type      string
+	Nature    string
 	IsActive  bool
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error) {
+type CreateAccountRow struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	Name      string
+	Type      string
+	Nature    string
+	IsActive  bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error) {
 	row := q.db.QueryRow(ctx, createAccount,
 		arg.LedgerID,
 		arg.Name,
 		arg.Type,
+		arg.Nature,
 		arg.IsActive,
 		arg.UpdatedAt,
 	)
-	var i Account
+	var i CreateAccountRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
 		&i.Name,
 		&i.Type,
+		&i.Nature,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -50,7 +64,7 @@ const deactivateAccount = `-- name: DeactivateAccount :one
 UPDATE accounts
 SET is_active = false, updated_at = $3
 WHERE ledger_id = $1 AND id = $2
-RETURNING id, ledger_id, name, type, is_active, created_at, updated_at
+RETURNING id, ledger_id, name, type, nature, is_active, created_at, updated_at
 `
 
 type DeactivateAccountParams struct {
@@ -59,14 +73,26 @@ type DeactivateAccountParams struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) DeactivateAccount(ctx context.Context, arg DeactivateAccountParams) (Account, error) {
+type DeactivateAccountRow struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	Name      string
+	Type      string
+	Nature    string
+	IsActive  bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) DeactivateAccount(ctx context.Context, arg DeactivateAccountParams) (DeactivateAccountRow, error) {
 	row := q.db.QueryRow(ctx, deactivateAccount, arg.LedgerID, arg.ID, arg.UpdatedAt)
-	var i Account
+	var i DeactivateAccountRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
 		&i.Name,
 		&i.Type,
+		&i.Nature,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -95,7 +121,7 @@ func (q *Queries) FindAccountByType(ctx context.Context, arg FindAccountByTypePa
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id, ledger_id, name, type, is_active, created_at, updated_at
+SELECT id, ledger_id, name, type, nature, is_active, created_at, updated_at
 FROM accounts
 WHERE ledger_id = $1 AND id = $2
 `
@@ -105,14 +131,26 @@ type GetAccountByIDParams struct {
 	ID       pgtype.UUID
 }
 
-func (q *Queries) GetAccountByID(ctx context.Context, arg GetAccountByIDParams) (Account, error) {
+type GetAccountByIDRow struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	Name      string
+	Type      string
+	Nature    string
+	IsActive  bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetAccountByID(ctx context.Context, arg GetAccountByIDParams) (GetAccountByIDRow, error) {
 	row := q.db.QueryRow(ctx, getAccountByID, arg.LedgerID, arg.ID)
-	var i Account
+	var i GetAccountByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
 		&i.Name,
 		&i.Type,
+		&i.Nature,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -122,27 +160,39 @@ func (q *Queries) GetAccountByID(ctx context.Context, arg GetAccountByIDParams) 
 
 const listAccountsByLedger = `-- name: ListAccountsByLedger :many
 
-SELECT id, ledger_id, name, type, is_active, created_at, updated_at
+SELECT id, ledger_id, name, type, nature, is_active, created_at, updated_at
 FROM accounts
 WHERE ledger_id = $1
 ORDER BY created_at
 `
 
+type ListAccountsByLedgerRow struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	Name      string
+	Type      string
+	Nature    string
+	IsActive  bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 // Accounts
-func (q *Queries) ListAccountsByLedger(ctx context.Context, ledgerID pgtype.UUID) ([]Account, error) {
+func (q *Queries) ListAccountsByLedger(ctx context.Context, ledgerID pgtype.UUID) ([]ListAccountsByLedgerRow, error) {
 	rows, err := q.db.Query(ctx, listAccountsByLedger, ledgerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Account
+	var items []ListAccountsByLedgerRow
 	for rows.Next() {
-		var i Account
+		var i ListAccountsByLedgerRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.LedgerID,
 			&i.Name,
 			&i.Type,
+			&i.Nature,
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -159,9 +209,9 @@ func (q *Queries) ListAccountsByLedger(ctx context.Context, ledgerID pgtype.UUID
 
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
-SET name = $3, type = $4, is_active = $5, updated_at = $6
+SET name = $3, type = $4, nature = $5, is_active = $6, updated_at = $7
 WHERE ledger_id = $1 AND id = $2
-RETURNING id, ledger_id, name, type, is_active, created_at, updated_at
+RETURNING id, ledger_id, name, type, nature, is_active, created_at, updated_at
 `
 
 type UpdateAccountParams struct {
@@ -169,25 +219,39 @@ type UpdateAccountParams struct {
 	ID        pgtype.UUID
 	Name      string
 	Type      string
+	Nature    string
 	IsActive  bool
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
+type UpdateAccountRow struct {
+	ID        pgtype.UUID
+	LedgerID  pgtype.UUID
+	Name      string
+	Type      string
+	Nature    string
+	IsActive  bool
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (UpdateAccountRow, error) {
 	row := q.db.QueryRow(ctx, updateAccount,
 		arg.LedgerID,
 		arg.ID,
 		arg.Name,
 		arg.Type,
+		arg.Nature,
 		arg.IsActive,
 		arg.UpdatedAt,
 	)
-	var i Account
+	var i UpdateAccountRow
 	err := row.Scan(
 		&i.ID,
 		&i.LedgerID,
 		&i.Name,
 		&i.Type,
+		&i.Nature,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,

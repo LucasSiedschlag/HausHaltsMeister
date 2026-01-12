@@ -126,7 +126,12 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 3) Request
 - Body:
 ```json
-{ "name": "Pessoal", "currency_code": "BRL" }
+{
+  "name": "Pessoal",
+  "currency_code": "BRL",
+  "create_default_accounts": true,
+  "include_investment": false
+}
 ```
 
 4) Response
@@ -148,6 +153,8 @@ Este modulo cobre ledgers e controle de membros (RBAC) por ledger.
 
 6) Semantics / Notes
 - O criador vira `owner`.
+- `create_default_accounts` cria Conta Corrente (current/asset) e Wallet/Pessoal (wallet/asset).
+- `include_investment` cria Investimentos (investment/asset) quando `true`.
 
 7) Pagination
 - n/a.

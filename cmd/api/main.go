@@ -190,8 +190,10 @@ func main() {
 	}
 	cardNetworksGroup := e.Group("/card-networks", middleware.RequireAuth(authService))
 	creditCardHandler.RegisterNetworks(cardNetworksGroup)
-	creditCardsGroup := e.Group("/ledgers/:ledgerId/credit-cards", middleware.RequireAuth(authService), ledgerGuardViewer)
-	creditCardHandler.Register(creditCardsGroup)
+	accountCardsGroup := e.Group("/accounts/:accountId/credit-cards", middleware.RequireAuth(authService))
+	creditCardHandler.RegisterAccountCards(accountCardsGroup)
+	creditCardsGroup := e.Group("/credit-cards/:cardId", middleware.RequireAuth(authService))
+	creditCardHandler.RegisterCards(creditCardsGroup)
 
 	reportsHandler := &handlers.ReportsHandler{
 		Service: reportsService,

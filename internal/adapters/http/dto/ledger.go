@@ -3,8 +3,10 @@ package dto
 import "time"
 
 type LedgerCreateRequest struct {
-	Name         string `json:"name"`
-	CurrencyCode string `json:"currency_code"`
+	Name                  string `json:"name"`
+	CurrencyCode          string `json:"currency_code"`
+	CreateDefaultAccounts *bool  `json:"create_default_accounts"`
+	IncludeInvestment     *bool  `json:"include_investment"`
 }
 
 type LedgerUpdateRequest struct {

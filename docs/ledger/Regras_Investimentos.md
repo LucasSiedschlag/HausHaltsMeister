@@ -2,7 +2,7 @@
 
 Este documento define como o módulo de investimentos funciona dentro do modelo atual:
 
-- `accounts` (cash / investment)
+- `accounts` (wallet/current + investment)
 - `transactions` + `entries` (journal)
 - `categories` com `direction` + flags (`is_budget_base`, `is_budget_relevant`)
 - Padrões de lançamento para: aporte, resgate, rendimento, ajuste
@@ -15,7 +15,7 @@ Este documento define como o módulo de investimentos funciona dentro do modelo 
 
 ### Objetivo funcional
 
-1. Separar “Pessoal” e “Investimentos” como contas internas (`accounts`).
+1. Separar “Wallet/Pessoal” e “Investimentos” como contas internas (`accounts`).
 2. Registrar aportes e resgates como transferências entre contas internas.
 3. Registrar rendimentos (e perdas) dentro da conta de investimentos.
 4. Permitir relatórios por período:
@@ -38,7 +38,7 @@ Este documento define como o módulo de investimentos funciona dentro do modelo 
 
 ### 1.1. Accounts
 
-- `Pessoal` (`type=cash`)
+- `Wallet/Pessoal` (`type=wallet`) ou `Conta Corrente` (`type=current`)
 - `Investimentos` (`type=investment`)
 
 ### 1.2. Categorias recomendadas (padrão definitivo)
@@ -136,13 +136,13 @@ Para transações `kind=transfer`:
 
 Quando criar um ledger:
 
-1. criar account `Pessoal` (cash)
+1. criar account `Wallet/Pessoal` (wallet) ou `Conta Corrente` (current)
 2. criar account `Investimentos` (investment)
 3. criar categorias técnicas (ou permitir criar depois)
 
 ---
 
-## 4.2. Fluxo — Aporte (Pessoal -> Investimentos)
+## 4.2. Fluxo — Aporte (Wallet/Pessoal -> Investimentos)
 
 Entrada:
 
@@ -155,7 +155,7 @@ Entrada:
 Regras:
 
 - este lançamento representa mover dinheiro para investimentos
-- deve reduzir saldo de Pessoal e aumentar saldo de Investimentos
+- deve reduzir saldo de Wallet/Pessoal e aumentar saldo de Investimentos
 
 Persistência (transação SQL):
 
@@ -163,8 +163,8 @@ Persistência (transação SQL):
    - occurred_at = date
    - description = "Aporte investimentos"
 2. criar 2 `entries` (kind=transfer):
-   A) OUT em Pessoal:
-   - account_id = Pessoal
+   A) OUT em Wallet/Pessoal:
+   - account_id = Wallet/Pessoal
    - category_id = `Aportes Investimentos` (OUT)
    - amount_cents = amount
    - kind = transfer
@@ -178,12 +178,12 @@ Efeito:
 
 - no orçamento (se relevante=true): o aporte consome o orçamento de aportes do mês
 - no saldo:
-  - Pessoal diminui
+  - Wallet/Pessoal diminui
   - Investimentos aumenta
 
 ---
 
-## 4.3. Fluxo — Resgate (Investimentos -> Pessoal)
+## 4.3. Fluxo — Resgate (Investimentos -> Wallet/Pessoal)
 
 Entrada:
 
@@ -197,8 +197,8 @@ Persistência:
    - account_id = Investimentos
    - category_id = `Resgate Investimentos` (OUT)
    - amount = amount
-     B) IN em Pessoal:
-   - account_id = Pessoal
+     B) IN em Wallet/Pessoal:
+   - account_id = Wallet/Pessoal
    - category_id = `Entrada Resgate (Investimentos)` (IN)
    - amount = amount
 
@@ -207,7 +207,7 @@ Efeito:
 - não deve inflar renda base (is_budget_base=false na entrada)
 - saldo:
   - Investimentos diminui
-  - Pessoal aumenta
+  - Wallet/Pessoal aumenta
 
 ---
 
@@ -217,7 +217,7 @@ Cenário:
 
 - aporte de R$500
 - rendimento de R$5 no mês
-- você não transfere para Pessoal, fica em Investimentos
+- você não transfere para Wallet/Pessoal, fica em Investimentos
 
 Entrada:
 
@@ -279,7 +279,7 @@ Exemplo: corrigir rendimento lançado errado
 Soma de entries:
 
 - category = `Aportes Investimentos` (OUT)
-- account = Pessoal (opcional, mas recomendado)
+- account = Wallet/Pessoal (opcional, mas recomendado)
 - filtrar por transactions.occurred_at no período
 
 Saída:
@@ -333,7 +333,7 @@ Sem detalhar ativos e cotações, você ainda consegue:
 
 - renda base do mês: 5.000
 - orçamento de aporte: 10% => limite 500
-- você aportou 500 (Pessoal -> Investimentos)
+- você aportou 500 (Wallet/Pessoal -> Investimentos)
 - rendimento do mês: 5
 
 No mês:
@@ -366,7 +366,7 @@ No mês:
 3. Bloquear erro comum:
 
 - não permitir que usuário crie “Aporte” como gasto normal (kind=normal)
-  - sempre usar transfer para manter consistência (Pessoal OUT + Investimentos IN)
+- sempre usar transfer para manter consistência (Wallet/Pessoal OUT + Investimentos IN)
 
 ---
 

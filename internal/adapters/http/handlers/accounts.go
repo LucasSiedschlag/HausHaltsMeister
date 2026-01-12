@@ -18,7 +18,7 @@ type AccountsHandler struct {
 type AccountsService interface {
 	ListAccounts(ctx context.Context, userID, ledgerID string) ([]accounts.Account, error)
 	GetAccount(ctx context.Context, userID, ledgerID, accountID string) (accounts.Account, error)
-	CreateAccount(ctx context.Context, userID, ledgerID, name, accountType string, isActive bool) (accounts.Account, error)
+	CreateAccount(ctx context.Context, userID, ledgerID, name, accountType, nature string, isActive bool) (accounts.Account, error)
 	UpdateAccount(ctx context.Context, userID, ledgerID, accountID, name string, isActive bool) (accounts.Account, error)
 	DeleteAccount(ctx context.Context, userID, ledgerID, accountID string) error
 }
@@ -95,7 +95,7 @@ func (h *AccountsHandler) Create(c echo.Context) error {
 		isActive = *req.IsActive
 	}
 
-	created, err := h.Service.CreateAccount(c.Request().Context(), user.ID, ledgerID, req.Name, req.Type, isActive)
+	created, err := h.Service.CreateAccount(c.Request().Context(), user.ID, ledgerID, req.Name, req.Type, req.Nature, isActive)
 	if err != nil {
 		return httpx.WriteAppError(c, err)
 	}
@@ -157,6 +157,7 @@ func toAccountResponse(item accounts.Account) accountResponse {
 		LedgerID:  item.LedgerID,
 		Name:      item.Name,
 		Type:      item.Type,
+		Nature:    item.Nature,
 		IsActive:  item.IsActive,
 		CreatedAt: item.CreatedAt,
 		UpdatedAt: item.UpdatedAt,

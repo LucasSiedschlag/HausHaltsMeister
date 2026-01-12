@@ -47,7 +47,7 @@ Este modulo cobre relatorios agregados por ledger.
 {
   "ledger_id": "uuid",
   "month": "2026-01-01",
-  "items": [ { "account_id": "uuid", "account_name": "Conta", "account_type": "cash", "balance_cents": 0 } ]
+  "items": [ { "account_id": "uuid", "account_name": "Conta", "account_type": "wallet", "account_nature": "asset", "balance_cents": 0 } ]
 }
 ```
 
@@ -55,7 +55,7 @@ Este modulo cobre relatorios agregados por ledger.
 - 422 `VALIDATION_ERROR`
 
 6) Semantics / Notes
-- Regras por tipo de conta (cash/investment vs credit_card).
+- Sinal do saldo depende de `account_nature` (asset vs liability).
 
 7) Pagination
 - n/a.

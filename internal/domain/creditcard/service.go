@@ -16,12 +16,14 @@ type Repository interface {
 	UpdateCardNetwork(ctx context.Context, code, displayName string, updatedAt time.Time) (CardNetwork, error)
 	DeleteCardNetwork(ctx context.Context, code string) error
 
-	ListCreditCards(ctx context.Context, ledgerID string) ([]CreditCard, error)
-	GetCreditCard(ctx context.Context, ledgerID, cardAccountID string) (CreditCard, error)
+	ListCreditCards(ctx context.Context, ledgerID, parentAccountID string) ([]CreditCard, error)
+	GetCreditCard(ctx context.Context, cardID string) (CreditCard, error)
 	CreateCreditCard(ctx context.Context, params CreditCard) (CreditCard, error)
 	UpdateCreditCard(ctx context.Context, params CreditCard, updatedAt time.Time) (CreditCard, error)
-	DeleteCreditCard(ctx context.Context, ledgerID, cardAccountID string) error
-	GetAccountType(ctx context.Context, ledgerID, accountID string) (string, error)
+	DeleteCreditCard(ctx context.Context, ledgerID, cardID string) error
+	GetAccount(ctx context.Context, userID, accountID string) (AccountInfo, error)
+	CreateAccount(ctx context.Context, ledgerID, name, accountType, nature string, isActive bool) (AccountInfo, error)
+	GetAccountNature(ctx context.Context, ledgerID, accountID string) (string, error)
 	GetLedgerRole(ctx context.Context, ledgerID, userID string) (string, error)
 	LedgerExists(ctx context.Context, ledgerID string) (bool, error)
 	GetCategoryBudgetInfo(ctx context.Context, ledgerID, categoryID string) (string, bool, error)
@@ -29,25 +31,25 @@ type Repository interface {
 	GetCardNetwork(ctx context.Context, code string) (CardNetwork, error)
 
 	CreatePlanWithInstallments(ctx context.Context, plan InstallmentPlan, installments []Installment) (InstallmentPlan, error)
-	ListPlans(ctx context.Context, ledgerID, cardAccountID string, status *string) ([]InstallmentPlan, error)
-	GetPlan(ctx context.Context, ledgerID, cardAccountID, planID string) (InstallmentPlan, error)
+	ListPlans(ctx context.Context, ledgerID, cardID string, status *string) ([]InstallmentPlan, error)
+	GetPlan(ctx context.Context, ledgerID, cardID, planID string) (InstallmentPlan, error)
 	UpdatePlanStatus(ctx context.Context, ledgerID, planID, status string, updatedAt time.Time) error
 	HasPostedInstallments(ctx context.Context, ledgerID, planID string) (bool, error)
 
-	ListInstallments(ctx context.Context, ledgerID, cardAccountID string, month *time.Time, status *string) ([]Installment, error)
+	ListInstallments(ctx context.Context, ledgerID, cardID string, month *time.Time, status *string) ([]Installment, error)
 	UpdateInstallmentStatus(ctx context.Context, ledgerID, installmentID, status string, updatedAt time.Time) (Installment, error)
-	ListInstallmentsForPosting(ctx context.Context, ledgerID, cardAccountID string, month time.Time) ([]Installment, error)
+	ListInstallmentsForPosting(ctx context.Context, ledgerID, cardID string, month time.Time) ([]Installment, error)
 	GetPlanCategory(ctx context.Context, ledgerID, planID string) (string, error)
 	MarkInstallmentPosted(ctx context.Context, ledgerID, installmentID, transactionID string, updatedAt time.Time) error
 
-	GetStatement(ctx context.Context, ledgerID, cardAccountID, statementID string) (Statement, error)
-	GetStatementByMonth(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (Statement, error)
+	GetStatement(ctx context.Context, ledgerID, cardID, statementID string) (Statement, error)
+	GetStatementByMonth(ctx context.Context, ledgerID, cardID string, month time.Time) (Statement, error)
 	CreateStatement(ctx context.Context, statement Statement) (Statement, error)
-	UpdateStatementTotals(ctx context.Context, ledgerID, cardAccountID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
-	ListStatements(ctx context.Context, ledgerID, cardAccountID string, month *time.Time) ([]Statement, error)
-	SetStatementPayment(ctx context.Context, ledgerID, cardAccountID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
-	MarkInstallmentsPaid(ctx context.Context, ledgerID, cardAccountID string, month time.Time, statementID string, updatedAt time.Time) error
-	SumStatementCharges(ctx context.Context, ledgerID, cardAccountID string, month time.Time) (int64, error)
+	UpdateStatementTotals(ctx context.Context, ledgerID, cardID, statementID string, totalCharges, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
+	ListStatements(ctx context.Context, ledgerID, cardID string, month *time.Time) ([]Statement, error)
+	SetStatementPayment(ctx context.Context, ledgerID, cardID, statementID, paymentTransactionID string, totalPayments int64, status string, updatedAt time.Time) (Statement, error)
+	MarkInstallmentsPaid(ctx context.Context, ledgerID, cardID string, month time.Time, statementID string, updatedAt time.Time) error
+	SumStatementCharges(ctx context.Context, ledgerID, cardID string, month time.Time) (int64, error)
 
 	CreateTransaction(ctx context.Context, params journal.CreateTransactionParams) (journal.Transaction, error)
 }
@@ -91,69 +93,76 @@ func (s *Service) DeleteCardNetwork(ctx context.Context, code string) error {
 	return s.repo.DeleteCardNetwork(ctx, code)
 }
 
-func (s *Service) ListCreditCards(ctx context.Context, userID, ledgerID string) ([]CreditCard, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) ListCreditCards(ctx context.Context, userID, accountID string) ([]CreditCard, error) {
+	account, err := s.requireAccountAccess(ctx, userID, accountID, "viewer")
+	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListCreditCards(ctx, ledgerID)
+	if account.Nature == "liability" {
+		return nil, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "invalid"})
+	}
+	return s.repo.ListCreditCards(ctx, account.LedgerID, account.ID)
 }
 
-func (s *Service) GetCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string) (CreditCard, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
-		return CreditCard{}, err
-	}
-	card, err := s.repo.GetCreditCard(ctx, ledgerID, cardAccountID)
+func (s *Service) GetCreditCard(ctx context.Context, userID, cardID string) (CreditCard, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return CreditCard{}, ErrCardNotFound
-		}
 		return CreditCard{}, err
 	}
 	return card, nil
 }
 
-func (s *Service) CreateCreditCard(ctx context.Context, userID, ledgerID string, card CreditCard) (CreditCard, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) CreateCreditCard(ctx context.Context, userID, accountID string, card CreditCard) (CreditCard, error) {
+	account, err := s.requireAccountAccess(ctx, userID, accountID, "editor")
+	if err != nil {
 		return CreditCard{}, err
 	}
-
-	if card.AccountID == "" {
-		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "required"})
-	}
-	accountType, err := s.repo.GetAccountType(ctx, ledgerID, card.AccountID)
-	if err != nil {
-		return CreditCard{}, ErrCardNotFound
-	}
-	if accountType != "credit_card" {
-		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "type"})
+	if account.Nature == "liability" {
+		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "invalid"})
 	}
 
-	if card.Network == "" {
-		card.Network = "other"
+	card.ParentAccountID = account.ID
+	card.LedgerID = account.LedgerID
+
+	if card.Brand == "" {
+		card.Brand = "other"
 	}
-	if _, err := s.repo.GetCardNetwork(ctx, card.Network); err != nil {
-		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"network": "invalid"})
+	if _, err := s.repo.GetCardNetwork(ctx, card.Brand); err != nil {
+		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"brand": "invalid"})
 	}
 	if card.ClosingDay < 1 || card.DueDay < 1 {
 		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"closing_day": "invalid"})
 	}
-	card.LedgerID = ledgerID
 
-	return s.repo.CreateCreditCard(ctx, card)
-}
-
-func (s *Service) UpdateCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string, card CreditCard) (CreditCard, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+	liabilityName := buildLiabilityAccountName(card)
+	liabilityAccount, err := s.repo.CreateAccount(ctx, card.LedgerID, liabilityName, "current", "liability", true)
+	if err != nil {
 		return CreditCard{}, err
 	}
-	card.AccountID = cardAccountID
-	card.LedgerID = ledgerID
+	card.LiabilityAccountID = liabilityAccount.ID
 
-	if card.Network == "" {
-		card.Network = "other"
+	created, err := s.repo.CreateCreditCard(ctx, card)
+	if err != nil {
+		return CreditCard{}, err
 	}
-	if _, err := s.repo.GetCardNetwork(ctx, card.Network); err != nil {
-		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"network": "invalid"})
+	return created, nil
+}
+
+func (s *Service) UpdateCreditCard(ctx context.Context, userID, cardID string, card CreditCard) (CreditCard, error) {
+	current, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
+		return CreditCard{}, err
+	}
+	card.ID = cardID
+	card.LedgerID = current.LedgerID
+	card.ParentAccountID = current.ParentAccountID
+	card.LiabilityAccountID = current.LiabilityAccountID
+
+	if card.Brand == "" {
+		card.Brand = "other"
+	}
+	if _, err := s.repo.GetCardNetwork(ctx, card.Brand); err != nil {
+		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"brand": "invalid"})
 	}
 	updated, err := s.repo.UpdateCreditCard(ctx, card, s.now())
 	if err != nil {
@@ -165,11 +174,12 @@ func (s *Service) UpdateCreditCard(ctx context.Context, userID, ledgerID, cardAc
 	return updated, nil
 }
 
-func (s *Service) DeleteCreditCard(ctx context.Context, userID, ledgerID, cardAccountID string) error {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) DeleteCreditCard(ctx context.Context, userID, cardID string) error {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return err
 	}
-	if err := s.repo.DeleteCreditCard(ctx, ledgerID, cardAccountID); err != nil {
+	if err := s.repo.DeleteCreditCard(ctx, card.LedgerID, card.ID); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return ErrCardNotFound
 		}
@@ -178,8 +188,9 @@ func (s *Service) DeleteCreditCard(ctx context.Context, userID, ledgerID, cardAc
 	return nil
 }
 
-func (s *Service) CreatePlan(ctx context.Context, userID, ledgerID, cardAccountID string, input InstallmentPlan, installmentsCount int, installmentAmount int64) (InstallmentPlan, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) CreatePlan(ctx context.Context, userID, cardID string, input InstallmentPlan, installmentsCount int, installmentAmount int64) (InstallmentPlan, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return InstallmentPlan{}, err
 	}
 	if input.Description == "" {
@@ -192,12 +203,7 @@ func (s *Service) CreatePlan(ctx context.Context, userID, ledgerID, cardAccountI
 		return InstallmentPlan{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"first_due_month": "invalid"})
 	}
 
-	accountType, err := s.repo.GetAccountType(ctx, ledgerID, cardAccountID)
-	if err != nil || accountType != "credit_card" {
-		return InstallmentPlan{}, ErrCardNotFound
-	}
-
-	direction, relevant, err := s.repo.GetCategoryBudgetInfo(ctx, ledgerID, input.CategoryID)
+	direction, relevant, err := s.repo.GetCategoryBudgetInfo(ctx, card.LedgerID, input.CategoryID)
 	if err != nil {
 		return InstallmentPlan{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"category_id": "invalid"})
 	}
@@ -206,8 +212,8 @@ func (s *Service) CreatePlan(ctx context.Context, userID, ledgerID, cardAccountI
 	}
 
 	plan := InstallmentPlan{
-		LedgerID:               ledgerID,
-		CardAccountID:          cardAccountID,
+		LedgerID:               card.LedgerID,
+		CreditCardID:           card.ID,
 		PurchaseOccurredAt:     input.PurchaseOccurredAt,
 		Merchant:               input.Merchant,
 		Description:            input.Description,
@@ -228,18 +234,20 @@ func (s *Service) CreatePlan(ctx context.Context, userID, ledgerID, cardAccountI
 	return s.repo.CreatePlanWithInstallments(ctx, plan, installments)
 }
 
-func (s *Service) ListPlans(ctx context.Context, userID, ledgerID, cardAccountID string, status *string) ([]InstallmentPlan, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) ListPlans(ctx context.Context, userID, cardID string, status *string) ([]InstallmentPlan, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
+	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListPlans(ctx, ledgerID, cardAccountID, status)
+	return s.repo.ListPlans(ctx, card.LedgerID, card.ID, status)
 }
 
-func (s *Service) GetPlan(ctx context.Context, userID, ledgerID, cardAccountID, planID string) (InstallmentPlan, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) GetPlan(ctx context.Context, userID, cardID, planID string) (InstallmentPlan, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
+	if err != nil {
 		return InstallmentPlan{}, err
 	}
-	plan, err := s.repo.GetPlan(ctx, ledgerID, cardAccountID, planID)
+	plan, err := s.repo.GetPlan(ctx, card.LedgerID, card.ID, planID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return InstallmentPlan{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"plan_id": "not_found"})
@@ -249,53 +257,57 @@ func (s *Service) GetPlan(ctx context.Context, userID, ledgerID, cardAccountID, 
 	return plan, nil
 }
 
-func (s *Service) CancelPlan(ctx context.Context, userID, ledgerID, cardAccountID, planID string) error {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) CancelPlan(ctx context.Context, userID, cardID, planID string) error {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return err
 	}
-	_, err := s.repo.GetPlan(ctx, ledgerID, cardAccountID, planID)
+	_, err = s.repo.GetPlan(ctx, card.LedgerID, card.ID, planID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"plan_id": "not_found"})
 		}
 		return err
 	}
-	hasPosted, err := s.repo.HasPostedInstallments(ctx, ledgerID, planID)
+	hasPosted, err := s.repo.HasPostedInstallments(ctx, card.LedgerID, planID)
 	if err != nil {
 		return err
 	}
 	if hasPosted {
 		return ErrTransactionReferenced
 	}
-	return s.repo.UpdatePlanStatus(ctx, ledgerID, planID, "cancelled", s.now())
+	return s.repo.UpdatePlanStatus(ctx, card.LedgerID, planID, "cancelled", s.now())
 }
 
-func (s *Service) ListInstallments(ctx context.Context, userID, ledgerID, cardAccountID string, month *time.Time, status *string) ([]Installment, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) ListInstallments(ctx context.Context, userID, cardID string, month *time.Time, status *string) ([]Installment, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
+	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListInstallments(ctx, ledgerID, cardAccountID, month, status)
+	return s.repo.ListInstallments(ctx, card.LedgerID, card.ID, month, status)
 }
 
-func (s *Service) UpdateInstallment(ctx context.Context, userID, ledgerID, installmentID, status string) (Installment, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) UpdateInstallment(ctx context.Context, userID, cardID, installmentID, status string) (Installment, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return Installment{}, err
 	}
 	if status != "skipped" {
 		return Installment{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"status": "invalid"})
 	}
-	return s.repo.UpdateInstallmentStatus(ctx, ledgerID, installmentID, status, s.now())
+	return s.repo.UpdateInstallmentStatus(ctx, card.LedgerID, installmentID, status, s.now())
 }
 
-func (s *Service) PostMonth(ctx context.Context, userID, ledgerID, cardAccountID string, month time.Time) (PostingResult, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) PostMonth(ctx context.Context, userID, cardID string, month time.Time) (PostingResult, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return PostingResult{}, err
 	}
 	if !isMonthStart(month) {
 		return PostingResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"month": "invalid"})
 	}
 
-	installments, err := s.repo.ListInstallmentsForPosting(ctx, ledgerID, cardAccountID, month)
+	installments, err := s.repo.ListInstallmentsForPosting(ctx, card.LedgerID, card.ID, month)
 	if err != nil {
 		return PostingResult{}, err
 	}
@@ -305,28 +317,29 @@ func (s *Service) PostMonth(ctx context.Context, userID, ledgerID, cardAccountID
 
 	transactionIDs := []string{}
 	for _, inst := range installments {
-		categoryID, err := s.repo.GetPlanCategory(ctx, ledgerID, inst.PlanID)
+		categoryID, err := s.repo.GetPlanCategory(ctx, card.LedgerID, inst.PlanID)
 		if err != nil {
 			return PostingResult{}, err
 		}
 		entry := journal.EntryInput{
-			AccountID:   cardAccountID,
+			AccountID:   card.LiabilityAccountID,
 			CategoryID:  &categoryID,
 			Kind:        "normal",
 			AmountCents: inst.AmountCents,
 		}
 		created, err := s.repo.CreateTransaction(ctx, journal.CreateTransactionParams{
-			LedgerID:        ledgerID,
+			LedgerID:        card.LedgerID,
 			OccurredAt:      month,
 			Description:     "Parcela",
 			CreatedByUserID: userID,
+			CreditCardID:    &card.ID,
 			Entries:         []journal.EntryInput{entry},
 		})
 		if err != nil {
 			return PostingResult{}, err
 		}
 
-		if err := s.repo.MarkInstallmentPosted(ctx, ledgerID, inst.ID, created.ID, s.now()); err != nil {
+		if err := s.repo.MarkInstallmentPosted(ctx, card.LedgerID, inst.ID, created.ID, s.now()); err != nil {
 			return PostingResult{}, err
 		}
 		transactionIDs = append(transactionIDs, created.ID)
@@ -335,18 +348,20 @@ func (s *Service) PostMonth(ctx context.Context, userID, ledgerID, cardAccountID
 	return PostingResult{PostedCount: len(installments), Transactions: transactionIDs}, nil
 }
 
-func (s *Service) ListStatements(ctx context.Context, userID, ledgerID, cardAccountID string, month *time.Time) ([]Statement, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) ListStatements(ctx context.Context, userID, cardID string, month *time.Time) ([]Statement, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
+	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListStatements(ctx, ledgerID, cardAccountID, month)
+	return s.repo.ListStatements(ctx, card.LedgerID, card.ID, month)
 }
 
-func (s *Service) GetStatement(ctx context.Context, userID, ledgerID, cardAccountID, statementID string) (Statement, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "viewer"); err != nil {
+func (s *Service) GetStatement(ctx context.Context, userID, cardID, statementID string) (Statement, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "viewer")
+	if err != nil {
 		return Statement{}, err
 	}
-	statement, err := s.repo.GetStatement(ctx, ledgerID, cardAccountID, statementID)
+	statement, err := s.repo.GetStatement(ctx, card.LedgerID, card.ID, statementID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return Statement{}, ErrStatementNotFound
@@ -356,28 +371,21 @@ func (s *Service) GetStatement(ctx context.Context, userID, ledgerID, cardAccoun
 	return statement, nil
 }
 
-func (s *Service) CloseStatement(ctx context.Context, userID, ledgerID, cardAccountID string, month time.Time) (Statement, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) CloseStatement(ctx context.Context, userID, cardID string, month time.Time) (Statement, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return Statement{}, err
 	}
 	if !isMonthStart(month) {
 		return Statement{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"month": "invalid"})
 	}
 
-	card, err := s.repo.GetCreditCard(ctx, ledgerID, cardAccountID)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return Statement{}, ErrCardNotFound
-		}
-		return Statement{}, err
-	}
-
-	statement, err := s.repo.GetStatementByMonth(ctx, ledgerID, cardAccountID, month)
+	statement, err := s.repo.GetStatementByMonth(ctx, card.LedgerID, card.ID, month)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			statement = Statement{
-				LedgerID:       ledgerID,
-				CardAccountID:  cardAccountID,
+				LedgerID:       card.LedgerID,
+				CreditCardID:   card.ID,
 				StatementMonth: month,
 				ClosingDate:    adjustDate(month, card.ClosingDay),
 				DueDate:        adjustDate(month, card.DueDay),
@@ -390,27 +398,28 @@ func (s *Service) CloseStatement(ctx context.Context, userID, ledgerID, cardAcco
 		return Statement{}, err
 	}
 
-	charges, err := s.repo.SumStatementCharges(ctx, ledgerID, cardAccountID, month)
+	charges, err := s.repo.SumStatementCharges(ctx, card.LedgerID, card.ID, month)
 	if err != nil {
 		return Statement{}, err
 	}
 
-	updated, err := s.repo.UpdateStatementTotals(ctx, statement.LedgerID, statement.CardAccountID, statement.ID, charges, statement.TotalPaymentsCents, "closed", s.now())
+	updated, err := s.repo.UpdateStatementTotals(ctx, statement.LedgerID, statement.CreditCardID, statement.ID, charges, statement.TotalPaymentsCents, "closed", s.now())
 	if err != nil {
 		return Statement{}, err
 	}
 	return updated, nil
 }
 
-func (s *Service) PayStatement(ctx context.Context, userID, ledgerID, cardAccountID, statementID, cashAccountID string, payAmount int64, paymentDate time.Time) (Statement, error) {
-	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+func (s *Service) PayStatement(ctx context.Context, userID, cardID, statementID, payingAccountID string, payAmount int64, paymentDate time.Time) (Statement, error) {
+	card, err := s.requireCardAccess(ctx, userID, cardID, "editor")
+	if err != nil {
 		return Statement{}, err
 	}
 	if payAmount <= 0 {
 		return Statement{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"pay_amount_cents": "invalid"})
 	}
 
-	statement, err := s.repo.GetStatement(ctx, ledgerID, cardAccountID, statementID)
+	statement, err := s.repo.GetStatement(ctx, card.LedgerID, card.ID, statementID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return Statement{}, ErrStatementNotFound
@@ -425,23 +434,23 @@ func (s *Service) PayStatement(ctx context.Context, userID, ledgerID, cardAccoun
 		return Statement{}, ErrPaymentExceedsTotal
 	}
 
-	accountType, err := s.repo.GetAccountType(ctx, ledgerID, cashAccountID)
-	if err != nil || accountType != "cash" {
-		return Statement{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"cash_account_id": "invalid"})
+	nature, err := s.repo.GetAccountNature(ctx, card.LedgerID, payingAccountID)
+	if err != nil || nature != "asset" {
+		return Statement{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"paying_account_id": "invalid"})
 	}
 
-	outCategory, inCategory, err := s.loadPaymentCategories(ctx, ledgerID)
+	outCategory, inCategory, err := s.loadPaymentCategories(ctx, card.LedgerID)
 	if err != nil {
 		return Statement{}, err
 	}
 
 	entries := []journal.EntryInput{
-		{AccountID: cashAccountID, CategoryID: &outCategory, Kind: "transfer", AmountCents: payAmount},
-		{AccountID: cardAccountID, CategoryID: &inCategory, Kind: "transfer", AmountCents: payAmount},
+		{AccountID: payingAccountID, CategoryID: &outCategory, Kind: "transfer", AmountCents: payAmount},
+		{AccountID: card.LiabilityAccountID, CategoryID: &inCategory, Kind: "transfer", AmountCents: payAmount},
 	}
 
 	paymentTx, err := s.repo.CreateTransaction(ctx, journal.CreateTransactionParams{
-		LedgerID:        ledgerID,
+		LedgerID:        card.LedgerID,
 		OccurredAt:      paymentDate,
 		Description:     "Pagamento fatura",
 		CreatedByUserID: userID,
@@ -457,12 +466,12 @@ func (s *Service) PayStatement(ctx context.Context, userID, ledgerID, cardAccoun
 		status = "paid"
 	}
 
-	updated, err := s.repo.SetStatementPayment(ctx, statement.LedgerID, statement.CardAccountID, statement.ID, paymentTx.ID, newTotalPayments, status, s.now())
+	updated, err := s.repo.SetStatementPayment(ctx, statement.LedgerID, statement.CreditCardID, statement.ID, paymentTx.ID, newTotalPayments, status, s.now())
 	if err != nil {
 		return Statement{}, err
 	}
 	if status == "paid" {
-		if err := s.repo.MarkInstallmentsPaid(ctx, ledgerID, cardAccountID, statement.StatementMonth, statement.ID, s.now()); err != nil {
+		if err := s.repo.MarkInstallmentsPaid(ctx, card.LedgerID, card.ID, statement.StatementMonth, statement.ID, s.now()); err != nil {
 			return Statement{}, err
 		}
 	}
@@ -480,6 +489,45 @@ func (s *Service) loadPaymentCategories(ctx context.Context, ledgerID string) (s
 		return "", "", NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"category": "Entrada Pagamento Cartao"})
 	}
 	return outID, inID, nil
+}
+
+func (s *Service) requireAccountAccess(ctx context.Context, userID, accountID, minRole string) (AccountInfo, error) {
+	accountID = strings.TrimSpace(accountID)
+	if accountID == "" {
+		return AccountInfo{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "required"})
+	}
+	account, err := s.repo.GetAccount(ctx, userID, accountID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return AccountInfo{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "invalid"})
+		}
+		return AccountInfo{}, err
+	}
+	if err := s.requireRole(ctx, account.LedgerID, userID, minRole); err != nil {
+		return AccountInfo{}, err
+	}
+	if !account.IsActive {
+		return AccountInfo{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"account_id": "inactive"})
+	}
+	return account, nil
+}
+
+func (s *Service) requireCardAccess(ctx context.Context, userID, cardID, minRole string) (CreditCard, error) {
+	cardID = strings.TrimSpace(cardID)
+	if cardID == "" {
+		return CreditCard{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"card_id": "required"})
+	}
+	card, err := s.repo.GetCreditCard(ctx, cardID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return CreditCard{}, ErrCardNotFound
+		}
+		return CreditCard{}, err
+	}
+	if err := s.requireRole(ctx, card.LedgerID, userID, minRole); err != nil {
+		return CreditCard{}, err
+	}
+	return card, nil
 }
 
 func (s *Service) requireRole(ctx context.Context, ledgerID, userID, minRole string) error {
@@ -560,4 +608,29 @@ func adjustDate(month time.Time, day int) time.Time {
 		day = last
 	}
 	return time.Date(year, mon, day, 0, 0, 0, 0, month.Location())
+}
+
+func buildLiabilityAccountName(card CreditCard) string {
+	label := strings.TrimSpace(ptrString(card.Label))
+	last4 := strings.TrimSpace(ptrString(card.Last4))
+	brand := strings.TrimSpace(card.Brand)
+
+	parts := []string{"Cartao"}
+	if label != "" {
+		parts = append(parts, label)
+	}
+	if last4 != "" {
+		parts = append(parts, last4)
+	} else if label == "" && brand != "" {
+		parts = append(parts, strings.ToUpper(brand))
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func ptrString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
