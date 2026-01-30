@@ -17,6 +17,7 @@ Este modulo cobre categorias de entrada e saida, incluindo regras de budget.
 | GET | /ledgers/{ledgerId}/categories | Listar categorias | Sim | viewer |
 | GET | /ledgers/{ledgerId}/categories/{categoryId} | Detalhe da categoria | Sim | viewer |
 | POST | /ledgers/{ledgerId}/categories | Criar categoria | Sim | editor |
+| POST | /ledgers/{ledgerId}/categories/seed | Adicionar categorias sugeridas | Sim | editor |
 | PATCH | /ledgers/{ledgerId}/categories/{categoryId} | Atualizar categoria | Sim | editor |
 | DELETE | /ledgers/{ledgerId}/categories/{categoryId} | Soft delete (planejado) | Sim | editor |
 
@@ -165,6 +166,46 @@ Este modulo cobre categorias de entrada e saida, incluindo regras de budget.
 
 8) Idempotency
 - n/a.
+
+---
+
+### POST /ledgers/{ledgerId}/categories/seed
+1) Summary / Purpose
+- Adicionar categorias sugeridas (idempotente por nome).
+
+2) Auth & Authorization
+- Role: editor+.
+
+3) Request
+- Body:
+```json
+{
+  "preset": "default_v1",
+  "items": [
+    { "name": "Gastos fixos", "direction": "out", "is_budget_relevant": true },
+    { "name": "Salário", "direction": "in", "is_budget_base": true }
+  ]
+}
+```
+
+4) Response
+- 200
+```json
+{
+  "created": ["Gastos fixos", "Investimentos (Saída)"],
+  "skipped": ["Conforto"]
+}
+```
+
+5) Errors
+- 422 `VALIDATION_ERROR`
+- 403 `LEDGER_ACCESS_DENIED`
+
+6) Semantics / Notes
+- Se `names` estiver vazio, usa o preset completo.
+- Se `items` estiver vazio, usa o preset completo.
+- Se `items` estiver presente, ele tem prioridade sobre `names`.
+- `skipped` retorna nomes ja existentes no ledger.
 
 ---
 

@@ -357,12 +357,12 @@ O sistema deve permitir registrar aportes como transferência interna:
 
 - OUT em Pessoal
 - IN em Investimentos
-  com categorias técnicas apropriadas.
+  com categorias `Investimentos (Saída)` (OUT) e `Investimentos (Entrada)` (IN) e `investment_action=contribution`.
 
 Critérios de aceitação
 
-- transferência balanceada
-- opcionalmente, aporte pode consumir orçamento (se categoria relevante=true)
+- transferência balanceada (amounts iguais quando `investment_action`)
+- opcionalmente, aporte pode consumir orçamento (se Investimentos (Saída).is_budget_relevant=true)
 
 ---
 
@@ -372,7 +372,7 @@ O sistema deve permitir registrar resgates como transferência interna inversa.
 
 Critérios de aceitação
 
-- a entrada no Pessoal não deve inflar renda base (budget_base=false)
+- `investment_action=redemption` não deve inflar renda base
 
 ---
 
@@ -382,7 +382,7 @@ O sistema deve permitir registrar rendimentos como lançamento IN na conta Inves
 
 Critérios de aceitação
 
-- rendimentos não devem inflar renda base (budget_base=false)
+- `investment_action=earnings` não deve inflar renda base
 - recomendado kind=adjust
 
 ---

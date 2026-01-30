@@ -23,8 +23,20 @@ func (r *Repository) ListAccountBalances(ctx context.Context, ledgerID string, c
 			COALESCE(SUM(
 				CASE
 					WHEN t.id IS NULL THEN 0
-					WHEN c.direction = 'in' THEN e.amount_cents
-					WHEN c.direction = 'out' THEN -e.amount_cents
+					WHEN t.investment_action IS NULL THEN
+						CASE
+							WHEN c.direction = 'in' THEN e.amount_cents
+							WHEN c.direction = 'out' THEN -e.amount_cents
+							ELSE 0
+						END
+					WHEN t.investment_action = 'contribution' THEN
+						CASE WHEN a.type = 'investment' THEN e.amount_cents ELSE -e.amount_cents END
+					WHEN t.investment_action = 'redemption' THEN
+						CASE WHEN a.type = 'investment' THEN -e.amount_cents ELSE e.amount_cents END
+					WHEN t.investment_action = 'earnings' THEN
+						CASE WHEN a.type = 'investment' THEN e.amount_cents ELSE 0 END
+					WHEN t.investment_action = 'loss' THEN
+						CASE WHEN a.type = 'investment' THEN -e.amount_cents ELSE 0 END
 					ELSE 0
 				END
 			), 0) AS net_cents
@@ -90,11 +102,26 @@ func (r *Repository) ListCategorySummary(ctx context.Context, ledgerID string, f
 func (r *Repository) ListCashflow(ctx context.Context, ledgerID string, from, to time.Time) ([]reports.CashflowEntry, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT date_trunc('month', t.occurred_at)::date AS month,
-			COALESCE(SUM(CASE WHEN c.direction = 'in' THEN e.amount_cents ELSE 0 END), 0) AS total_in,
-			COALESCE(SUM(CASE WHEN c.direction = 'out' THEN e.amount_cents ELSE 0 END), 0) AS total_out
+			COALESCE(SUM(
+				CASE
+					WHEN t.investment_action IS NULL THEN
+						CASE WHEN c.direction = 'in' THEN e.amount_cents ELSE 0 END
+					WHEN t.investment_action = 'redemption' AND a.type <> 'investment' THEN e.amount_cents
+					ELSE 0
+				END
+			), 0) AS total_in,
+			COALESCE(SUM(
+				CASE
+					WHEN t.investment_action IS NULL THEN
+						CASE WHEN c.direction = 'out' THEN e.amount_cents ELSE 0 END
+					WHEN t.investment_action = 'contribution' AND a.type <> 'investment' THEN e.amount_cents
+					ELSE 0
+				END
+			), 0) AS total_out
 		FROM entries e
 		JOIN transactions t ON t.id = e.transaction_id
-		JOIN categories c ON c.id = e.category_id
+		JOIN accounts a ON a.id = e.account_id
+		LEFT JOIN categories c ON c.id = e.category_id
 		WHERE e.ledger_id = $1 AND t.occurred_at >= $2 AND t.occurred_at <= $3
 		GROUP BY month
 		ORDER BY month

@@ -37,15 +37,7 @@ const { summary, loading: summaryLoading, error: summaryError, fetchSummary } = 
 const { balances, loading: balancesLoading, error: balancesError, fetchBalances } = useBalancesReport()
 const journalPeriod = useJournalPeriod()
 
-const requiredCategoryNames = [
-  'Aportes Investimentos',
-  'Entrada Investimentos (Aporte)',
-  'Resgate Investimentos',
-  'Entrada Resgate (Investimentos)',
-  'Rendimentos'
-]
-
-const optionalCategoryNames = ['Perdas']
+const requiredCategoryNames = ['Investimentos']
 
 const hasActiveAccount = (type: string) =>
   accounts.value.some((account) => account.type === type && account.is_active)
@@ -219,7 +211,6 @@ const activityError = ref('')
 
 const categoryById = computed(() => new Map(categories.value.map((item) => [item.id, item])))
 const categoryIdByName = computed(() => new Map(categories.value.map((item) => [item.name, item.id])))
-const hasLossCategory = computed(() => categoryIdByName.value.has('Perdas'))
 
 const activityItems = computed(() => {
   const accountId = selectedAccountId.value
@@ -238,14 +229,23 @@ const formatActivityDate = (value: string) => {
   return new Intl.DateTimeFormat(locale.value, { day: '2-digit', month: 'short' }).format(parsed)
 }
 
-const formatActivityAmount = (entry: TransactionEntry) => {
+const formatActivityAmount = (entry: TransactionEntry, action?: string | null) => {
+  if (action) {
+    const sign = action === 'redemption' || action === 'loss' ? -1 : 1
+    return formatAmount(entry.amount_cents * sign)
+  }
   const category = entry.category_id ? categoryById.value.get(entry.category_id) : null
   const direction = category?.direction
   const signed = direction === 'out' ? -entry.amount_cents : entry.amount_cents
   return formatAmount(signed)
 }
 
-const activityAmountClass = (entry: TransactionEntry) => {
+const activityAmountClass = (entry: TransactionEntry, action?: string | null) => {
+  if (action) {
+    return action === 'redemption' || action === 'loss'
+      ? 'text-destructive'
+      : 'text-emerald-600 dark:text-emerald-300'
+  }
   const category = entry.category_id ? categoryById.value.get(entry.category_id) : null
   const direction = category?.direction
   if (direction === 'out') return 'text-destructive'
@@ -331,9 +331,6 @@ const actionDisabledReason = computed(() => {
   if (selectedAccount.value.type !== 'investment') {
     return t('investments.accounts.unsupportedHint')
   }
-  if (activeAction.value === 'loss' && !hasLossCategory.value) {
-    return t('investments.setup.lossCategoryHint')
-  }
   return ''
 })
 
@@ -355,12 +352,10 @@ const handleSubmit = async () => {
     return
   }
 
-  const getCategoryId = (name: string) => {
-    const id = categoryIdByName.value.get(name)
-    if (!id) {
-      throw new Error(`Missing category: ${name}`)
-    }
-    return id
+  const categoryId = categoryIdByName.value.get('Investimentos')
+  if (!categoryId) {
+    push.error({ title: t('investments.title'), message: t('investments.setup.blockedHint') })
+    return
   }
 
   const memoValue = memo.value.trim() ? memo.value.trim() : null
@@ -373,21 +368,23 @@ const handleSubmit = async () => {
   }>
 
   let description = ''
+  let investmentAction: ActionKey | null = null
 
   try {
     if (activeAction.value === 'contribution') {
       description = 'Aporte investimentos'
+      investmentAction = 'contribution'
       entries.push(
         {
           account_id: flowAccounts.cashAccount.id,
-          category_id: getCategoryId('Aportes Investimentos'),
+          category_id: categoryId,
           kind: 'transfer',
           amount_cents: amountCents,
           memo: memoValue
         },
         {
           account_id: flowAccounts.investmentAccount.id,
-          category_id: getCategoryId('Entrada Investimentos (Aporte)'),
+          category_id: categoryId,
           kind: 'transfer',
           amount_cents: amountCents,
           memo: memoValue
@@ -397,17 +394,18 @@ const handleSubmit = async () => {
 
     if (activeAction.value === 'redemption') {
       description = 'Resgate investimentos'
+      investmentAction = 'redemption'
       entries.push(
         {
           account_id: flowAccounts.investmentAccount.id,
-          category_id: getCategoryId('Resgate Investimentos'),
+          category_id: categoryId,
           kind: 'transfer',
           amount_cents: amountCents,
           memo: memoValue
         },
         {
           account_id: flowAccounts.cashAccount.id,
-          category_id: getCategoryId('Entrada Resgate (Investimentos)'),
+          category_id: categoryId,
           kind: 'transfer',
           amount_cents: amountCents,
           memo: memoValue
@@ -420,9 +418,10 @@ const handleSubmit = async () => {
         return
       }
       description = 'Rendimento investimentos'
+      investmentAction = 'earnings'
       entries.push({
         account_id: flowAccounts.investmentAccount.id,
-        category_id: getCategoryId('Rendimentos'),
+        category_id: categoryId,
         kind: 'adjust',
         amount_cents: amountCents,
         memo: memoValue
@@ -434,9 +433,10 @@ const handleSubmit = async () => {
         return
       }
       description = 'Perda investimentos'
+      investmentAction = 'loss'
       entries.push({
         account_id: flowAccounts.investmentAccount.id,
-        category_id: getCategoryId('Perdas'),
+        category_id: categoryId,
         kind: 'adjust',
         amount_cents: amountCents,
         memo: memoValue
@@ -462,6 +462,7 @@ const handleSubmit = async () => {
         occurred_at: occurredAt.value,
         description,
         notes: memoValue,
+        investment_action: investmentAction,
         entries
       }
     })
@@ -561,7 +562,6 @@ watch(
             </Badge>
           </div>
         </div>
-        <p class="text-xs text-muted-foreground">{{ t('investments.setup.optionalHint', { names: optionalCategoryNames.join(', ') }) }}</p>
       </CardContent>
       <CardFooter class="flex flex-wrap gap-2">
         <Button variant="outline" as-child>
@@ -682,8 +682,8 @@ watch(
                     <span v-if="item.entry.memo">· {{ item.entry.memo }}</span>
                   </p>
                 </div>
-                <p class="text-sm font-semibold" :class="activityAmountClass(item.entry)">
-                  {{ formatActivityAmount(item.entry) }}
+                <p class="text-sm font-semibold" :class="activityAmountClass(item.entry, item.transaction.investment_action)">
+                  {{ formatActivityAmount(item.entry, item.transaction.investment_action) }}
                 </p>
               </div>
             </div>

@@ -3,16 +3,17 @@ package journal
 import "time"
 
 type Transaction struct {
-	ID              string
-	LedgerID        string
-	OccurredAt      time.Time
-	Description     string
-	Notes           *string
-	CreatedByUserID string
-	CreditCardID    *string
-	CreatedAt       time.Time
-	UpdatedAt       *time.Time
-	Entries         []Entry
+	ID               string
+	LedgerID         string
+	OccurredAt       time.Time
+	Description      string
+	Notes            *string
+	CreatedByUserID  string
+	CreditCardID     *string
+	InvestmentAction *string
+	CreatedAt        time.Time
+	UpdatedAt        *time.Time
+	Entries          []Entry
 }
 
 type Entry struct {

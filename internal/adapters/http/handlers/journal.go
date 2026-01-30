@@ -80,12 +80,13 @@ func (h *JournalHandler) Create(c echo.Context) error {
 	}
 
 	created, err := h.Service.CreateTransaction(c.Request().Context(), user.ID, ledgerID, journal.CreateTransactionParams{
-		LedgerID:    ledgerID,
-		OccurredAt:  occurredAt,
-		Description: req.Description,
-		Notes:       req.Notes,
-		Entries:     entries,
-		Idempotency: idempotency,
+		LedgerID:         ledgerID,
+		OccurredAt:       occurredAt,
+		Description:      req.Description,
+		Notes:            req.Notes,
+		InvestmentAction: req.InvestmentAction,
+		Entries:          entries,
+		Idempotency:      idempotency,
 	})
 	if err != nil {
 		return httpx.WriteAppError(c, err)
@@ -314,14 +315,15 @@ func toTransactionResponse(item journal.Transaction) transactionResponse {
 	}
 
 	return transactionResponse{
-		ID:           item.ID,
-		LedgerID:     item.LedgerID,
-		OccurredAt:   item.OccurredAt,
-		Description:  item.Description,
-		Notes:        item.Notes,
-		CreditCardID: item.CreditCardID,
-		CreatedAt:    item.CreatedAt,
-		UpdatedAt:    item.UpdatedAt,
-		Entries:      entries,
+		ID:               item.ID,
+		LedgerID:         item.LedgerID,
+		OccurredAt:       item.OccurredAt,
+		Description:      item.Description,
+		Notes:            item.Notes,
+		CreditCardID:     item.CreditCardID,
+		InvestmentAction: item.InvestmentAction,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
+		Entries:          entries,
 	}
 }

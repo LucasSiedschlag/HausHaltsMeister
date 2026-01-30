@@ -104,3 +104,16 @@ Credit cards are standalone entities with `credit_cards.id` as the primary refer
 - Credit cards are 1:N under accounts via `parent_account_id` and always have a dedicated `liability_account_id` with `nature=liability`.
 - Card flows and endpoints use `card_id` (not `cardAccountId`).
 - Listagem de cartoes e feita por `account_id`; faturas/parcelas/planos sempre por `card_id`.
+
+## 9) Investment action + category onboarding
+
+**Decision**
+Investments use `transactions.investment_action` (`contribution`, `redemption`, `earnings`, `loss`) and two categories:
+- `Investimentos (Entrada)` (direction `in`) for aportes and rendimentos.
+- `Investimentos (Saída)` (direction `out`) for resgates and perdas.
+Category onboarding is manual via a seed endpoint with suggested categories.
+
+**Implications**
+- No technical categories for investments (classification lives in `investment_action`).
+- Transfer validation for investment flows balances by equal `amount_cents`.
+- New endpoint `POST /ledgers/{ledgerId}/categories/seed` is idempotent by name.

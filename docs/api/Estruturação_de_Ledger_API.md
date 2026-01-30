@@ -234,6 +234,7 @@ E a seguranca fica no guard + repo scoped.
 | GET | /ledgers/{ledgerId}/categories | viewer |
 | GET | /ledgers/{ledgerId}/categories/{categoryId} | viewer |
 | POST | /ledgers/{ledgerId}/categories | editor |
+| POST | /ledgers/{ledgerId}/categories/seed | editor |
 | PATCH | /ledgers/{ledgerId}/categories/{categoryId} | editor |
 | DELETE | /ledgers/{ledgerId}/categories/{categoryId} | editor |
 

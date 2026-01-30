@@ -235,17 +235,18 @@ type OauthState struct {
 }
 
 type Transaction struct {
-	ID              pgtype.UUID
-	LedgerID        pgtype.UUID
-	OccurredAt      pgtype.Timestamptz
-	Description     string
-	Notes           pgtype.Text
-	CreatedByUserID pgtype.UUID
-	ExternalSource  pgtype.Text
-	ExternalID      pgtype.Text
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	CreditCardID    pgtype.UUID
+	ID               pgtype.UUID
+	LedgerID         pgtype.UUID
+	OccurredAt       pgtype.Timestamptz
+	Description      string
+	Notes            pgtype.Text
+	CreatedByUserID  pgtype.UUID
+	ExternalSource   pgtype.Text
+	ExternalID       pgtype.Text
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	CreditCardID     pgtype.UUID
+	InvestmentAction pgtype.Text
 }
 
 type User struct {

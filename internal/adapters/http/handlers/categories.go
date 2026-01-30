@@ -20,16 +20,20 @@ type CategoriesService interface {
 	ListCategories(ctx context.Context, userID, ledgerID string, direction *string, active *bool) ([]categories.Category, error)
 	GetCategory(ctx context.Context, userID, ledgerID, categoryID string) (categories.Category, error)
 	CreateCategory(ctx context.Context, userID, ledgerID string, input categories.CreateCategoryParams) (categories.Category, error)
+	SeedCategories(ctx context.Context, userID, ledgerID string, input categories.SeedCategoriesParams) (categories.SeedCategoriesResult, error)
 	UpdateCategory(ctx context.Context, userID, ledgerID, categoryID string, input categories.UpdateCategoryParams) (categories.Category, error)
 	DeleteCategory(ctx context.Context, userID, ledgerID, categoryID string) error
 }
 
 type categoryRequest = dto.CategoryRequest
 type categoryResponse = dto.CategoryResponse
+type categorySeedRequest = dto.CategorySeedRequest
+type categorySeedResponse = dto.CategorySeedResponse
 
 func (h *CategoriesHandler) Register(g *echo.Group) {
 	g.GET("", h.List)
 	g.POST("", h.Create)
+	g.POST("/seed", h.Seed)
 	g.GET("/:categoryId", h.Get)
 	g.PATCH("/:categoryId", h.Update)
 	g.DELETE("/:categoryId", h.Delete)
@@ -129,6 +133,46 @@ func (h *CategoriesHandler) Create(c echo.Context) error {
 		return httpx.WriteAppError(c, err)
 	}
 	return c.JSON(http.StatusCreated, toCategoryResponse(created))
+}
+
+func (h *CategoriesHandler) Seed(c echo.Context) error {
+	user, ok := httpx.GetUser(c)
+	if !ok {
+		return httpx.WriteError(c, http.StatusUnauthorized, "AUTH_INVALID_CREDENTIALS", "Credenciais invalidas", nil)
+	}
+	ledgerID := c.Param("ledgerId")
+	if ledgerID == "" {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Parametros invalidos", map[string]string{"ledger_id": "required"})
+	}
+
+	var req categorySeedRequest
+	if err := c.Bind(&req); err != nil {
+		return httpx.WriteError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Payload invalido", nil)
+	}
+
+	items := make([]categories.SeedCategoryItem, 0, len(req.Items))
+	for _, item := range req.Items {
+		items = append(items, categories.SeedCategoryItem{
+			Name:             item.Name,
+			Direction:        item.Direction,
+			IsBudgetRelevant: item.IsBudgetRelevant,
+			IsBudgetBase:     item.IsBudgetBase,
+		})
+	}
+
+	result, err := h.Service.SeedCategories(c.Request().Context(), user.ID, ledgerID, categories.SeedCategoriesParams{
+		Preset: req.Preset,
+		Names:  req.Names,
+		Items:  items,
+	})
+	if err != nil {
+		return httpx.WriteAppError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, categorySeedResponse{
+		Created: result.Created,
+		Skipped: result.Skipped,
+	})
 }
 
 func (h *CategoriesHandler) Update(c echo.Context) error {

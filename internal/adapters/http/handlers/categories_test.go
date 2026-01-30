@@ -30,6 +30,10 @@ func (f fakeCategoriesService) CreateCategory(ctx context.Context, userID, ledge
 	return categories.Category{}, nil
 }
 
+func (f fakeCategoriesService) SeedCategories(ctx context.Context, userID, ledgerID string, input categories.SeedCategoriesParams) (categories.SeedCategoriesResult, error) {
+	return categories.SeedCategoriesResult{}, nil
+}
+
 func (f fakeCategoriesService) UpdateCategory(ctx context.Context, userID, ledgerID, categoryID string, input categories.UpdateCategoryParams) (categories.Category, error) {
 	return categories.Category{}, f.updateErr
 }

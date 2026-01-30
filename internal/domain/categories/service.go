@@ -46,6 +46,21 @@ type Service struct {
 	now  func() time.Time
 }
 
+const defaultCategoryPreset = "default_v1"
+
+var defaultCategoryPresetItems = []SeedCategoryItem{
+	{Name: "Gastos fixos", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Conforto", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Lazer", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Investimentos (Saída)", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Objetivos", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Educação", Direction: "out", IsBudgetRelevant: boolPtr(true)},
+	{Name: "Investimentos (Entrada)", Direction: "in", IsBudgetBase: boolPtr(false)},
+	{Name: "Salário", Direction: "in", IsBudgetBase: boolPtr(true)},
+	{Name: "Extra", Direction: "in", IsBudgetBase: boolPtr(true)},
+	{Name: "Terceiros", Direction: "in", IsBudgetBase: boolPtr(true)},
+}
+
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo, now: time.Now().UTC}
 }
@@ -119,6 +134,107 @@ func (s *Service) CreateCategory(ctx context.Context, userID, ledgerID string, i
 		return Category{}, err
 	}
 	return created, nil
+}
+
+func (s *Service) SeedCategories(ctx context.Context, userID, ledgerID string, input SeedCategoriesParams) (SeedCategoriesResult, error) {
+	if err := s.requireRole(ctx, ledgerID, userID, "editor"); err != nil {
+		return SeedCategoriesResult{}, err
+	}
+
+	preset := strings.TrimSpace(input.Preset)
+	if preset == "" {
+		preset = defaultCategoryPreset
+	}
+	if preset != defaultCategoryPreset {
+		return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"preset": "invalid"})
+	}
+
+	presetMap := make(map[string]SeedCategoryItem, len(defaultCategoryPresetItems))
+	for _, item := range defaultCategoryPresetItems {
+		presetMap[strings.ToLower(item.Name)] = item
+	}
+
+	candidates := make([]SeedCategoryItem, 0, len(defaultCategoryPresetItems))
+	if len(input.Items) == 0 && len(input.Names) == 0 {
+		candidates = append(candidates, defaultCategoryPresetItems...)
+	} else if len(input.Items) > 0 {
+		candidates = append(candidates, input.Items...)
+	} else {
+		for _, name := range input.Names {
+			trimmed := strings.TrimSpace(name)
+			if trimmed == "" {
+				return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"names": "invalid"})
+			}
+			preset, ok := presetMap[strings.ToLower(trimmed)]
+			if !ok {
+				return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"names": "invalid"})
+			}
+			candidates = append(candidates, preset)
+		}
+	}
+
+	unique := make(map[string]struct{}, len(candidates))
+	created := make([]string, 0, len(candidates))
+	skipped := make([]string, 0, len(candidates))
+
+	for _, candidate := range candidates {
+		name := strings.TrimSpace(candidate.Name)
+		if name == "" {
+			return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"items": "invalid"})
+		}
+		if _, ok := unique[strings.ToLower(name)]; ok {
+			continue
+		}
+		unique[strings.ToLower(name)] = struct{}{}
+
+		preset, ok := presetMap[strings.ToLower(name)]
+		if !ok {
+			return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"items": "invalid"})
+		}
+
+		direction := strings.TrimSpace(candidate.Direction)
+		if direction == "" {
+			direction = preset.Direction
+		}
+		if direction != preset.Direction || !isValidDirection(direction) {
+			return SeedCategoriesResult{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"items": "invalid"})
+		}
+
+		isBudgetBase := false
+		if preset.IsBudgetBase != nil {
+			isBudgetBase = *preset.IsBudgetBase
+		}
+		if candidate.IsBudgetBase != nil {
+			isBudgetBase = *candidate.IsBudgetBase
+		}
+		isBudgetRelevant := false
+		if preset.IsBudgetRelevant != nil {
+			isBudgetRelevant = *preset.IsBudgetRelevant
+		}
+		if candidate.IsBudgetRelevant != nil {
+			isBudgetRelevant = *candidate.IsBudgetRelevant
+		}
+
+		flags := applyDirectionFlags(direction, isBudgetBase, isBudgetRelevant)
+		_, err := s.repo.CreateCategory(ctx, CreateCategoryParams{
+			LedgerID:         ledgerID,
+			Name:             preset.Name,
+			Direction:        direction,
+			IsBudgetBase:     flags.IsBudgetBase,
+			IsBudgetRelevant: flags.IsBudgetRelevant,
+			IsActive:         true,
+		})
+		if err != nil {
+			if errors.Is(err, ErrDuplicateName) {
+				skipped = append(skipped, preset.Name)
+				continue
+			}
+			return SeedCategoriesResult{}, err
+		}
+		created = append(created, preset.Name)
+	}
+
+	return SeedCategoriesResult{Created: created, Skipped: skipped}, nil
 }
 
 func (s *Service) UpdateCategory(ctx context.Context, userID, ledgerID, categoryID string, input UpdateCategoryParams) (Category, error) {
@@ -229,6 +345,10 @@ func isValidDirection(direction string) bool {
 	default:
 		return false
 	}
+}
+
+func boolPtr(value bool) *bool {
+	return &value
 }
 
 func applyDirectionFlags(direction string, isBudgetBase bool, isBudgetRelevant bool) struct {

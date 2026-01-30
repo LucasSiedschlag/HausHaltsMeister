@@ -13,10 +13,6 @@ type Summary struct {
 }
 
 type FlowCategoryIDs struct {
-	ContributionOut string
-	ContributionIn  string
-	RedemptionOut   string
-	RedemptionIn    string
-	EarningsIn      string
-	LossesOut       *string
+	InvestmentsIn  string
+	InvestmentsOut string
 }

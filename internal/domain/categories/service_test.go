@@ -9,11 +9,12 @@ import (
 )
 
 type fakeRepo struct {
-	role      string
-	created   CreateCategoryParams
-	createErr error
-	category  Category
-	used      bool
+	role         string
+	created      CreateCategoryParams
+	createErr    error
+	createErrors map[string]error
+	category     Category
+	used         bool
 }
 
 func (f *fakeRepo) ListCategories(ctx context.Context, ledgerID string, direction *string, active *bool) ([]Category, error) {
@@ -26,6 +27,11 @@ func (f *fakeRepo) GetCategory(ctx context.Context, ledgerID, categoryID string)
 
 func (f *fakeRepo) CreateCategory(ctx context.Context, params CreateCategoryParams) (Category, error) {
 	f.created = params
+	if f.createErrors != nil {
+		if err, ok := f.createErrors[params.Name]; ok {
+			return Category{}, err
+		}
+	}
 	return Category{}, f.createErr
 }
 
@@ -93,6 +99,49 @@ func TestCreateCategorySuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Mercado", repo.created.Name)
 	require.Equal(t, "out", repo.created.Direction)
+}
+
+func TestSeedCategoriesDefaultPreset(t *testing.T) {
+	repo := &fakeRepo{
+		role:         "editor",
+		createErrors: map[string]error{"Conforto": ErrDuplicateName},
+	}
+	service := NewService(repo)
+
+	result, err := service.SeedCategories(context.Background(), "user-1", "ledger-1", SeedCategoriesParams{})
+	require.NoError(t, err)
+	require.Contains(t, result.Created, "Gastos fixos")
+	require.Contains(t, result.Created, "Investimentos (Saída)")
+	require.Contains(t, result.Created, "Investimentos (Entrada)")
+	require.Contains(t, result.Created, "Salário")
+	require.Contains(t, result.Skipped, "Conforto")
+}
+
+func TestSeedCategoriesCustomRelevance(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	_, err := service.SeedCategories(context.Background(), "user-1", "ledger-1", SeedCategoriesParams{
+		Items: []SeedCategoryItem{
+			{Name: "Gastos fixos", Direction: "out", IsBudgetRelevant: boolPtr(false)},
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, repo.created.IsBudgetRelevant)
+}
+
+func TestSeedCategoriesRejectsUnknownNames(t *testing.T) {
+	repo := &fakeRepo{role: "editor"}
+	service := NewService(repo)
+
+	_, err := service.SeedCategories(context.Background(), "user-1", "ledger-1", SeedCategoriesParams{
+		Items: []SeedCategoryItem{{Name: "Categoria invalida", Direction: "out"}},
+	})
+	require.Error(t, err)
+	appErr, ok := err.(*Error)
+	require.True(t, ok)
+	require.Equal(t, "VALIDATION_ERROR", appErr.Code())
+	require.Equal(t, "invalid", appErr.Details()["items"])
 }
 
 func TestDeleteCategoryBlockedWhenInUse(t *testing.T) {

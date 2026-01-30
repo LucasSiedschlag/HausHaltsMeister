@@ -438,6 +438,26 @@
       "deactivate": "Deactivate",
       "activate": "Reactivate"
     },
+    "seed": {
+      "title": "Suggested categories",
+      "description": "Select the categories to add to your ledger.",
+      "action": "Add suggestions",
+      "submit": "Add categories",
+      "saving": "Adding...",
+      "skip": "Skip for now",
+      "budgetRelevant": "Budget relevant",
+      "budgetBase": "Income base",
+      "groups": {
+        "in": "Income categories",
+        "out": "Expense categories"
+      },
+      "none": "No suggested categories remaining.",
+      "messages": {
+        "added": "{count} categories added.",
+        "error": "Could not add suggested categories.",
+        "invalid": "Select valid categories to add."
+      }
+    },
     "form": {
       "createTitle": "Create category",
       "createDescription": "Define direction and grouping.",
@@ -694,12 +714,10 @@
     },
     "setup": {
       "title": "Setup required",
-      "description": "Create the required accounts and technical categories to enable investments.",
+      "description": "Create the required accounts and the Investments category to enable this module.",
       "accountsTitle": "Required accounts",
-      "categoriesTitle": "Technical categories",
-      "categoriesHint": "The names below must match exactly:",
-      "optionalHint": "Optional: {names}.",
-      "lossCategoryHint": "Create the Losses category to record losses.",
+      "categoriesTitle": "Required category",
+      "categoriesHint": "Create the Investments category to enable this module.",
       "goAccounts": "Go to accounts",
       "goCategories": "Go to categories",
       "blockedHint": "Finish setup before recording entries.",

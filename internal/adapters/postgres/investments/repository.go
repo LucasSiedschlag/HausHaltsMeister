@@ -58,35 +58,22 @@ func (r *Repository) FindCategoryByName(ctx context.Context, ledgerID, name stri
 	return id, nil
 }
 
-func (r *Repository) GetCategoryDirection(ctx context.Context, ledgerID, categoryID string) (string, error) {
-	var direction string
-	row := r.pool.QueryRow(ctx, `
-		SELECT direction FROM categories
-		WHERE ledger_id = $1 AND id = $2
-	`, ledgerID, categoryID)
-	if err := row.Scan(&direction); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", investments.ErrNotFound
-		}
-		return "", err
-	}
-	return direction, nil
-}
-
 func (r *Repository) CreateTransaction(ctx context.Context, params journal.CreateTransactionParams) (journal.Transaction, error) {
 	return r.journalRepo.CreateTransaction(ctx, params)
 }
 
-func (r *Repository) SumByCategory(ctx context.Context, ledgerID, categoryID string, from, to time.Time) (int64, error) {
+func (r *Repository) SumByInvestmentAction(ctx context.Context, ledgerID, action string, from, to time.Time) (int64, error) {
 	var total int64
 	row := r.pool.QueryRow(ctx, `
 		SELECT COALESCE(SUM(e.amount_cents), 0)
 		FROM entries e
 		JOIN transactions t ON t.id = e.transaction_id
+		JOIN accounts a ON a.id = e.account_id
 		WHERE e.ledger_id = $1
-			AND e.category_id = $2
+			AND t.investment_action = $2
+			AND a.type = 'investment'
 			AND t.occurred_at >= $3 AND t.occurred_at <= $4
-	`, ledgerID, categoryID, from, to)
+	`, ledgerID, action, from, to)
 	if err := row.Scan(&total); err != nil {
 		return 0, err
 	}

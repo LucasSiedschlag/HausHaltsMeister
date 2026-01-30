@@ -98,6 +98,7 @@ Responsabilidades:
 A fonte da verdade para o histórico financeiro.
 
 - `transactions`: evento (data, descrição, notas, autor, origem/import)
+- `transactions.investment_action`: classificador opcional para investimentos
 - `entries`: linhas de valor (conta, categoria, valor, memo, kind)
 
 ---
@@ -229,20 +230,20 @@ Uso:
   - Conta pagadora -> Passivo do cartão (pagamento fatura)
   - Investimentos -> Wallet/Pessoal (resgate)
     Regras recomendadas:
-- deve haver pelo menos:
+- sem `investment_action`:
   - 1 entry OUT (categoria direction=out)
   - 1 entry IN (categoria direction=in)
-- valores devem bater (mesmo amount total)
-
-> Se você permitir mais de 2 entries (transferência complexa), ainda assim:
-> total OUT == total IN.
+  - total OUT == total IN
+- com `investment_action`:
+  - todas as entries devem ter o mesmo `amount_cents`
+  - direction pode ser diferente (ex.: categorias Investimentos (Entrada) e Investimentos (Saída))
 
 ### 5.3. `kind=adjust`
 
 Uso:
 
 - correções e estornos
-- rendimento de investimento (quando tratado como variação)
+- rendimento/perda de investimento (via `investment_action`)
 - juros/multa (se preferir tratar como ajuste)
   Regras:
 - pode ser 1 ou várias linhas
@@ -439,16 +440,19 @@ Input: user_id, ledger_id, transaction_id
 - Wallet/Pessoal (wallet, asset)
 - Investimentos (investment, asset) (opcional no onboarding)
 
-### 8.2. Categorias técnicas seed (mínimo útil)
+### 8.2. Categorias sugeridas (onboarding opcional)
 
-- Transferências internas (IN e OUT) (opcional)
-- Aportes Investimentos (OUT)
-- Entrada Investimentos (IN, base=false)
-- Rendimentos (IN, base=false)
-- Pagamento Fatura Cartão (OUT, budget_relevant=false)
-- Entrada Pagamento Cartão (IN, base=false)
+- Gastos fixos
+- Conforto
+- Lazer
+- Investimentos
+- Objetivos
+- Educação
+- Salário (in, budget_base=true)
+- Extra (in, budget_base=true)
+- Terceiros (in, budget_base=true)
 
-> As categorias reais (Mercado, Fixos, etc.) são configuráveis pelo usuário.
+> A classificacao de investimentos e feita via `transactions.investment_action`.
 
 ---
 

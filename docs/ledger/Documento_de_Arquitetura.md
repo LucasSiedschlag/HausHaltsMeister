@@ -165,9 +165,9 @@ Para um mês M:
 
 ### 6.3 Investimentos
 
-- Aporte: transferência Pessoal (OUT) -> Investimentos (IN).
-- Rendimento reinvestido: 1 entry IN na conta Investimentos em categoria “Rendimentos” com `is_budget_base=false`.
-- Resgate: transferência inversa.
+- Aporte: transferência com `investment_action=contribution` usando `Investimentos (Saída)` (OUT) e `Investimentos (Entrada)` (IN).
+- Rendimento reinvestido: entry na conta Investimentos com `investment_action=earnings` e categoria `Investimentos (Entrada)`.
+- Resgate: transferência com `investment_action=redemption` usando `Investimentos (Saída)` (OUT) e `Investimentos (Entrada)` (IN).
 
 ### 6.4 Cartão com parcelas e fatura
 
@@ -334,16 +334,12 @@ A API deve ser organizada por `ledger_id` como primeiro-class:
 
 ---
 
-## 14) Apêndice: categorias técnicas recomendadas (resumo)
+## 14) Apêndice: categorias recomendadas (resumo)
 
 ### Investimentos
 
-- Aportes Investimentos (OUT, budget_relevant = true se quiser orçar 10%)
-- Entrada Investimentos (IN, budget_base=false)
-- Resgate Investimentos (OUT, budget_relevant=false)
-- Entrada Resgate (IN, budget_base=false)
-- Rendimentos (IN, budget_base=false)
-- (opcional) Perdas (OUT, budget_relevant=false)
+- Investimentos (OUT, budget_relevant depende)
+- Classificacao via `transactions.investment_action`
 
 ### Cartão
 

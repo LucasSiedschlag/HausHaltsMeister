@@ -33,6 +33,24 @@ type CategoryUpdatePayload = {
   is_active: boolean
 }
 
+type CategorySeedPayload = {
+  preset?: string
+  names?: string[]
+  items?: CategorySeedItem[]
+}
+
+type CategorySeedItem = {
+  name: string
+  direction: CategoryDirection
+  is_budget_relevant?: boolean
+  is_budget_base?: boolean
+}
+
+export type CategorySeedResult = {
+  created: string[]
+  skipped: string[]
+}
+
 export const useCategories = () => {
   const api = useApiClient()
   const { currentLedgerId } = useLedger()
@@ -124,6 +142,20 @@ export const useCategories = () => {
     return true
   }
 
+  const seedCategories = async (payload: CategorySeedPayload) => {
+    if (!(await ensureAccessToken())) return null
+    const ledgerId = currentLedgerId.value
+    if (!ledgerId) return null
+    const result = await api<CategorySeedResult>(`/ledgers/${ledgerId}/categories/seed`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken.value}`
+      },
+      body: payload
+    })
+    return result
+  }
+
   return {
     categories,
     loading,
@@ -131,6 +163,7 @@ export const useCategories = () => {
     fetchCategories,
     createCategory,
     updateCategory,
-    deactivateCategory
+    deactivateCategory,
+    seedCategories
   }
 }

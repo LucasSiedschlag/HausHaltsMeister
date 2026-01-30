@@ -47,6 +47,7 @@ Este modulo cobre transacoes e entries com paginacao segura e regras de transfer
   "occurred_at": "2026-01-10",
   "description": "Mercado",
   "notes": null,
+  "investment_action": null,
   "entries": [
     {
       "account_id": "uuid",
@@ -71,6 +72,8 @@ Este modulo cobre transacoes e entries com paginacao segura e regras de transfer
 6) Semantics / Notes
 - `amount_cents` sempre positivo.
 - `transfer` deve balancear IN/OUT.
+- `investment_action` e opcional para classificar movimentos de investimento:
+  - `contribution` | `redemption` | `earnings` | `loss`.
 
 7) Pagination
 - n/a.

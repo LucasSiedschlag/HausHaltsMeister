@@ -18,16 +18,14 @@ import { Label } from '@shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@shared/components/ui/sheet'
 import { Switch } from '@shared/components/ui/switch'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@shared/components/ui/table'
-import { CornerDownRight, MoreHorizontal, Plus, ChevronDown } from 'lucide-vue-next'
+import { CornerDownRight, MoreHorizontal, ChevronDown } from 'lucide-vue-next'
 import { push } from 'notivue'
 import CrudTableCard from '@shared/components/CrudTableCard.vue'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
 import SortableColumnHeader from '@shared/components/SortableColumnHeader.vue'
 import { useCategories, type Category, type CategoryDirection } from '#layers/categories/composables/useCategories'
 import { useLedgerContext } from '@shared/composables/useLedgerContext'
-import { useHeaderAction } from '@shared/composables/useHeaderAction'
 import { categoryDirectionSchema, nameSchema, useInlineValidation, getInputClass } from '@shared/validators'
 import { isApiError } from '@shared/utils/api-error'
 import { useI18n } from 'vue-i18n'
@@ -35,7 +33,6 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const ledgerContext = useLedgerContext()
 const canEdit = computed(() => ledgerContext.hasRole('editor'))
-const { setHeaderAction } = useHeaderAction()
 
 const {
   categories,
@@ -44,7 +41,8 @@ const {
   fetchCategories,
   createCategory,
   updateCategory,
-  deactivateCategory
+  deactivateCategory,
+  seedCategories
 } = useCategories()
 
 // --- Data Preparation (Hierarchy) ---
@@ -75,6 +73,105 @@ const buildHierarchy = (items: Category[]) => {
 }
 
 const flattenedCategories = computed<CategoryRow[]>(() => buildHierarchy(categories.value))
+
+type CategorySuggestion = {
+  name: string
+  direction: CategoryDirection
+  isBudgetRelevant: boolean
+  isBudgetBase: boolean
+}
+
+const suggestedCategories: CategorySuggestion[] = [
+  { name: 'Gastos fixos', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Conforto', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Lazer', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Investimentos (Saída)', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Objetivos', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Educação', direction: 'out', isBudgetRelevant: true, isBudgetBase: false },
+  { name: 'Investimentos (Entrada)', direction: 'in', isBudgetRelevant: false, isBudgetBase: false },
+  { name: 'Salário', direction: 'in', isBudgetRelevant: false, isBudgetBase: true },
+  { name: 'Extra', direction: 'in', isBudgetRelevant: false, isBudgetBase: true },
+  { name: 'Terceiros', direction: 'in', isBudgetRelevant: false, isBudgetBase: true }
+]
+
+const normalizeCategoryName = (value: string) => value.trim().toLowerCase()
+
+const existingCategoryNames = computed(
+  () => new Set(categories.value.map((item) => normalizeCategoryName(item.name)))
+)
+
+const missingSuggestions = computed(() =>
+  suggestedCategories.filter(
+    (suggestion) => !existingCategoryNames.value.has(normalizeCategoryName(suggestion.name))
+  )
+)
+
+const missingOutSuggestions = computed(() =>
+  missingSuggestions.value.filter((item) => item.direction === 'out')
+)
+
+const missingInSuggestions = computed(() =>
+  missingSuggestions.value.filter((item) => item.direction === 'in')
+)
+
+const hasSuggestions = computed(() => missingSuggestions.value.length > 0)
+
+const seedSelection = ref<string[]>([])
+const seedRelevance = ref<Record<string, boolean>>({})
+const seedBase = ref<Record<string, boolean>>({})
+const seedSaving = ref(false)
+
+const getSeedRelevance = (name: string, fallback: boolean) =>
+  seedRelevance.value[name] ?? fallback
+
+const getSeedBase = (name: string, fallback: boolean) =>
+  seedBase.value[name] ?? fallback
+
+const setSeedRelevance = (name: string, value: boolean) => {
+  seedRelevance.value = { ...seedRelevance.value, [name]: value }
+}
+
+const setSeedBase = (name: string, value: boolean) => {
+  seedBase.value = { ...seedBase.value, [name]: value }
+}
+
+const resetSeedSelection = () => {
+  seedSelection.value = missingSuggestions.value.map((item) => item.name)
+  seedRelevance.value = missingSuggestions.value.reduce<Record<string, boolean>>((acc, item) => {
+    acc[item.name] = item.isBudgetRelevant
+    return acc
+  }, {})
+  seedBase.value = missingSuggestions.value.reduce<Record<string, boolean>>((acc, item) => {
+    acc[item.name] = item.isBudgetBase
+    return acc
+  }, {})
+}
+
+const toggleSeedSelection = (name: string, enabled: boolean) => {
+  if (enabled) {
+    if (!seedSelection.value.includes(name)) {
+      seedSelection.value = [...seedSelection.value, name]
+    }
+    return
+  }
+  seedSelection.value = seedSelection.value.filter((item) => item !== name)
+}
+
+const showSeedInline = computed(() => categories.value.length === 0 && hasSuggestions.value)
+
+watch(
+  () => missingSuggestions.value,
+  () => {
+    if (missingSuggestions.value.length === 0) {
+      seedSelection.value = []
+      seedRelevance.value = {}
+      seedBase.value = {}
+      return
+    }
+    resetSeedSelection()
+  },
+  { immediate: true }
+)
 
 // --- TanStack Table Configuration ---
 
@@ -232,27 +329,39 @@ const resetValidation = () => {
   errors.direction = []
 }
 
-const resetForm = () => {
-  name.value = ''
-  direction.value = 'out'
-  parentId.value = '__none__'
-  isBudgetBase.value = false
-  isBudgetRelevant.value = true
-  formError.value = ''
-  resetValidation()
+const handleSeed = async () => {
+  if (!canEdit.value || seedSelection.value.length === 0) return
+  seedSaving.value = true
+  try {
+    const selectedSuggestions = missingSuggestions.value.filter((item) =>
+      seedSelection.value.includes(item.name)
+    )
+    const result = await seedCategories({
+      preset: 'default_v1',
+      items: selectedSuggestions.map((item) => ({
+        name: item.name,
+        direction: item.direction,
+        is_budget_relevant:
+          item.direction === 'out' ? getSeedRelevance(item.name, item.isBudgetRelevant) : undefined,
+        is_budget_base: item.direction === 'in' ? getSeedBase(item.name, item.isBudgetBase) : undefined
+      }))
+    })
+    await fetchCategories()
+    const createdCount = result?.created?.length ?? 0
+    push.success({
+      title: t('categories.seed.title'),
+      message: t('categories.seed.messages.added', { count: createdCount })
+    })
+  } catch (err) {
+    if (isApiError(err) && err.code === 'VALIDATION_ERROR') {
+      push.error({ title: t('categories.seed.title'), message: t('categories.seed.messages.invalid') })
+    } else {
+      push.error({ title: t('categories.seed.title'), message: t('categories.seed.messages.error') })
+    }
+  } finally {
+    seedSaving.value = false
+  }
 }
-
-const openCreate = () => {
-  formMode.value = 'create'
-  editingCategory.value = null
-  resetForm()
-  formOpen.value = true
-}
-
-setHeaderAction(
-  { key: 'categories:new', labelKey: 'categories.actions.new', requiresEditor: true },
-  openCreate
-)
 
 const openEdit = (category: Category) => {
   formMode.value = 'edit'
@@ -381,6 +490,8 @@ watch(
   () => ledgerContext.activeLedgerId.value,
   async (ledgerId) => {
     if (!ledgerId) return
+    seedSelection.value = []
+    seedRelevance.value = {}
     await fetchCategories()
   },
   { immediate: true }
@@ -393,24 +504,6 @@ watch(
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <span>
-              <Button :disabled="!canEdit" @click="openCreate">
-                <Plus class="h-4 w-4" />
-                {{ t('categories.actions.new') }}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent v-if="!canEdit">
-            {{ t('categories.readOnlyHint') }}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-
     <CrudTableCard
       :title="t('categories.list.title')"
       :description="t('categories.list.description')"
@@ -420,6 +513,108 @@ watch(
       :loading-message="t('categories.loading')"
       :empty-message="t('categories.empty')"
     >
+      <template #empty>
+        <div v-if="showSeedInline" class="grid gap-4">
+          <div>
+            <p class="text-sm font-medium text-foreground">{{ t('categories.seed.title') }}</p>
+            <p class="text-xs text-muted-foreground">{{ t('categories.seed.description') }}</p>
+          </div>
+          <div class="grid gap-4">
+            <div v-if="missingInSuggestions.length" class="grid gap-2">
+              <div class="flex items-center gap-3">
+                <div class="h-px flex-1 bg-border/60"></div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {{ t('categories.seed.groups.in') }}
+                </p>
+                <div class="h-px flex-1 bg-border/60"></div>
+              </div>
+              <div class="grid gap-2">
+                <div
+                  v-for="suggestion in missingInSuggestions"
+                  :key="suggestion.name"
+                  class="grid gap-2 rounded-md border border-border/60 px-3 py-2"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-medium">{{ suggestion.name }}</p>
+                    <Switch
+                      :disabled="!canEdit || seedSaving"
+                      :checked="seedSelection.includes(suggestion.name)"
+                      @update:checked="(value: boolean) => toggleSeedSelection(suggestion.name, value)"
+                    />
+                  </div>
+                  <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {{ suggestion.direction === 'in' ? t('categories.seed.budgetBase') : t('categories.seed.budgetRelevant') }}
+                    </span>
+                    <Switch
+                      :disabled="!canEdit || seedSaving"
+                      :checked="suggestion.direction === 'in'
+                        ? getSeedBase(suggestion.name, suggestion.isBudgetBase)
+                        : getSeedRelevance(suggestion.name, suggestion.isBudgetRelevant)"
+                      @update:checked="(value: boolean) =>
+                        suggestion.direction === 'in'
+                          ? setSeedBase(suggestion.name, value)
+                          : setSeedRelevance(suggestion.name, value)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="missingOutSuggestions.length" class="grid gap-2">
+              <div class="flex items-center gap-3">
+                <div class="h-px flex-1 bg-border/60"></div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {{ t('categories.seed.groups.out') }}
+                </p>
+                <div class="h-px flex-1 bg-border/60"></div>
+              </div>
+              <div class="grid gap-2">
+                <div
+                  v-for="suggestion in missingOutSuggestions"
+                  :key="suggestion.name"
+                  class="grid gap-2 rounded-md border border-border/60 px-3 py-2"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-medium">{{ suggestion.name }}</p>
+                    <Switch
+                      :disabled="!canEdit || seedSaving"
+                      :checked="seedSelection.includes(suggestion.name)"
+                      @update:checked="(value: boolean) => toggleSeedSelection(suggestion.name, value)"
+                    />
+                  </div>
+                  <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {{ suggestion.direction === 'in' ? t('categories.seed.budgetBase') : t('categories.seed.budgetRelevant') }}
+                    </span>
+                    <Switch
+                      :disabled="!canEdit || seedSaving"
+                      :checked="suggestion.direction === 'in'
+                        ? getSeedBase(suggestion.name, suggestion.isBudgetBase)
+                        : getSeedRelevance(suggestion.name, suggestion.isBudgetRelevant)"
+                      @update:checked="(value: boolean) =>
+                        suggestion.direction === 'in'
+                          ? setSeedBase(suggestion.name, value)
+                          : setSeedRelevance(suggestion.name, value)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              :disabled="!canEdit || seedSaving || seedSelection.length === 0"
+              @click="handleSeed()"
+            >
+              {{ seedSaving ? t('categories.seed.saving') : t('categories.seed.submit') }}
+            </Button>
+          </div>
+        </div>
+        <div v-else class="flex flex-col items-center gap-3 text-center">
+          <p class="text-sm text-muted-foreground">{{ t('categories.empty') }}</p>
+        </div>
+      </template>
+
       <template #toolbar>
          <div class="flex w-full items-center justify-between gap-4 flex-wrap">
              <div class="flex flex-1 items-center gap-2 max-w-sm">

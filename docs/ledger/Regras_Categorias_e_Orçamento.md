@@ -61,9 +61,7 @@ Exemplos típicos:
 - Salário: `in`, `is_budget_base=true`
 - Comissão recorrente: `in`, `is_budget_base=true`
 - Reembolso: `in`, `is_budget_base=false` (não é renda “real”)
-- Resgate de investimento: `in`, `is_budget_base=false`
 - Entrada técnica de transferência: `in`, `is_budget_base=false`
-- Rendimentos de investimento: `in`, `is_budget_base=false` (para não inflar orçamento)
 
 #### `is_budget_relevant` (para categorias OUT)
 
@@ -74,7 +72,7 @@ Exemplos típicos:
 - Mercado: `out`, `is_budget_relevant=true`
 - Custos fixos: `out`, `is_budget_relevant=true`
 - Pagamento fatura cartão: `out`, `is_budget_relevant=false` (evitar dupla contagem)
-- Transferência interna (Pessoal -> Investimentos): `out`, `is_budget_relevant=depende`
+- Categoria Investimentos (Saída) (aportes): `out`, `is_budget_relevant=depende`
   - se você quer “orçar aportes”, então `true`
   - se você quer “fora do orçamento”, então `false`
 
@@ -407,8 +405,7 @@ Exemplos:
 
 - reembolso
 - estorno recebido
-- resgate de investimento
-- rendimentos de investimento (se você não quiser “expandir” orçamento)
+- ajustes de investimento (investment_action=earnings/loss)
 
 Regra:
 

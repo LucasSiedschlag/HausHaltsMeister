@@ -56,6 +56,7 @@ Este documento consolida os padroes globais e o template obrigatorio de contrato
 ### 1.9 Enum values oficiais
 - `category_direction`: `in`, `out`
 - `entry_kind`: `normal`, `transfer`, `adjust`
+- `investment_action`: `contribution`, `redemption`, `earnings`, `loss`
 - `installment_plan_status`: `active`, `cancelled`, `finished`
 - `installment_status`: `scheduled`, `posted`, `paid`, `skipped`
 - `statement_status`: `open`, `closed`, `paid`

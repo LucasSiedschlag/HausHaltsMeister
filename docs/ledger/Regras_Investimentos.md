@@ -41,47 +41,23 @@ Este documento define como o módulo de investimentos funciona dentro do modelo 
 - `Wallet/Pessoal` (`type=wallet`) ou `Conta Corrente` (`type=current`)
 - `Investimentos` (`type=investment`)
 
-### 1.2. Categorias recomendadas (padrão definitivo)
+### 1.2. Categorias de investimentos + investment_action
 
-> Abaixo, categorias “técnicas” que suportam o fluxo completo.
+- `Investimentos (Entrada)`:
+  - direction: in
+  - is_budget_base: false
+  - usada para aportes e rendimentos
+- `Investimentos (Saída)`:
+  - direction: out
+  - is_budget_relevant: true (quando quiser orcar aportes)
+  - usada para resgates e perdas
+- Classificacao do movimento via `transactions.investment_action`:
+  - `contribution` (aporte)
+  - `redemption` (resgate)
+  - `earnings` (rendimento)
+  - `loss` (perda)
 
-#### A) Aportes Investimentos
-
-- direction: out
-- is_budget_relevant: **true** (se você quer controlar “10% dos ganhos” no orçamento)
-- is_budget_base: false
-
-#### B) Entrada Investimentos (Aporte)
-
-- direction: in
-- is_budget_base: **false** (não inflar renda base)
-- is_budget_relevant: false
-
-#### C) Resgate Investimentos
-
-- direction: out
-- is_budget_relevant: false
-- is_budget_base: false
-
-#### D) Entrada Resgate (Investimentos)
-
-- direction: in
-- is_budget_base: **false** (resgate não é renda base)
-- is_budget_relevant: false
-
-#### E) Rendimentos
-
-- direction: in
-- is_budget_base: **false** (não inflar renda base)
-- is_budget_relevant: false
-
-#### (Opcional) F) Perdas
-
-- direction: out
-- is_budget_relevant: false
-- is_budget_base: false
-
-> Observação: você pode renomear livremente, mas a semântica (direction + flags) é o que importa.
+> As categorias separam IN/OUT, e o detalhe continua em `investment_action`.
 
 ---
 
@@ -93,17 +69,17 @@ Há dois modos:
 
 #### Modo recomendado (com orçamento)
 
-- Definir uma `budget_plan_line` para a categoria `Aportes Investimentos` com `percent=10`.
-- Marcar `Aportes Investimentos.is_budget_relevant=true`.
+- Definir uma `budget_plan_line` para a categoria `Investimentos (Saída)` com `percent=10`.
+- Marcar `Investimentos (Saída).is_budget_relevant=true`.
 
 Resultado:
 
 - Limite mensal de aportes = renda_base_mes \* 10%
-- Realizado = soma das entradas OUT na categoria Aportes Investimentos no mês
+- Realizado = soma das entradas OUT na categoria Investimentos (Saída) no mês
 
 #### Modo “fora do orçamento”
 
-- `Aportes Investimentos.is_budget_relevant=false`
+- `Investimentos (Saída).is_budget_relevant=false`
 - Acompanhamento por relatórios de aportes, não por orçamento
   (útil se você quer orçamento apenas de consumo e tratar aportes separadamente)
 
@@ -119,14 +95,14 @@ Resultado:
 
 Para transações `kind=transfer`:
 
-- total OUT == total IN
-- deve haver ao menos uma entry IN e uma OUT
+- sem `investment_action`: total OUT == total IN (por direction)
+- com `investment_action`: todas as entries devem ter o mesmo `amount_cents`
 - recomendação prática: 2 entries (uma de cada lado)
 
 ### 3.3. Rendimentos/perdas não devem mexer na renda base
 
-- categorias `Rendimentos` e `Entrada Investimentos (Aporte)` devem ter `is_budget_base=false`
-  para não inflar o orçamento.
+- a categoria `Investimentos (Entrada)` deve manter `is_budget_base=false`.
+- `investment_action=earnings|loss` nao entra na renda base.
 
 ---
 
@@ -138,7 +114,7 @@ Quando criar um ledger:
 
 1. criar account `Wallet/Pessoal` (wallet) ou `Conta Corrente` (current)
 2. criar account `Investimentos` (investment)
-3. criar categorias técnicas (ou permitir criar depois)
+3. criar categorias `Investimentos (Entrada)` e `Investimentos (Saída)` (ou permitir criar depois)
 
 ---
 
@@ -162,21 +138,22 @@ Persistência (transação SQL):
 1. criar `transactions`:
    - occurred_at = date
    - description = "Aporte investimentos"
+   - investment_action = `contribution`
 2. criar 2 `entries` (kind=transfer):
    A) OUT em Wallet/Pessoal:
    - account_id = Wallet/Pessoal
-   - category_id = `Aportes Investimentos` (OUT)
+   - category_id = `Investimentos (Saída)` (OUT)
    - amount_cents = amount
    - kind = transfer
      B) IN em Investimentos:
    - account_id = Investimentos
-   - category_id = `Entrada Investimentos (Aporte)` (IN)
+   - category_id = `Investimentos (Entrada)` (IN)
    - amount_cents = amount
    - kind = transfer
 
 Efeito:
 
-- no orçamento (se relevante=true): o aporte consome o orçamento de aportes do mês
+- no orçamento (se relevante=true): o aporte consome o orçamento da categoria Investimentos (Saída)
 - no saldo:
   - Wallet/Pessoal diminui
   - Investimentos aumenta
@@ -192,19 +169,20 @@ Entrada:
 Persistência:
 
 1. criar `transactions` "Resgate investimentos"
+   - investment_action = `redemption`
 2. 2 entries (kind=transfer):
    A) OUT em Investimentos:
    - account_id = Investimentos
-   - category_id = `Resgate Investimentos` (OUT)
+   - category_id = `Investimentos (Saída)` (OUT)
    - amount = amount
      B) IN em Wallet/Pessoal:
    - account_id = Wallet/Pessoal
-   - category_id = `Entrada Resgate (Investimentos)` (IN)
+   - category_id = `Investimentos (Entrada)` (IN)
    - amount = amount
 
 Efeito:
 
-- não deve inflar renda base (is_budget_base=false na entrada)
+- nao deve inflar renda base (category Investimentos (Entrada) com is_budget_base=false)
 - saldo:
   - Investimentos diminui
   - Wallet/Pessoal aumenta
@@ -231,9 +209,10 @@ Persistência:
 1. criar `transactions`:
    - description = "Rendimento investimentos (mês/ano)"
    - occurred_at = date
+   - investment_action = `earnings`
 2. criar 1 entry:
    - account_id = Investimentos
-   - category_id = `Rendimentos` (IN, base=false)
+   - category_id = `Investimentos (Entrada)` (IN)
    - kind = adjust (recomendado) ou normal
    - amount_cents = rendimento
 
@@ -249,9 +228,10 @@ Efeito:
 Se quiser acompanhar quedas:
 
 1. transaction "Perda investimentos"
+   - investment_action = `loss`
 2. entry:
    - account_id = Investimentos
-   - category_id = `Perdas` (OUT)
+   - category_id = `Investimentos (Saída)` (OUT)
    - kind = adjust
    - amount = perda
 
@@ -278,8 +258,8 @@ Exemplo: corrigir rendimento lançado errado
 
 Soma de entries:
 
-- category = `Aportes Investimentos` (OUT)
-- account = Wallet/Pessoal (opcional, mas recomendado)
+- transactions.investment_action = `contribution`
+- account = Investimentos
 - filtrar por transactions.occurred_at no período
 
 Saída:
@@ -291,7 +271,7 @@ Saída:
 
 Soma de entries:
 
-- category = `Resgate Investimentos` (OUT)
+- transactions.investment_action = `redemption`
 - account = Investimentos
 - período
 
@@ -299,7 +279,7 @@ Soma de entries:
 
 Soma de entries:
 
-- category = `Rendimentos` (IN)
+- transactions.investment_action = `earnings`
 - account = Investimentos
 - período
 
@@ -308,7 +288,7 @@ Soma de entries:
 Saldo derivado:
 
 - para a conta Investimentos:
-  - saldo = SUM(IN) - SUM(OUT) considerando categorias.direction
+  - saldo = soma considerando `investment_action` para definir o sinal
 - pode ser calculado:
   - até uma data (saldo atual)
   - por mês (saldo acumulado por competência)
@@ -343,10 +323,10 @@ No mês:
   - realizado de aportes = 500
   - delta = 0 (dentro)
 - saldo Investimentos:
-  - +500 (entrada técnica do aporte)
+  - +500 (investment_action=contribution)
   - +5 (rendimentos)
 - renda base:
-  - não inclui “Entrada Investimentos (Aporte)” e nem “Rendimentos” (base=false)
+  - nao inclui movimentos com investment_action=earnings/loss
 
 ---
 
@@ -355,7 +335,7 @@ No mês:
 1. Assistente de “Aporte” na UI:
 
 - formulário com valor/data
-- gera automaticamente a transaction e as 2 entries com categorias técnicas
+- gera automaticamente a transaction e as 2 entries com investment_action
 
 2. Assistente de “Rendimento mensal”:
 

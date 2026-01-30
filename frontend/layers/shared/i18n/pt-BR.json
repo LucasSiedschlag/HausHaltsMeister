@@ -438,6 +438,26 @@
       "deactivate": "Desativar",
       "activate": "Reativar"
     },
+    "seed": {
+      "title": "Categorias sugeridas",
+      "description": "Selecione as categorias para adicionar ao seu ledger.",
+      "action": "Adicionar sugestoes",
+      "submit": "Adicionar categorias",
+      "saving": "Adicionando...",
+      "skip": "Pular por agora",
+      "budgetRelevant": "Relevante no orcamento",
+      "budgetBase": "Renda base",
+      "groups": {
+        "in": "Categorias de entrada",
+        "out": "Categorias de saída"
+      },
+      "none": "Nao ha sugestoes restantes.",
+      "messages": {
+        "added": "{count} categorias adicionadas.",
+        "error": "Nao foi possivel adicionar as sugestoes.",
+        "invalid": "Selecione categorias validas para adicionar."
+      }
+    },
     "form": {
       "createTitle": "Criar categoria",
       "createDescription": "Defina direção e agrupamento.",
@@ -694,12 +714,10 @@
     },
     "setup": {
       "title": "Configuração necessária",
-      "description": "Crie as contas e categorias técnicas para habilitar os lançamentos.",
+      "description": "Crie as contas e a categoria necessária para habilitar os lançamentos.",
       "accountsTitle": "Contas obrigatórias",
-      "categoriesTitle": "Categorias técnicas",
-      "categoriesHint": "Os nomes abaixo devem ser exatamente iguais:",
-      "optionalHint": "Opcional: {names}.",
-      "lossCategoryHint": "Crie a categoria Perdas para registrar perdas.",
+      "categoriesTitle": "Categoria obrigatória",
+      "categoriesHint": "Crie a categoria Investimentos para habilitar este módulo.",
       "goAccounts": "Ir para contas",
       "goCategories": "Ir para categorias",
       "blockedHint": "Finalize a configuração antes de registrar movimentações.",

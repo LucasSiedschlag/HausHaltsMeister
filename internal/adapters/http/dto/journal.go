@@ -3,10 +3,11 @@ package dto
 import "time"
 
 type TransactionRequest struct {
-	OccurredAt  string             `json:"occurred_at"`
-	Description string             `json:"description"`
-	Notes       *string            `json:"notes"`
-	Entries     []TransactionEntry `json:"entries"`
+	OccurredAt       string             `json:"occurred_at"`
+	Description      string             `json:"description"`
+	Notes            *string            `json:"notes"`
+	InvestmentAction *string            `json:"investment_action,omitempty"`
+	Entries          []TransactionEntry `json:"entries"`
 }
 
 type TransactionEntry struct {
@@ -25,15 +26,16 @@ type TransactionPatchRequest struct {
 }
 
 type TransactionResponse struct {
-	ID           string                     `json:"id"`
-	LedgerID     string                     `json:"ledger_id"`
-	OccurredAt   time.Time                  `json:"occurred_at"`
-	Description  string                     `json:"description"`
-	Notes        *string                    `json:"notes,omitempty"`
-	CreditCardID *string                    `json:"credit_card_id,omitempty"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	UpdatedAt    *time.Time                 `json:"updated_at,omitempty"`
-	Entries      []TransactionEntryResponse `json:"entries"`
+	ID               string                     `json:"id"`
+	LedgerID         string                     `json:"ledger_id"`
+	OccurredAt       time.Time                  `json:"occurred_at"`
+	Description      string                     `json:"description"`
+	Notes            *string                    `json:"notes,omitempty"`
+	CreditCardID     *string                    `json:"credit_card_id,omitempty"`
+	InvestmentAction *string                    `json:"investment_action,omitempty"`
+	CreatedAt        time.Time                  `json:"created_at"`
+	UpdatedAt        *time.Time                 `json:"updated_at,omitempty"`
+	Entries          []TransactionEntryResponse `json:"entries"`
 }
 
 type TransactionEntryResponse struct {

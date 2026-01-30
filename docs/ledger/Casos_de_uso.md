@@ -282,11 +282,11 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 1. usuário informa valor e data
 2. sistema cria transaction “Aporte”
 3. cria 2 entries kind=transfer:
-   - OUT em Wallet/Pessoal (categoria Aportes Investimentos, budget_relevant=true se orçado)
-   - IN em Investimentos (categoria Entrada Investimentos, budget_base=false)  
+   - OUT em Wallet/Pessoal (categoria Investimentos (Saída))
+   - IN em Investimentos (categoria Investimentos (Entrada))  
      **Pós-condições:** saldo migra para investimentos; orçamento pode refletir o aporte  
      **Tabelas:** `transactions`, `entries`, `accounts`, `categories`  
-     **Validações:** balanceamento
+     **Validações:** balanceamento por amount + `investment_action=contribution`
 
 ---
 
@@ -298,7 +298,7 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 
 1. usuário informa valor do rendimento e data (ex.: último dia do mês)
 2. cria transaction “Rendimentos”
-3. cria entry IN na conta Investimentos (categoria Rendimentos, budget_base=false) com kind=adjust  
+3. cria entry na conta Investimentos (categoria Investimentos (Entrada)) com kind=adjust e `investment_action=earnings`  
    **Pós-condições:** saldo investimento aumenta sem inflar orçamento  
    **Tabelas:** `transactions`, `entries`, `categories`
 
@@ -313,8 +313,8 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 1. usuário informa valor e data
 2. transaction “Resgate”
 3. 2 entries kind=transfer:
-   - OUT em Investimentos (Resgate Investimentos)
-   - IN em Wallet/Pessoal (Entrada Resgate, budget_base=false)  
+   - OUT em Investimentos (categoria Investimentos (Saída))
+   - IN em Wallet/Pessoal (categoria Investimentos (Entrada))  
      **Pós-condições:** saldo volta ao Wallet/Pessoal sem inflar renda base  
      **Tabelas:** `transactions`, `entries`
 
@@ -437,7 +437,7 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 ### UC-072 — Aportes por período
 
 **Ator:** Viewer  
-**Fluxo:** somar entries na categoria Aportes Investimentos por período  
+**Fluxo:** somar entries com `investment_action=contribution` por período  
 **Tabelas:** `entries`, `transactions`, `categories`
 
 ---
@@ -445,7 +445,7 @@ Este documento lista e descreve os principais **casos de uso** do sistema, com:
 ### UC-073 — Rendimentos por período
 
 **Ator:** Viewer  
-**Fluxo:** somar entries categoria Rendimentos na conta Investimentos por período  
+**Fluxo:** somar entries com `investment_action=earnings` na conta Investimentos por período  
 **Tabelas:** `entries`, `transactions`, `categories`, `accounts`
 
 ---

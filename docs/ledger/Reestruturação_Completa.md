@@ -116,7 +116,7 @@ Referência: `docs/ledger/Regras_Investimentos.md`.
 
 - Aporte: transferência Pessoal -> Investimentos.
 - Resgate: transferência Investimentos -> Pessoal.
-- Rendimento: entry IN na conta de investimentos (`kind=adjust` recomendado).
+- Rendimento: entry na conta de investimentos com `investment_action=earnings` (`kind=adjust` recomendado).
 
 ### 5.3 Flags recomendadas
 
@@ -646,12 +646,9 @@ Referência: `docs/ledger/Regras_Investimentos.md` e `docs/ledger/Regras_Cartão
 
 ### 10.2 Investimentos
 
-- Aportes Investimentos (OUT, `is_budget_relevant=false` por padrão; habilitar se for orçar)
-- Entrada Investimentos (Aporte) (IN, `is_budget_base=false`)
-- Resgate Investimentos (OUT, `is_budget_relevant=false`)
-- Entrada Resgate (Investimentos) (IN, `is_budget_base=false`)
-- Rendimentos (IN, `is_budget_base=false`)
-- (Opcional) Perdas (OUT, `is_budget_relevant=false`)
+- Investimentos (Entrada) (IN, `is_budget_base=false`)
+- Investimentos (Saída) (OUT, `is_budget_relevant` depende do orçamento)
+- Classificacao via `transactions.investment_action`
 
 ---
 
@@ -661,7 +658,7 @@ Referência: `docs/ledger/Regras_Segurança.md`.
 
 - Sempre validar acesso por `ledger_id` e role.
 - Garantir consistência entre entry/account/category/transaction.
-- Transferências devem ser balanceadas (IN == OUT).
+- Transferências devem ser balanceadas (IN == OUT, ou `amount_cents` igual quando `investment_action`).
 - Rotinas automáticas (posting de parcelas) devem ser idempotentes.
 - Evitar endpoints sem `ledger_id` (anti-vazamento).
 

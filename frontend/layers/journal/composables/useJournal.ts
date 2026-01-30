@@ -20,6 +20,7 @@ export type Transaction = {
   occurred_at: string
   description: string
   notes?: string | null
+  investment_action?: string | null
   created_at?: string
   updated_at?: string | null
   entries: TransactionEntry[]
@@ -47,6 +48,7 @@ type TransactionCreatePayload = {
   occurred_at: string
   description: string
   notes?: string | null
+  investment_action?: string | null
   entries: TransactionEntryInput[]
 }
 

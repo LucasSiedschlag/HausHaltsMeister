@@ -417,6 +417,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Category'
+  /ledgers/{ledgerId}/categories/seed:
+    post:
+      tags: [Categories]
+      summary: Seed suggested categories
+      parameters:
+        - $ref: '#/components/parameters/LedgerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySeedRequest'
+      responses:
+        '200':
+          description: Seed result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySeedResponse'
   /ledgers/{ledgerId}/categories/{categoryId}:
     get:
       tags: [Categories]
@@ -1680,6 +1699,42 @@ components:
         parent_id:
           type: string
           nullable: true
+    CategorySeedRequest:
+      type: object
+      properties:
+        preset:
+          type: string
+        names:
+          type: array
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySeedItem'
+    CategorySeedItem:
+      type: object
+      properties:
+        name:
+          type: string
+        direction:
+          type: string
+          enum: [in, out]
+        is_budget_relevant:
+          type: boolean
+        is_budget_base:
+          type: boolean
+    CategorySeedResponse:
+      type: object
+      properties:
+        created:
+          type: array
+          items:
+            type: string
+        skipped:
+          type: array
+          items:
+            type: string
     Entry:
       type: object
       properties:
@@ -1712,6 +1767,13 @@ components:
         notes:
           type: string
           nullable: true
+        credit_card_id:
+          type: string
+          nullable: true
+        investment_action:
+          type: string
+          nullable: true
+          enum: [contribution, redemption, earnings, loss]
         created_by_user_id:
           type: string
         created_at:
@@ -1736,6 +1798,10 @@ components:
         notes:
           type: string
           nullable: true
+        investment_action:
+          type: string
+          nullable: true
+          enum: [contribution, redemption, earnings, loss]
         entries:
           type: array
           items:

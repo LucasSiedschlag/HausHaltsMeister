@@ -36,7 +36,7 @@ Referencias principais:
    - `varchar` + `CHECK` para valores enumerados.
    - `created_at` default; `updated_at` setado pela app.
 5. Confirmar seeds tecnicas:
-   - categorias tecnicas (cartao e investimentos).
+   - categorias tecnicas (cartao) e investment_action (investimentos).
    - catalogo de bandeiras (card_networks).
 
 **Entregaveis:**

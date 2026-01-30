@@ -169,6 +169,51 @@ func TestCreateTransactionAdjust(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestTransferWithInvestmentActionAllowsSameDirection(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true, "acc-2": true},
+		categories: map[string]string{"cat-out-1": "out", "cat-out-2": "out"},
+	}
+	service := NewService(repo)
+	action := "contribution"
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:       time.Now().UTC(),
+		Description:      "Aporte",
+		InvestmentAction: &action,
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-out-1"), Kind: "transfer", AmountCents: 100},
+			{AccountID: "acc-2", CategoryID: ptr("cat-out-2"), Kind: "transfer", AmountCents: 100},
+		},
+	})
+	require.NoError(t, err)
+}
+
+func TestCreateTransactionRejectsInvalidInvestmentAction(t *testing.T) {
+	repo := &fakeRepo{
+		role:       "editor",
+		accounts:   map[string]bool{"acc-1": true},
+		categories: map[string]string{"cat-out": "out"},
+	}
+	service := NewService(repo)
+	action := "invalid"
+
+	_, err := service.CreateTransaction(context.Background(), "user-1", "ledger-1", CreateTransactionParams{
+		OccurredAt:       time.Now().UTC(),
+		Description:      "Compra",
+		InvestmentAction: &action,
+		Entries: []EntryInput{
+			{AccountID: "acc-1", CategoryID: ptr("cat-out"), Kind: "normal", AmountCents: 1000},
+		},
+	})
+	require.Error(t, err)
+	appErr, ok := err.(*Error)
+	require.True(t, ok)
+	require.Equal(t, "VALIDATION_ERROR", appErr.Code())
+	require.Equal(t, "invalid", appErr.Details()["investment_action"])
+}
+
 func TestCreateTransactionIdempotencyKeyTooLong(t *testing.T) {
 	repo := &fakeRepo{
 		role:       "editor",

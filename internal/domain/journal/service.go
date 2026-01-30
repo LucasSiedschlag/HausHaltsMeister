@@ -49,14 +49,15 @@ type IdempotencyRecord struct {
 }
 
 type CreateTransactionParams struct {
-	LedgerID        string
-	OccurredAt      time.Time
-	Description     string
-	Notes           *string
-	CreatedByUserID string
-	CreditCardID    *string
-	Entries         []EntryInput
-	Idempotency     *IdempotencyParams
+	LedgerID         string
+	OccurredAt       time.Time
+	Description      string
+	Notes            *string
+	CreatedByUserID  string
+	CreditCardID     *string
+	InvestmentAction *string
+	Entries          []EntryInput
+	Idempotency      *IdempotencyParams
 }
 
 type UpdateTransactionParams struct {
@@ -112,7 +113,18 @@ func (s *Service) CreateTransaction(ctx context.Context, userID, ledgerID string
 		return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"entries": "required"})
 	}
 
-	validatedEntries, err := s.validateEntries(ctx, ledgerID, params.Entries)
+	if params.InvestmentAction != nil {
+		action := strings.TrimSpace(*params.InvestmentAction)
+		if action == "" {
+			params.InvestmentAction = nil
+		} else if !isValidInvestmentAction(action) {
+			return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"investment_action": "invalid"})
+		} else {
+			params.InvestmentAction = &action
+		}
+	}
+
+	validatedEntries, err := s.validateEntries(ctx, ledgerID, params.Entries, params.InvestmentAction)
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -129,7 +141,7 @@ func (s *Service) CreateTransaction(ctx context.Context, userID, ledgerID string
 				return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"idempotency_key": "too_long"})
 			}
 			params.Idempotency.Key = key
-			hash, err := buildIdempotencyHash(params.OccurredAt, params.Description, params.Notes, validatedEntries)
+			hash, err := buildIdempotencyHash(params.OccurredAt, params.Description, params.Notes, params.InvestmentAction, validatedEntries)
 			if err != nil {
 				return Transaction{}, err
 			}
@@ -198,7 +210,17 @@ func (s *Service) UpdateTransaction(ctx context.Context, userID, ledgerID, trans
 		if len(*params.Entries) == 0 {
 			return Transaction{}, NewError("VALIDATION_ERROR", "Validacao falhou", map[string]string{"entries": "required"})
 		}
-		validated, err := s.validateEntries(ctx, ledgerID, *params.Entries)
+		var investmentAction *string
+		existing, err := s.repo.GetTransaction(ctx, ledgerID, transactionID)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return Transaction{}, ErrTransactionNotFound
+			}
+			return Transaction{}, s.mapAccessError(ctx, ledgerID, err)
+		}
+		investmentAction = existing.InvestmentAction
+
+		validated, err := s.validateEntries(ctx, ledgerID, *params.Entries, investmentAction)
 		if err != nil {
 			return Transaction{}, err
 		}
@@ -241,17 +263,19 @@ func (s *Service) DeleteTransaction(ctx context.Context, userID, ledgerID, trans
 	return nil
 }
 
-func buildIdempotencyHash(occurredAt time.Time, description string, notes *string, entries []EntryInput) (string, error) {
+func buildIdempotencyHash(occurredAt time.Time, description string, notes *string, investmentAction *string, entries []EntryInput) (string, error) {
 	payload := struct {
-		OccurredAt  string       `json:"occurred_at"`
-		Description string       `json:"description"`
-		Notes       *string      `json:"notes,omitempty"`
-		Entries     []EntryInput `json:"entries"`
+		OccurredAt       string       `json:"occurred_at"`
+		Description      string       `json:"description"`
+		Notes            *string      `json:"notes,omitempty"`
+		InvestmentAction *string      `json:"investment_action,omitempty"`
+		Entries          []EntryInput `json:"entries"`
 	}{
-		OccurredAt:  occurredAt.UTC().Format(time.RFC3339Nano),
-		Description: strings.TrimSpace(description),
-		Notes:       notes,
-		Entries:     entries,
+		OccurredAt:       occurredAt.UTC().Format(time.RFC3339Nano),
+		Description:      strings.TrimSpace(description),
+		Notes:            notes,
+		InvestmentAction: investmentAction,
+		Entries:          entries,
 	}
 
 	raw, err := json.Marshal(payload)
@@ -262,7 +286,7 @@ func buildIdempotencyHash(occurredAt time.Time, description string, notes *strin
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (s *Service) validateEntries(ctx context.Context, ledgerID string, entries []EntryInput) ([]EntryInput, error) {
+func (s *Service) validateEntries(ctx context.Context, ledgerID string, entries []EntryInput, investmentAction *string) ([]EntryInput, error) {
 	accountIDs := make([]string, 0, len(entries))
 	categoryIDs := make([]string, 0, len(entries))
 
@@ -335,13 +359,32 @@ func (s *Service) validateEntries(ctx context.Context, ledgerID string, entries 
 		}
 
 		if hasTransfer || requiresCategories {
-			if err := validateTransferBalance(entries, categoryMap); err != nil {
-				return nil, err
+			if investmentAction != nil {
+				if err := validateTransferAmountMatch(entries); err != nil {
+					return nil, err
+				}
+			} else {
+				if err := validateTransferBalance(entries, categoryMap); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
 	return entries, nil
+}
+
+func validateTransferAmountMatch(entries []EntryInput) error {
+	if len(entries) < 2 {
+		return ErrTransferNotBalanced
+	}
+	amount := entries[0].AmountCents
+	for _, entry := range entries {
+		if entry.AmountCents != amount {
+			return ErrTransferNotBalanced
+		}
+	}
+	return nil
 }
 
 func validateTransferBalance(entries []EntryInput, categories map[string]string) error {
@@ -404,6 +447,15 @@ func (s *Service) mapAccessError(ctx context.Context, ledgerID string, err error
 func isValidKind(kind string) bool {
 	switch kind {
 	case "normal", "transfer", "adjust":
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidInvestmentAction(action string) bool {
+	switch action {
+	case "contribution", "redemption", "earnings", "loss":
 		return true
 	default:
 		return false

@@ -75,7 +75,7 @@ Escopo:
 - Fluxos de aporte, resgate e rendimentos via journal.
 
 Tarefas:
-1. Garantir account `investment` e categorias tecnicas.
+1. Garantir account `investment`, categorias `Investimentos (Entrada)` e `Investimentos (Saída)` e `investment_action`.
 2. Implementar fluxos:
    - Aporte: transferencia Wallet/Pessoal -> Investimentos
    - Resgate: transferencia Investimentos -> Wallet/Pessoal

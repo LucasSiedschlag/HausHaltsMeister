@@ -41,17 +41,13 @@ func (f *fakeRepo) FindCategoryByName(ctx context.Context, ledgerID, name string
 	return "cat-1", nil
 }
 
-func (f *fakeRepo) GetCategoryDirection(ctx context.Context, ledgerID, categoryID string) (string, error) {
-	return "out", nil
-}
-
 func (f *fakeRepo) CreateTransaction(ctx context.Context, params journal.CreateTransactionParams) (journal.Transaction, error) {
 	f.last = params
 	return journal.Transaction{ID: "tx-1"}, nil
 }
 
-func (f *fakeRepo) SumByCategory(ctx context.Context, ledgerID, categoryID string, from, to time.Time) (int64, error) {
-	return f.sums[categoryID], nil
+func (f *fakeRepo) SumByInvestmentAction(ctx context.Context, ledgerID, action string, from, to time.Time) (int64, error) {
+	return f.sums[action], nil
 }
 
 func TestContributionRequiresEditor(t *testing.T) {
@@ -71,6 +67,8 @@ func TestEarningsCreatesAdjustEntry(t *testing.T) {
 	_, err := service.Earnings(context.Background(), "user-1", "ledger-1", 500, occurredAt, nil)
 	require.NoError(t, err)
 	require.Equal(t, "Rendimento investimentos", repo.last.Description)
+	require.NotNil(t, repo.last.InvestmentAction)
+	require.Equal(t, "earnings", *repo.last.InvestmentAction)
 	require.Equal(t, 1, len(repo.last.Entries))
 	require.Equal(t, "adjust", repo.last.Entries[0].Kind)
 }
@@ -83,6 +81,8 @@ func TestRedemptionCreatesTransferEntries(t *testing.T) {
 	_, err := service.Redemption(context.Background(), "user-1", "ledger-1", 1000, occurredAt, nil)
 	require.NoError(t, err)
 	require.Equal(t, "Resgate investimentos", repo.last.Description)
+	require.NotNil(t, repo.last.InvestmentAction)
+	require.Equal(t, "redemption", *repo.last.InvestmentAction)
 	require.Len(t, repo.last.Entries, 2)
 	require.Equal(t, "transfer", repo.last.Entries[0].Kind)
 	require.Equal(t, "transfer", repo.last.Entries[1].Kind)
@@ -92,18 +92,14 @@ func TestSummaryReturnsTotals(t *testing.T) {
 	repo := &fakeRepo{
 		role: "viewer",
 		categories: map[string]string{
-			"Aportes Investimentos":           "cat-contrib",
-			"Resgate Investimentos":           "cat-redempt",
-			"Rendimentos":                     "cat-earn",
-			"Perdas":                          "cat-loss",
-			"Entrada Investimentos (Aporte)":  "cat-in",
-			"Entrada Resgate (Investimentos)": "cat-in-resc",
+			"Investimentos (Entrada)": "cat-invest-in",
+			"Investimentos (Saída)":   "cat-invest-out",
 		},
 		sums: map[string]int64{
-			"cat-contrib": 1000,
-			"cat-redempt": 2000,
-			"cat-earn":    300,
-			"cat-loss":    50,
+			"contribution": 1000,
+			"redemption":   2000,
+			"earnings":     300,
+			"loss":         50,
 		},
 	}
 	service := NewService(repo)

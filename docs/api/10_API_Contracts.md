@@ -61,6 +61,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 ### 2.6 Enum values oficiais
 - `category_direction`: `in`, `out`
 - `entry_kind`: `normal`, `transfer`, `adjust`
+- `investment_action`: `contribution`, `redemption`, `earnings`, `loss`
 - `installment_plan_status`: `active`, `cancelled`, `finished`
 - `installment_status`: `scheduled`, `posted`, `paid`, `skipped`
 - `statement_status`: `open`, `closed`, `paid`
@@ -123,6 +124,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 | GET | /ledgers/{ledgerId}/categories | Listar categorias | Sim | viewer |
 | GET | /ledgers/{ledgerId}/categories/{categoryId} | Detalhe da categoria | Sim | viewer |
 | POST | /ledgers/{ledgerId}/categories | Criar categoria | Sim | editor |
+| POST | /ledgers/{ledgerId}/categories/seed | Adicionar categorias sugeridas | Sim | editor |
 | PATCH | /ledgers/{ledgerId}/categories/{categoryId} | Atualizar categoria | Sim | editor |
 | DELETE | /ledgers/{ledgerId}/categories/{categoryId} | Soft delete (planejado) | Sim | editor |
 
@@ -984,6 +986,42 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 8) Idempotency
 - n/a.
 
+#### POST /ledgers/{ledgerId}/categories/seed
+1) Summary / Purpose
+- Adicionar categorias sugeridas (idempotente por nome).
+
+2) Auth & Authorization
+- Role: editor+.
+
+3) Request
+```json
+{
+  "preset": "default_v1",
+  "items": [
+    { "name": "Gastos fixos", "direction": "out", "is_budget_relevant": true },
+    { "name": "Salário", "direction": "in", "is_budget_base": true }
+  ]
+}
+```
+
+4) Response
+```json
+{
+  "created": ["Gastos fixos", "Investimentos (Saída)"],
+  "skipped": ["Conforto"]
+}
+```
+
+5) Errors
+- 422 `VALIDATION_ERROR`
+- 403 `LEDGER_ACCESS_DENIED`
+
+6) Semantics / Notes
+- Se `names` estiver vazio, usa o preset completo.
+- Se `items` estiver vazio, usa o preset completo.
+- Se `items` estiver presente, ele tem prioridade sobre `names`.
+- `skipped` retorna nomes ja existentes no ledger.
+
 #### PATCH /ledgers/{ledgerId}/categories/{categoryId}
 1) Summary / Purpose
 - Atualizar categoria.
@@ -1054,6 +1092,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
   "occurred_at": "2026-01-10",
   "description": "Mercado",
   "notes": null,
+  "investment_action": null,
   "entries": [
     {
       "account_id": "uuid",
@@ -1079,6 +1118,7 @@ Este documento e a fonte de verdade de contratos entre frontend e backend. Ele c
 6) Semantics / Notes
 - `amount_cents` sempre positivo.
 - `transfer` deve balancear IN/OUT.
+- `investment_action` e opcional para classificar movimentos de investimento.
 
 7) Pagination
 - n/a.

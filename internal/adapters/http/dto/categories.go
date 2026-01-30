@@ -23,3 +23,21 @@ type CategoryResponse struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 }
+
+type CategorySeedRequest struct {
+	Preset string             `json:"preset"`
+	Names  []string           `json:"names"`
+	Items  []CategorySeedItem `json:"items"`
+}
+
+type CategorySeedItem struct {
+	Name             string `json:"name"`
+	Direction        string `json:"direction"`
+	IsBudgetRelevant *bool  `json:"is_budget_relevant,omitempty"`
+	IsBudgetBase     *bool  `json:"is_budget_base,omitempty"`
+}
+
+type CategorySeedResponse struct {
+	Created []string `json:"created"`
+	Skipped []string `json:"skipped"`
+}

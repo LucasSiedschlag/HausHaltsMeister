@@ -58,23 +58,13 @@ func TestContributionCreatesTransfer(t *testing.T) {
 	err = conn.QueryRow(ctx, `INSERT INTO accounts (ledger_id, name, type, nature, is_active) VALUES ($1, $2, 'investment', 'asset', true) RETURNING id`, ledgerID, "Investimentos").Scan(&investAccountID)
 	require.NoError(t, err)
 
-	categories := []struct {
-		Name           string
-		Direction      string
-		BudgetBase     bool
-		BudgetRelevant bool
-	}{
-		{"Aportes Investimentos", "out", false, true},
-		{"Entrada Investimentos (Aporte)", "in", false, false},
-		{"Resgate Investimentos", "out", false, false},
-		{"Entrada Resgate (Investimentos)", "in", false, false},
-		{"Rendimentos", "in", false, false},
-	}
-
-	for _, item := range categories {
-		_, err = conn.Exec(ctx, `INSERT INTO categories (ledger_id, name, direction, is_budget_base, is_budget_relevant, is_active) VALUES ($1, $2, $3, $4, $5, true)`, ledgerID, item.Name, item.Direction, item.BudgetBase, item.BudgetRelevant)
-		require.NoError(t, err)
-	}
+	_, err = conn.Exec(ctx, `
+		INSERT INTO categories (ledger_id, name, direction, is_budget_base, is_budget_relevant, is_active)
+		VALUES
+			($1, 'Investimentos (Saída)', 'out', false, true, true),
+			($1, 'Investimentos (Entrada)', 'in', false, false, true)
+	`, ledgerID)
+	require.NoError(t, err)
 
 	repo := NewRepository(store)
 	service := investments.NewService(repo)
